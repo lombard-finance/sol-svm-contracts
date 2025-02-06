@@ -1,4 +1,4 @@
-use crate::{errors::LBTCError, MintFromPayload, SetValset};
+use crate::{errors::LBTCError, Config};
 use anchor_lang::prelude::*;
 use std::io::{prelude::*, BufReader};
 
@@ -18,7 +18,7 @@ struct ValsetAction {
     height: u64,
 }
 
-pub fn decode_mint_action(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Result<MintAction> {
+pub fn decode_mint_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<MintAction> {
     let mut reader = BufReader::new(bytes.as_slice());
 
     // Check action bytes
@@ -26,17 +26,14 @@ pub fn decode_mint_action(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Resu
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
     require!(
-        action == ctx.accounts.config.deposit_btc_action,
+        action == config.deposit_btc_action,
         LBTCError::InvalidActionBytes
     );
 
     // Read to_chain
     let mut to_chain = [0u8; 32];
     reader.read_exact(&mut to_chain)?;
-    require!(
-        to_chain == ctx.accounts.config.chain_id,
-        LBTCError::InvalidChainID
-    );
+    require!(to_chain == config.chain_id, LBTCError::InvalidChainID);
 
     // Read recipient
     let mut recipient = [0u8; 32];
@@ -78,7 +75,7 @@ pub fn decode_mint_action(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Resu
     }
 }
 
-pub fn decode_valset_action(ctx: Context<SetValset>, bytes: Vec<u8>) -> Result<ValsetAction> {
+pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<ValsetAction> {
     let mut reader = BufReader::new(bytes.as_slice());
 
     // Check action bytes
@@ -86,7 +83,7 @@ pub fn decode_valset_action(ctx: Context<SetValset>, bytes: Vec<u8>) -> Result<V
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
     require!(
-        action == ctx.accounts.config.set_valset_action,
+        action == config.set_valset_action,
         LBTCError::InvalidActionBytes
     );
 
