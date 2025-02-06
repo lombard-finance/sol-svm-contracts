@@ -60,12 +60,18 @@ fn decode_mint_action(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<DepositBtcAc
     let mut action_bytes = [0u8; 4];
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
-    require!(action == DEPOSIT_BTC_ACTION, InvalidMintActionBytes);
+    require!(
+        action == DEPOSIT_BTC_ACTION,
+        LBTCError::InvalidMintActionBytes
+    );
 
     // Read to_chain
     let mut to_chain = [0u8; 32];
     reader.read_exact(&mut to_chain)?;
-    require!(to_chain == ctx.accounts.chain_id.id, InvalidChainID);
+    require!(
+        to_chain == ctx.accounts.chain_id.id,
+        LBTCError::InvalidChainID
+    );
 
     // Read recipient
     let mut recipient = [0u8; 32];
@@ -91,20 +97,27 @@ fn decode_mint_action(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<DepositBtcAc
     reader.read_exact(&mut vout_bytes)?;
     let vout = convert_to_u32_be(vout_bytes)?;
 
-    Ok(DepositBtcAction {
-        to_chain,
-        recipient,
-        amount,
-        txid,
-        vout,
-    })
+    // Ensure buffer is now empty, to avoid collisions with deposits made previously.
+    let mut leftover = vec![];
+    reader.read_to_end(&mut leftover)?;
+    if leftover.len() > 0 {
+        err!(LBTCError::LeftoverData)
+    } else {
+        Ok(DepositBtcAction {
+            to_chain,
+            recipient,
+            amount,
+            txid,
+            vout,
+        })
+    }
 }
 
 // Removes left-padded bytes and interprets the value as a big endian u64.
 fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
     let mut result = remove_padding(bytes);
 
-    require!(result.len() <= 8, AmountTooLarge);
+    require!(result.len() <= 8, LBTCError::AmountTooLarge);
 
     // Insert bytes at the start until we hit 8 bytes in length (big-endian padding).
     while result.len() < 8 {
@@ -121,7 +134,7 @@ fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
 fn convert_to_u32_be(bytes: [u8; 32]) -> Result<u32> {
     let mut result = remove_padding(bytes);
 
-    require!(result.len() <= 4, VoutTooLarge);
+    require!(result.len() <= 4, LBTCError::VoutTooLarge);
 
     // Insert bytes at the start until we hit 4 bytes in length (big-endian padding).
     while result.len() < 4 {
@@ -165,4 +178,6 @@ pub enum LBTCError {
     CouldNotConvertToU64,
     #[msg("Could not convert vout bytes to u32")]
     CouldNotConvertToU32,
+    #[msg("Leftover data in payload")]
+    LeftoverData,
 }
