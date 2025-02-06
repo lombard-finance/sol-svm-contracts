@@ -172,7 +172,7 @@ pub fn decode_fee_payload(config: Account<'_, Config>, bytes: Vec<u8>) -> Result
 fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
     let mut result = remove_padding(bytes);
 
-    require!(result.len() <= 8, LBTCError::AmountTooLarge); // TODO: change error name
+    require!(result.len() <= 8, LBTCError::U64TooLarge);
 
     // Insert bytes at the start until we hit 8 bytes in length (big-endian padding).
     while result.len() < 8 {
@@ -189,7 +189,7 @@ fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
 fn convert_to_u32_be(bytes: [u8; 32]) -> Result<u32> {
     let mut result = remove_padding(bytes);
 
-    require!(result.len() <= 4, LBTCError::VoutTooLarge);
+    require!(result.len() <= 4, LBTCError::U32TooLarge);
 
     // Insert bytes at the start until we hit 4 bytes in length (big-endian padding).
     while result.len() < 4 {

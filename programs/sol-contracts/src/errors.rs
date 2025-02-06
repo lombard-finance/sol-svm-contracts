@@ -18,16 +18,24 @@ pub enum LBTCError {
     FeeGTEAmount,
     #[msg("Fee approval expired")]
     FeeApprovalExpired,
+    #[msg("Signatures array length mismatch with validators array")]
+    SignatureLengthMismatch,
+    #[msg("No validator set added")]
+    NoValidatorSet,
+    #[msg("Not enough valid signatures")]
+    NotEnoughSignatures,
     #[msg("Fee signature invalid")]
     InvalidFeeSignature,
+    #[msg("Error when attempting to recover Secp256k1 public key")]
+    Secp256k1RecoverError,
     #[msg("Invalid action bytes")]
     InvalidActionBytes,
     #[msg("Invalid chain ID")]
     InvalidChainID,
-    #[msg("Amount too large")]
-    AmountTooLarge,
-    #[msg("Vout too large")]
-    VoutTooLarge,
+    #[msg("Attempted to decode a u64, but leftover too large")]
+    U64TooLarge,
+    #[msg("Attempted to decode a u32, but leftover too large")]
+    U32TooLarge,
     #[msg("Could not convert amount bytes to u64")]
     CouldNotConvertToU64,
     #[msg("Could not convert vout bytes to u32")]

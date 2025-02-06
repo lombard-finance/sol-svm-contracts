@@ -228,13 +228,13 @@ fn validate_mint(
         return err!(LBTCError::RecipientMismatch);
     }
 
-    let signatures = decoder::decode_signatures(signatures)?;
-    consortium::check_signatures(config, signatures)?;
-
-    let payload_hash = Hash::new(&mint_payload);
-    if payload_hash.to_bytes() != mint_payload_hash {
+    let payload_hash = Hash::new(&mint_payload).to_bytes();
+    if payload_hash != mint_payload_hash {
         return err!(LBTCError::MintPayloadHashMismatch);
     }
+
+    let signatures = decoder::decode_signatures(signatures)?;
+    consortium::check_signatures(config, signatures, payload_hash)?;
 
     if used.used {
         return err!(LBTCError::MintPayloadUsed);
@@ -244,6 +244,7 @@ fn validate_mint(
 
     // Confirm deposit against bascule, if using.
     if config.bascule_enabled {
+        // TODO
         // This is empty for now, while Bascule is being implemented as a Solana program.
     }
 
@@ -273,14 +274,17 @@ fn validate_fee(
     // Check signature
     let hash = KeccakHash::new(&fee_payload).to_bytes();
     // Check first with v = 27.
-    let pubkey = secp256k1_recover(&hash, 0, &fee_signature).unwrap();
-    if pubkey.to_bytes() != fee_pubkey {
+    let pubkey = match secp256k1_recover(&hash, 0, &fee_signature) {
+        Ok(pubkey) => pubkey.to_bytes(),
+        Err(_) => return err!(LBTCError::Secp256k1RecoverError),
+    };
+    if pubkey != fee_pubkey {
         // If it fails, check with v = 28.
-        let pubkey = secp256k1_recover(&hash, 1, &fee_signature).unwrap();
-        require!(
-            pubkey.to_bytes() == fee_pubkey,
-            LBTCError::InvalidFeeSignature
-        );
+        let pubkey = match secp256k1_recover(&hash, 1, &fee_signature) {
+            Ok(pubkey) => pubkey.to_bytes(),
+            Err(_) => return err!(LBTCError::Secp256k1RecoverError),
+        };
+        require!(pubkey == fee_pubkey, LBTCError::InvalidFeeSignature);
     }
 
     Ok(fee)
@@ -433,7 +437,7 @@ pub struct Config {
     // Consortium fields
     pub epoch: u64,
     #[max_len(102)]
-    pub validators: Vec<[u8; 32]>,
+    pub validators: Vec<[u8; 64]>,
     #[max_len(102)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
