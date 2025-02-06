@@ -12,7 +12,7 @@ pub struct MintAction {
 
 struct ValsetAction {
     pub epoch: u64,
-    pub validators: Vec<[u8; 32]>,
+    pub validators: Vec<[u8; 64]>,
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
     pub height: u64,
@@ -99,12 +99,57 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
     let epoch = convert_to_u64_be(epoch_bytes)?;
 
     // Read validators TODO
-    let mut recipient = [0u8; 32];
-    reader.read_exact(&mut recipient)?;
+    let mut validators = vec![];
+    // Read length
+    let mut validators_length_bytes = [0u8; 32];
+    reader.read_exact(&mut validators_length_bytes)?;
+    let validators_length = convert_to_u64_be(validators_length_bytes)?;
 
-    // Read weights TODO
-    let mut amount_bytes = [0u8; 32];
-    reader.read_exact(&mut amount_bytes)?;
+    // Read offset
+    // We can chop these bytes off minus the initial 32 to immediately arrive at the first element
+    // in the array.
+    let mut validators_offset_bytes = [0u8; 32];
+    reader.read_exact(&mut validators_offset_bytes)?;
+    let validators_offset = convert_to_u64_be(validators_offset_bytes)?;
+
+    // Consume what we just read from the offset.
+    let to_consume = validators_offset - 32;
+    for _ in 0..to_consume {
+        let mut byte = [0u8; 1];
+        reader.read_exact(&mut byte)?;
+    }
+
+    for _ in 0..validators_length {
+        let mut validator_length_bytes = [0u8; 32];
+        reader.read_exact(&mut validator_length_bytes)?;
+        let validator_length = convert_to_u64_be(validator_length_bytes)?;
+        assert!(validator_length == 65);
+
+        // Chop off identifier byte; we don't need it for our purposes.
+        let mut identifier_byte = [0u8; 1];
+        reader.read_exact(&mut identifier_byte)?;
+
+        // Read public key
+        let mut validator = [0u8; 64];
+        reader.read_exact(&mut validator)?;
+        validators.push(validator);
+
+        // Since ethereum encodes in 32 byte slots, we are now at a 31 byte offset, so we can read
+        // and discard the next 31 bytes.
+        let mut discarded_bytes = [0u8; 31];
+        reader.read_exact(&mut discarded_bytes)?
+    }
+
+    let mut weights = vec![];
+    let mut weights_length_bytes = [0u8; 32];
+    reader.read_exact(&mut weights_length_bytes)?;
+    let weights_length = convert_to_u64_be(weights_length_bytes)?;
+    for _ in 0..weights_length {
+        let mut weight_bytes = [0u8; 32];
+        reader.read_exact(&mut weight_bytes)?;
+        let weight = convert_to_u64_be(weight_bytes)?;
+        weights.push(weight);
+    }
 
     // Read weight threshold
     let mut weight_threshold_bytes = [0u8; 32];
