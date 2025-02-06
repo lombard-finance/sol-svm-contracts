@@ -1,10 +1,10 @@
+mod bitcoin_utils;
 mod consortium;
 mod decoder;
 pub mod errors;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
-use decoder::MintAction;
 use errors::LBTCError;
 use solana_program::{
     clock::Clock, hash::Hash, keccak::Hash as KeccakHash, secp256k1_recover::secp256k1_recover,
@@ -42,18 +42,34 @@ pub mod lbtc {
         )
     }
 
-    pub fn redeem(ctx: Context<Redeem>, amount: u64) -> Result<()> {
+    pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Result<()> {
         if !ctx.accounts.config.withdrawals_enabled {
             return err!(LBTCError::WithdrawalsDisabled);
         }
 
-        // TODO calc fee and dust limit
-        // TODO check redeem is greater than fee
-        // TODO check leftover is greater than dust limit
+        require!(
+            ctx.accounts.treasury.key() == ctx.accounts.config.treasury,
+            LBTCError::InvalidTreasury
+        );
+
+        let fee = ctx.accounts.config.burn_commission;
+        let dust_limit = bitcoin_utils::get_dust_limit_for_output(
+            script_pubkey,
+            amount,
+            ctx.accounts.config.dust_fee_rate,
+        )?;
+        require!(amount > fee, LBTCError::FeeGTEAmount);
+        require!(amount - fee > dust_limit, LBTCError::AmountBelowDustLimit);
+
         execute_burn(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             amount,
+        );
+        execute_mint(
+            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.treasury.to_account_info(),
+            fee,
         )
     }
 
@@ -211,6 +227,11 @@ pub mod lbtc {
 
     pub fn set_fee_approval_action(ctx: Context<Admin>, action: u32) -> Result<()> {
         ctx.accounts.config.fee_approval_action = action;
+        Ok(())
+    }
+
+    pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
+        ctx.accounts.config.treasury = treasury;
         Ok(())
     }
 }
@@ -374,6 +395,7 @@ pub struct Redeem<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    pub treasury: InterfaceAccount<'info, TokenAccount>,
 }
 
 #[derive(Accounts)]
@@ -410,6 +432,7 @@ pub struct Config {
     pub admin: Pubkey,
     pub pauser: Pubkey,
     pub operator: Pubkey,
+    pub treasury: Pubkey,
     #[max_len(100)]
     pub minters: Vec<Pubkey>,
     #[max_len(100)]

@@ -8,6 +8,8 @@ pub enum LBTCError {
     SignaturesInvalid,
     #[msg("Mismatch between mint payload and passed account")]
     RecipientMismatch,
+    #[msg("Invalid treasury provided for redeem")]
+    InvalidTreasury,
     #[msg("Mint payload already used")]
     MintPayloadUsed,
     #[msg("Passed mint payload hash does not match computed hash")]
@@ -22,6 +24,10 @@ pub enum LBTCError {
     SignatureLengthMismatch,
     #[msg("No validator set added")]
     NoValidatorSet,
+    #[msg("Script pubkey is unsupported")]
+    UnsupportedRedeemAddress,
+    #[msg("Redeemed amount is below the BTC dust limit")]
+    AmountBelowDustLimit,
     #[msg("Not enough valid signatures")]
     NotEnoughSignatures,
     #[msg("Fee signature invalid")]
