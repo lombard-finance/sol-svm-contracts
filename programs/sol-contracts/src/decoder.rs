@@ -98,7 +98,7 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
     reader.read_exact(&mut epoch_bytes)?;
     let epoch = convert_to_u64_be(epoch_bytes)?;
 
-    // Read validators TODO
+    // Read validators
     let mut validators = vec![];
     // Read length
     let mut validators_length_bytes = [0u8; 32];
