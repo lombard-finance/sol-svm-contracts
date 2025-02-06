@@ -1,0 +1,181 @@
+use crate::{errors::LBTCError, MintFromPayload, SetValset};
+use anchor_lang::prelude::*;
+use std::io::{prelude::*, BufReader};
+
+struct MintAction {
+    to_chain: [u8; 32],
+    recipient: [u8; 32],
+    amount: u64,
+    txid: [u8; 32],
+    vout: u32,
+}
+
+struct ValsetAction {
+    epoch: u64,
+    validators: Vec<[u8; 32]>,
+    weights: Vec<u64>,
+    weight_threshold: u64,
+    height: u64,
+}
+
+pub fn decode_mint_action(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Result<MintAction> {
+    let mut reader = BufReader::new(bytes.as_slice());
+
+    // Check action bytes
+    let mut action_bytes = [0u8; 4];
+    reader.read_exact(&mut action_bytes)?;
+    let action = u32::from_be_bytes(action_bytes);
+    require!(
+        action == ctx.accounts.config.deposit_btc_action,
+        LBTCError::InvalidActionBytes
+    );
+
+    // Read to_chain
+    let mut to_chain = [0u8; 32];
+    reader.read_exact(&mut to_chain)?;
+    require!(
+        to_chain == ctx.accounts.config.chain_id,
+        LBTCError::InvalidChainID
+    );
+
+    // Read recipient
+    let mut recipient = [0u8; 32];
+    reader.read_exact(&mut recipient)?;
+
+    // Read amount
+    let mut amount_bytes = [0u8; 32];
+    reader.read_exact(&mut amount_bytes)?;
+
+    // Remove padding, as ethereum left-pads encoded uint256. Then we convert to u64.
+    // The amount is encoded as big-endian, and we assume to never exceed u64::MAX,
+    // given that the maximum value of LBTC is 2_100_000_000_000_000, and u64::MAX
+    // is defined as 18_446_744_073_709_551_615, so this should always fit.
+    // Thus, we decode the leftover bytes as a big-endian u64.
+    let amount = convert_to_u64_be(amount_bytes)?;
+
+    // Read txid
+    let mut txid = [0u8; 32];
+    reader.read_exact(&mut txid)?;
+
+    // Read vout
+    let mut vout_bytes = [0u8; 32];
+    reader.read_exact(&mut vout_bytes)?;
+    let vout = convert_to_u32_be(vout_bytes)?;
+
+    // Ensure buffer is now empty, to avoid collisions with deposits made previously.
+    let mut leftover = vec![];
+    reader.read_to_end(&mut leftover)?;
+    if leftover.len() > 0 {
+        err!(LBTCError::LeftoverData)
+    } else {
+        Ok(MintAction {
+            to_chain,
+            recipient,
+            amount,
+            txid,
+            vout,
+        })
+    }
+}
+
+pub fn decode_valset_action(ctx: Context<SetValset>, bytes: Vec<u8>) -> Result<ValsetAction> {
+    let mut reader = BufReader::new(bytes.as_slice());
+
+    // Check action bytes
+    let mut action_bytes = [0u8; 4];
+    reader.read_exact(&mut action_bytes)?;
+    let action = u32::from_be_bytes(action_bytes);
+    require!(
+        action == ctx.accounts.config.set_valset_action,
+        LBTCError::InvalidActionBytes
+    );
+
+    // Read epoch
+    let mut epoch_bytes = [0u8; 32];
+    reader.read_exact(&mut epoch_bytes)?;
+    let epoch = convert_to_u64_be(epoch_bytes)?;
+
+    // Read validators TODO
+    let mut recipient = [0u8; 32];
+    reader.read_exact(&mut recipient)?;
+
+    // Read weights TODO
+    let mut amount_bytes = [0u8; 32];
+    reader.read_exact(&mut amount_bytes)?;
+
+    // Read weight threshold
+    let mut weight_threshold_bytes = [0u8; 32];
+    reader.read_exact(&mut weight_threshold_bytes)?;
+    let weight_threshold = convert_to_u64_be(weight_threshold_bytes)?;
+
+    // Read height
+    let mut height_bytes = [0u8; 32];
+    reader.read_exact(&mut height_bytes)?;
+    let height = convert_to_u64_be(height_bytes)?;
+
+    // Ensure buffer is now empty, to avoid collisions with deposits made previously.
+    let mut leftover = vec![];
+    reader.read_to_end(&mut leftover)?;
+    if leftover.len() > 0 {
+        err!(LBTCError::LeftoverData)
+    } else {
+        Ok(ValsetAction {
+            epoch,
+            validators,
+            weights,
+            weight_threshold,
+            height,
+        })
+    }
+}
+
+// Removes left-padded bytes and interprets the value as a big endian u64.
+fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
+    let mut result = remove_padding(bytes);
+
+    require!(result.len() <= 8, LBTCError::AmountTooLarge); // TODO: change error name
+
+    // Insert bytes at the start until we hit 8 bytes in length (big-endian padding).
+    while result.len() < 8 {
+        result.insert(0, 0);
+    }
+
+    Ok(u64::from_be_bytes(
+        result
+            .try_into()
+            .map_err(|_| LBTCError::CouldNotConvertToU64)?,
+    ))
+}
+
+fn convert_to_u32_be(bytes: [u8; 32]) -> Result<u32> {
+    let mut result = remove_padding(bytes);
+
+    require!(result.len() <= 4, LBTCError::VoutTooLarge);
+
+    // Insert bytes at the start until we hit 4 bytes in length (big-endian padding).
+    while result.len() < 4 {
+        result.insert(0, 0);
+    }
+
+    Ok(u32::from_be_bytes(
+        result
+            .try_into()
+            .map_err(|_| LBTCError::CouldNotConvertToU32)?,
+    ))
+}
+
+fn remove_padding(bytes: [u8; 32]) -> Vec<u8> {
+    let mut result = vec![];
+    let mut padding_removed = false;
+    for byte in bytes {
+        if !padding_removed && byte == 0 {
+            continue;
+        } else if !padding_removed && byte != 0 {
+            padding_removed = true;
+        }
+
+        result.push(byte);
+    }
+
+    result
+}
