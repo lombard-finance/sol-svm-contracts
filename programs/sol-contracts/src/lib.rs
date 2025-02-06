@@ -3,18 +3,17 @@ use std::io::{prelude::*, BufReader};
 
 declare_id!("DG958H3tYj3QWTDPjsisb9CxS6TpdMUznYpgVg5bRd8P");
 
-const DEPOSIT_BTC_ACTION: u32 = 4075241340;
-
 #[program]
 pub mod lbtc {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let chain_id = &ctx.accounts.chain_id;
+        let deposit_btc_action = &ctx.accounts.deposit_btc_action;
         Ok(())
     }
 
-    pub fn mint_from_payload(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<()> {
+    pub fn mint_from_payload(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Result<()> {
         let mint_action = decode_mint_action(ctx, bytes)?;
         Ok(())
     }
@@ -28,16 +27,17 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = payer,
-        space = 32 + 8
+        space = 32 + 4 + 8
     )]
     pub chain_id: Account<'info, ChainID>,
+    pub deposit_btc_action: Account<'info, DepositBtcAction>,
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct LBTC<'info> {
-    #[account(mut)]
+pub struct MintFromPayload<'info> {
     pub chain_id: Account<'info, ChainID>,
+    pub deposit_btc_action: Account<'info, DepositBtcAction>,
 }
 
 #[account]
@@ -45,7 +45,12 @@ pub struct ChainID {
     id: [u8; 32],
 }
 
-struct DepositBtcAction {
+#[account]
+pub struct DepositBtcAction {
+    action: u32,
+}
+
+struct MintAction {
     to_chain: [u8; 32],
     recipient: [u8; 32],
     amount: u64,
@@ -53,7 +58,7 @@ struct DepositBtcAction {
     vout: u32,
 }
 
-fn decode_mint_action(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<DepositBtcAction> {
+fn decode_mint_action(ctx: Context<MintFromPayload>, bytes: Vec<u8>) -> Result<MintAction> {
     let mut reader = BufReader::new(bytes.as_slice());
 
     // Check action bytes
@@ -61,7 +66,7 @@ fn decode_mint_action(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<DepositBtcAc
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
     require!(
-        action == DEPOSIT_BTC_ACTION,
+        action == ctx.accounts.deposit_btc_action.action,
         LBTCError::InvalidMintActionBytes
     );
 
@@ -103,7 +108,7 @@ fn decode_mint_action(ctx: Context<LBTC>, bytes: Vec<u8>) -> Result<DepositBtcAc
     if leftover.len() > 0 {
         err!(LBTCError::LeftoverData)
     } else {
-        Ok(DepositBtcAction {
+        Ok(MintAction {
             to_chain,
             recipient,
             amount,
