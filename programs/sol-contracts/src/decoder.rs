@@ -152,7 +152,7 @@ pub fn decode_signatures(bytes: Vec<u8>) -> Result<Vec<[u8; 64]>> {
     reader.read_exact(&mut offset_bytes)?;
     let offset = convert_to_u64_be(offset_bytes)?;
 
-    // Consume unnecessary info
+    // Consume what we just read from the offset.
     let to_consume = offset - 32;
     for _ in 0..to_consume {
         let mut byte = [0u8; 1];
