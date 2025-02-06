@@ -2,20 +2,25 @@ use crate::{errors::LBTCError, Config};
 use anchor_lang::prelude::*;
 use std::io::{prelude::*, BufReader};
 
-struct MintAction {
-    to_chain: [u8; 32],
-    recipient: [u8; 32],
-    amount: u64,
-    txid: [u8; 32],
-    vout: u32,
+pub struct MintAction {
+    pub to_chain: [u8; 32],
+    pub recipient: Pubkey,
+    pub amount: u64,
+    pub txid: [u8; 32],
+    pub vout: u32,
 }
 
 struct ValsetAction {
-    epoch: u64,
-    validators: Vec<[u8; 32]>,
-    weights: Vec<u64>,
-    weight_threshold: u64,
-    height: u64,
+    pub epoch: u64,
+    pub validators: Vec<[u8; 32]>,
+    pub weights: Vec<u64>,
+    pub weight_threshold: u64,
+    pub height: u64,
+}
+
+struct FeeAction {
+    pub fee: u64,
+    pub expiry: u64,
 }
 
 pub fn decode_mint_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<MintAction> {
@@ -36,8 +41,9 @@ pub fn decode_mint_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result
     require!(to_chain == config.chain_id, LBTCError::InvalidChainID);
 
     // Read recipient
-    let mut recipient = [0u8; 32];
-    reader.read_exact(&mut recipient)?;
+    let mut recipient_bytes = [0u8; 32];
+    reader.read_exact(&mut recipient_bytes)?;
+    let recipient = Pubkey::from(recipient_bytes);
 
     // Read amount
     let mut amount_bytes = [0u8; 32];
@@ -110,7 +116,7 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
     reader.read_exact(&mut height_bytes)?;
     let height = convert_to_u64_be(height_bytes)?;
 
-    // Ensure buffer is now empty, to avoid collisions with deposits made previously.
+    // Ensure buffer is now empty, to avoid collisions with valsets set previously.
     let mut leftover = vec![];
     reader.read_to_end(&mut leftover)?;
     if leftover.len() > 0 {
@@ -123,6 +129,42 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
             weight_threshold,
             height,
         })
+    }
+}
+
+pub fn decode_signatures(bytes: Vec<u8>) -> Result<Vec<[u8; 64]>> {
+    Ok(vec![])
+}
+
+pub fn decode_fee_payload(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<FeeAction> {
+    let mut reader = BufReader::new(bytes.as_slice());
+
+    // Check action bytes
+    let mut action_bytes = [0u8; 4];
+    reader.read_exact(&mut action_bytes)?;
+    let action = u32::from_be_bytes(action_bytes);
+    require!(
+        action == config.fee_approval_action,
+        LBTCError::InvalidActionBytes
+    );
+
+    // Read fee
+    let mut fee_bytes = [0u8; 32];
+    reader.read_exact(&mut fee_bytes)?;
+    let fee = convert_to_u64_be(fee_bytes)?;
+
+    // Read expiry
+    let mut expiry_bytes = [0u8; 32];
+    reader.read_exact(&mut expiry_bytes)?;
+    let expiry = convert_to_u64_be(expiry_bytes)?;
+
+    // Ensure buffer is now empty.
+    let mut leftover = vec![];
+    reader.read_to_end(&mut leftover)?;
+    if leftover.len() > 0 {
+        err!(LBTCError::LeftoverData)
+    } else {
+        Ok(FeeAction { fee, expiry })
     }
 }
 
