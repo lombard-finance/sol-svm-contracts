@@ -133,7 +133,52 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
 }
 
 pub fn decode_signatures(bytes: Vec<u8>) -> Result<Vec<[u8; 64]>> {
-    Ok(vec![])
+    let mut signatures = vec![];
+    let mut reader = BufReader::new(bytes.as_slice());
+
+    // Decode an initial offset, which can be discarded.
+    let mut initial_offset = [0u8; 32];
+    reader.read_exact(&mut initial_offset)?;
+
+    // Read length
+    let mut length_bytes = [0u8; 32];
+    reader.read_exact(&mut length_bytes)?;
+    let length = convert_to_u64_be(length_bytes)?;
+
+    // Read offset
+    // We can chop these bytes off minus the initial 32 to immediately arrive at the first element
+    // in the array.
+    let mut offset_bytes = [0u8; 32];
+    reader.read_exact(&mut offset_bytes)?;
+    let offset = convert_to_u64_be(offset_bytes)?;
+
+    // Consume unnecessary info
+    let to_consume = offset - 32;
+    for _ in 0..to_consume {
+        let mut byte = [0u8; 1];
+        reader.read_exact(&mut byte)?;
+    }
+
+    // Now, proceed to decode signatures.
+    for _ in 0..length {
+        let mut signature_length_bytes = [0u8; 32];
+        reader.read_exact(&mut signature_length_bytes)?;
+        let signature_length = convert_to_u64_be(signature_length_bytes)?;
+        assert!(signature_length == 64);
+
+        let mut signature = [0u8; 64];
+        reader.read_exact(&mut signature)?;
+        signatures.push(signature);
+    }
+
+    // Ensure buffer is now empty, to avoid collisions with valsets set previously.
+    let mut leftover = vec![];
+    reader.read_to_end(&mut leftover)?;
+    if leftover.len() > 0 {
+        err!(LBTCError::LeftoverData)
+    } else {
+        Ok(signatures)
+    }
 }
 
 pub fn decode_fee_payload(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<FeeAction> {
