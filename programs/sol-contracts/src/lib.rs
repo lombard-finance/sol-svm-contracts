@@ -39,6 +39,8 @@ pub mod lbtc {
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
             amount,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )
     }
 
@@ -65,11 +67,15 @@ pub mod lbtc {
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             amount,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         );
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.treasury.to_account_info(),
             fee,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )
     }
 
@@ -88,6 +94,8 @@ pub mod lbtc {
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
             amount,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )
     }
 
@@ -106,6 +114,8 @@ pub mod lbtc {
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
             amount,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )
     }
 
@@ -146,12 +156,16 @@ pub mod lbtc {
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.treasury.to_account_info(),
             fee,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )?;
 
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
             amount - fee,
+            ctx.accounts.token_mint.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
         )
     }
 
@@ -311,14 +325,20 @@ fn validate_fee(
     Ok(fee)
 }
 
-fn execute_mint(token_program: AccountInfo<'_>, to: AccountInfo<'_>, amount: u64) -> Result<()> {
+fn execute_mint(
+    token_program: AccountInfo<'_>,
+    to: AccountInfo<'_>,
+    amount: u64,
+    mint: AccountInfo<'_>,
+    authority: AccountInfo<'_>,
+) -> Result<()> {
     token_interface::mint_to(
         CpiContext::new_with_signer(
             token_program,
             token_interface::MintTo {
-                mint: ctx.accounts.common.mint.to_account_info(),
+                mint,
                 to,
-                authority: ctx.accounts.common.token_authority.to_account_info(),
+                authority,
             },
             token_authority_sig,
         ),
@@ -326,14 +346,20 @@ fn execute_mint(token_program: AccountInfo<'_>, to: AccountInfo<'_>, amount: u64
     )
 }
 
-fn execute_burn(token_program: AccountInfo<'_>, from: AccountInfo<'_>, amount: u64) -> Result<()> {
+fn execute_burn(
+    token_program: AccountInfo<'_>,
+    from: AccountInfo<'_>,
+    amount: u64,
+    mint: AccountInfo<'_>,
+    authority: AccountInfo<'_>,
+) -> Result<()> {
     token_interface::burn(
         CpiContext::new_with_signer(
             token_program,
             token_interface::Burn {
-                mint: ctx.accounts.common.mint.to_account_info(),
+                mint,
                 from,
-                authority: ctx.accounts.common.token_authority.to_account_info(),
+                authority,
             },
             token_authority_sig,
         ),
@@ -366,6 +392,8 @@ pub struct MintFromPayload<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    pub token_authority: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
 }
@@ -376,6 +404,8 @@ pub struct Mint<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    pub token_authority: InterfaceAccount<'info, TokenAccount>,
 }
 
 #[derive(Accounts)]
@@ -385,6 +415,8 @@ pub struct MintWithFee<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    pub token_authority: InterfaceAccount<'info, TokenAccount>,
     pub treasury: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
@@ -395,6 +427,8 @@ pub struct Redeem<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    pub token_authority: InterfaceAccount<'info, TokenAccount>,
     pub treasury: InterfaceAccount<'info, TokenAccount>,
 }
 
