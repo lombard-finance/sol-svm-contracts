@@ -48,4 +48,8 @@ pub enum LBTCError {
     CouldNotConvertToU32,
     #[msg("Leftover data in payload")]
     LeftoverData,
+    #[msg("Validator set already set")]
+    ValidatorSetAlreadySet,
+    #[msg("Invalid epoch")]
+    InvalidEpoch,
 }

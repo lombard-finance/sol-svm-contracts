@@ -37,6 +37,8 @@ pub mod lbtc {
             mint_payload_hash,
         )?;
 
+        // TODO save payload hash
+
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
@@ -48,10 +50,10 @@ pub mod lbtc {
     }
 
     pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Result<()> {
-        if !ctx.accounts.config.withdrawals_enabled {
-            return err!(LBTCError::WithdrawalsDisabled);
-        }
-
+        require!(
+            ctx.accounts.config.withdrawals_enabled,
+            LBTCError::WithdrawalsDisabled
+        );
         require!(
             ctx.accounts.treasury.key() == ctx.accounts.config.treasury,
             LBTCError::InvalidTreasury
@@ -84,15 +86,14 @@ pub mod lbtc {
     }
 
     pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
-        if !ctx
-            .accounts
-            .config
-            .minters
-            .iter()
-            .any(|&minter| minter == ctx.accounts.payer.key())
-        {
-            return err!(LBTCError::Unauthorized);
-        }
+        require!(
+            ctx.accounts
+                .config
+                .minters
+                .iter()
+                .any(|&minter| minter == ctx.accounts.payer.key()),
+            LBTCError::Unauthorized
+        );
 
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
@@ -105,15 +106,14 @@ pub mod lbtc {
     }
 
     pub fn burn(ctx: Context<Mint>, amount: u64) -> Result<()> {
-        if !ctx
-            .accounts
-            .config
-            .minters
-            .iter()
-            .any(|&minter| minter == ctx.accounts.payer.key())
-        {
-            return err!(LBTCError::Unauthorized);
-        }
+        require!(
+            ctx.accounts
+                .config
+                .minters
+                .iter()
+                .any(|&minter| minter == ctx.accounts.payer.key()),
+            LBTCError::Unauthorized
+        );
 
         execute_burn(
             ctx.accounts.token_program.to_account_info(),
@@ -134,15 +134,14 @@ pub mod lbtc {
         fee_signature: [u8; 64],
         fee_pubkey: [u8; 64],
     ) -> Result<()> {
-        if !ctx
-            .accounts
-            .config
-            .claimers
-            .iter()
-            .any(|&claimer| claimer == ctx.accounts.payer.key())
-        {
-            return err!(LBTCError::Unauthorized);
-        }
+        require!(
+            ctx.accounts
+                .config
+                .claimers
+                .iter()
+                .any(|&claimer| claimer == ctx.accounts.payer.key()),
+            LBTCError::Unauthorized
+        );
 
         let amount = validate_mint(
             &ctx.accounts.config,
@@ -153,10 +152,10 @@ pub mod lbtc {
             mint_payload_hash,
         )?;
 
+        // TODO save payload hash
+
         let fee = validate_fee(&ctx.accounts.config, fee_payload, fee_signature, fee_pubkey)?;
-        if fee >= amount {
-            return err!(LBTCError::FeeGTEAmount);
-        }
+        require!(fee < amount, LBTCError::FeeGTEAmount);
 
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
@@ -178,7 +177,15 @@ pub mod lbtc {
 
     pub fn set_initial_valset(ctx: Context<Admin>, valset_payload: Vec<u8>) -> Result<()> {
         let valset_action = decoder::decode_valset_action(&ctx.accounts.config, &valset_payload)?;
-        // TODO
+        require!(
+            ctx.accounts.config.epoch == 0,
+            LBTCError::ValidatorSetAlreadySet
+        );
+        require!(valset_action.epoch != 0, LBTCError::InvalidEpoch);
+        ctx.accounts.config.epoch = valset_action.epoch;
+        ctx.accounts.config.validators = valset_action.validators;
+        ctx.accounts.config.weights = valset_action.weights;
+        ctx.accounts.config.weight_threshold = valset_action.weight_threshold;
         Ok(())
     }
 
