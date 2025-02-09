@@ -5,8 +5,6 @@ use anchor_lang::prelude::*;
 pub enum LBTCError {
     #[msg("Unauthorized function call")]
     Unauthorized,
-    #[msg("Signatures for payload are invalid")]
-    SignaturesInvalid,
     #[msg("Mismatch between mint payload and passed account")]
     RecipientMismatch,
     #[msg("Invalid treasury provided for redeem")]

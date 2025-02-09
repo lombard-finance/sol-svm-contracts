@@ -8,9 +8,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
 use decoder::ValsetAction;
 use errors::LBTCError;
-use solana_program::{
-    clock::Clock, hash::Hash, keccak::Hash as KeccakHash, secp256k1_recover::secp256k1_recover,
-};
+use solana_ed25519_verify::verify_signature;
+use solana_program::{clock::Clock, hash::Hash};
 
 declare_id!("DG958H3tYj3QWTDPjsisb9CxS6TpdMUznYpgVg5bRd8P");
 
@@ -134,7 +133,6 @@ pub mod lbtc {
         mint_payload_hash: [u8; 32],
         fee_payload: Vec<u8>,
         fee_signature: [u8; 64],
-        fee_pubkey: [u8; 64],
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -154,7 +152,12 @@ pub mod lbtc {
             mint_payload_hash,
         )?;
 
-        let fee = validate_fee(&ctx.accounts.config, fee_payload, fee_signature, fee_pubkey)?;
+        let fee = validate_fee(
+            &ctx.accounts.config,
+            &ctx.accounts.recipient.to_account_info(),
+            fee_payload,
+            fee_signature,
+        )?;
         require!(fee < amount, LBTCError::FeeGTEAmount);
 
         execute_mint(
@@ -338,11 +341,11 @@ fn validate_mint(
     Ok(mint_action.amount)
 }
 
-fn validate_fee(
-    config: &Account<'_, Config>,
+fn validate_fee<'info>(
+    config: &Account<'info, Config>,
+    recipient: &AccountInfo<'info>,
     fee_payload: Vec<u8>,
     fee_signature: [u8; 64],
-    fee_pubkey: [u8; 64],
 ) -> Result<u64> {
     let fee_action = decoder::decode_fee_action(&fee_payload)?;
     require!(
@@ -364,10 +367,13 @@ fn validate_fee(
     }
 
     // Check signature
-    // TODO shouldnt this be ed25519?
-    let hash = KeccakHash::new(&fee_payload).to_bytes();
-    consortium::check_signatures(1, &[fee_pubkey], &[1], 1, vec![fee_signature], hash)?;
-    Ok(fee)
+    if verify_signature(&recipient.key(), &fee_signature, &fee_payload)
+        .map_err(|_| LBTCError::InvalidFeeSignature)?
+    {
+        Ok(fee)
+    } else {
+        err!(LBTCError::InvalidFeeSignature)
+    }
 }
 
 fn validate_valset(config: &Account<'_, Config>, valset_payload: &[u8]) -> Result<ValsetAction> {

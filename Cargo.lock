@@ -833,6 +833,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "curve25519-dalek"
+version = "4.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "curve25519-dalek-derive",
+ "fiat-crypto",
+ "rustc_version",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "curve25519-dalek-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -919,7 +945,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
 dependencies = [
- "curve25519-dalek",
+ "curve25519-dalek 3.2.1",
  "ed25519",
  "rand 0.7.3",
  "serde",
@@ -969,6 +995,12 @@ name = "feature-probe"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835a3dc7d1ec9e75e2b5fb4ba75396837112d2060b03f7d43bc1897c7f7211da"
+
+[[package]]
+name = "fiat-crypto"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "fnv"
@@ -1835,6 +1867,7 @@ dependencies = [
  "anchor-spl",
  "hex",
  "solana-program",
+ "solana_ed25519_verify",
 ]
 
 [[package]]
@@ -1908,7 +1941,7 @@ dependencies = [
  "cc",
  "console_error_panic_hook",
  "console_log",
- "curve25519-dalek",
+ "curve25519-dalek 3.2.1",
  "getrandom 0.2.15",
  "itertools",
  "js-sys",
@@ -2025,7 +2058,7 @@ dependencies = [
  "bincode",
  "bytemuck",
  "byteorder",
- "curve25519-dalek",
+ "curve25519-dalek 3.2.1",
  "getrandom 0.1.16",
  "itertools",
  "lazy_static",
@@ -2041,6 +2074,21 @@ dependencies = [
  "subtle",
  "thiserror",
  "zeroize",
+]
+
+[[package]]
+name = "solana_ed25519_verify"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e62a13a870635d0ec27b43015c1cf6ff01ea84914fb1a4c725e516b8a95401f9"
+dependencies = [
+ "anyhow",
+ "arrayref",
+ "curve25519-dalek 4.1.3",
+ "getrandom 0.1.16",
+ "sha2 0.10.8",
+ "solana-program",
+ "solana-zk-token-sdk",
 ]
 
 [[package]]
