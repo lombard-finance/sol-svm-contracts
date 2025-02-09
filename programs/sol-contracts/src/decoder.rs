@@ -363,10 +363,26 @@ mod tests {
         assert_eq!(valset_action.weight_threshold, 320);
         assert_eq!(valset_action.validators.len(), 4);
         assert_eq!(valset_action.weights.len(), 4);
-        assert_eq!(valset_action.validators[0].to_vec(), hex::decode("7378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b2572").unwrap());
-        assert_eq!(valset_action.validators[1].to_vec(), hex::decode("ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd5").unwrap());
-        assert_eq!(valset_action.validators[2].to_vec(), hex::decode("ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc488299").unwrap());
-        assert_eq!(valset_action.validators[3].to_vec(), hex::decode("b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb4").unwrap());
+        assert_eq!(
+            valset_action.validators[0].to_vec(), 
+            hex::decode("7378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b2572")
+                .unwrap()
+        );
+        assert_eq!(
+            valset_action.validators[1].to_vec(), 
+            hex::decode("ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd5")
+                .unwrap()
+        );
+        assert_eq!(
+            valset_action.validators[2].to_vec(), 
+            hex::decode("ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc488299")
+                .unwrap()
+        );
+        assert_eq!(
+            valset_action.validators[3].to_vec(), 
+            hex::decode("b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb4")
+                .unwrap()
+        );
 
         for weight in valset_action.weights {
             assert_eq!(weight, 100);

@@ -364,6 +364,7 @@ fn validate_fee(
     }
 
     // Check signature
+    // TODO shouldnt this be ed25519?
     let hash = KeccakHash::new(&fee_payload).to_bytes();
     consortium::check_signatures(1, &[fee_pubkey], &[1], 1, vec![fee_signature], hash)?;
     Ok(fee)
