@@ -327,7 +327,6 @@ fn remove_padding(bytes: [u8; 32]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex;
 
     #[test]
     fn test_decode_mint_payload() {

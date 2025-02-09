@@ -204,7 +204,14 @@ pub mod lbtc {
         );
 
         let payload_hash = Hash::new(&valset_payload).to_bytes();
-        consortium::check_signatures(&ctx.accounts.config, signatures, payload_hash)?;
+        consortium::check_signatures(
+            ctx.accounts.config.epoch,
+            &ctx.accounts.config.validators,
+            &ctx.accounts.config.weights,
+            ctx.accounts.config.weight_threshold,
+            signatures,
+            payload_hash,
+        )?;
 
         ctx.accounts.config.epoch = valset_action.epoch;
         ctx.accounts.config.validators = valset_action.validators;
@@ -307,7 +314,14 @@ fn validate_mint(
     }
 
     let signatures = decoder::decode_signatures(&signatures)?;
-    consortium::check_signatures(&config, signatures, payload_hash)?;
+    consortium::check_signatures(
+        config.epoch,
+        &config.validators,
+        &config.weights,
+        config.weight_threshold,
+        signatures,
+        payload_hash,
+    )?;
 
     if used.used {
         return err!(LBTCError::MintPayloadUsed);
