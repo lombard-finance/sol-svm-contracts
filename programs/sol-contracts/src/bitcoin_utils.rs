@@ -15,13 +15,11 @@ pub enum OutputType {
     P2WSH,
 }
 
-pub fn get_dust_limit_for_output(
-    script_pubkey: Vec<u8>,
-    amount: u64,
-    dust_fee_rate: u64,
-) -> Result<u64> {
-    let output_type = get_output_type(script_pubkey)?;
-    let spend_cost = BASE_SPEND_COST + WITNESS_INPUT_SIZE + serialize_size(script_pubkey.len());
+pub fn get_dust_limit_for_output(script_pubkey: Vec<u8>, dust_fee_rate: u64) -> Result<u64> {
+    let script_pubkey_len = script_pubkey.len();
+    // Validate correct output type, but we can drop the actual result.
+    let _ = get_output_type(script_pubkey)?;
+    let spend_cost = BASE_SPEND_COST + WITNESS_INPUT_SIZE + serialize_size(script_pubkey_len);
     Ok((spend_cost * dust_fee_rate) / 1000)
 }
 
@@ -43,6 +41,7 @@ fn get_output_type(script_pubkey: Vec<u8>) -> Result<OutputType> {
                 err!(LBTCError::UnsupportedRedeemAddress)
             }
         }
+        _ => err!(LBTCError::UnsupportedRedeemAddress),
     }
 }
 

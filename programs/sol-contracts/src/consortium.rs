@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use solana_program::secp256k1_recover::secp256k1_recover;
 
 pub fn check_signatures(
-    config: Account<'_, Config>,
+    config: &Account<'_, Config>,
     signatures: Vec<[u8; 64]>,
     payload_hash: [u8; 32],
 ) -> Result<()> {

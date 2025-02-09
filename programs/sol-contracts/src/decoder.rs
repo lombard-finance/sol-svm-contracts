@@ -10,7 +10,7 @@ pub struct MintAction {
     pub vout: u32,
 }
 
-struct ValsetAction {
+pub struct ValsetAction {
     pub epoch: u64,
     pub validators: Vec<[u8; 64]>,
     pub weights: Vec<u64>,
@@ -18,13 +18,13 @@ struct ValsetAction {
     pub height: u64,
 }
 
-struct FeeAction {
+pub struct FeeAction {
     pub fee: u64,
     pub expiry: u64,
 }
 
-pub fn decode_mint_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<MintAction> {
-    let mut reader = BufReader::new(bytes.as_slice());
+pub fn decode_mint_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<MintAction> {
+    let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];
@@ -81,8 +81,8 @@ pub fn decode_mint_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result
     }
 }
 
-pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<ValsetAction> {
-    let mut reader = BufReader::new(bytes.as_slice());
+pub fn decode_valset_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<ValsetAction> {
+    let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];
@@ -177,9 +177,9 @@ pub fn decode_valset_action(config: Account<'_, Config>, bytes: Vec<u8>) -> Resu
     }
 }
 
-pub fn decode_signatures(bytes: Vec<u8>) -> Result<Vec<[u8; 64]>> {
+pub fn decode_signatures(bytes: &[u8]) -> Result<Vec<[u8; 64]>> {
     let mut signatures = vec![];
-    let mut reader = BufReader::new(bytes.as_slice());
+    let mut reader = BufReader::new(bytes);
 
     // Decode an initial offset, which can be discarded.
     let mut initial_offset = [0u8; 32];
@@ -226,8 +226,8 @@ pub fn decode_signatures(bytes: Vec<u8>) -> Result<Vec<[u8; 64]>> {
     }
 }
 
-pub fn decode_fee_payload(config: Account<'_, Config>, bytes: Vec<u8>) -> Result<FeeAction> {
-    let mut reader = BufReader::new(bytes.as_slice());
+pub fn decode_fee_payload(config: &Account<'_, Config>, bytes: &[u8]) -> Result<FeeAction> {
+    let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];

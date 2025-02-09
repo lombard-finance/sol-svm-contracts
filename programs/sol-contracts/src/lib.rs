@@ -12,11 +12,13 @@ use solana_program::{
 
 declare_id!("DG958H3tYj3QWTDPjsisb9CxS6TpdMUznYpgVg5bRd8P");
 
+pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
+
 #[program]
 pub mod lbtc {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
         Ok(())
     }
 
@@ -27,9 +29,9 @@ pub mod lbtc {
         mint_payload_hash: [u8; 32],
     ) -> Result<()> {
         let amount = validate_mint(
-            ctx.accounts.config,
-            ctx.accounts.recipient,
-            ctx.accounts.used,
+            &ctx.accounts.config,
+            &ctx.accounts.recipient,
+            &mut ctx.accounts.used,
             mint_payload,
             signatures,
             mint_payload_hash,
@@ -41,6 +43,7 @@ pub mod lbtc {
             amount,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )
     }
 
@@ -57,7 +60,6 @@ pub mod lbtc {
         let fee = ctx.accounts.config.burn_commission;
         let dust_limit = bitcoin_utils::get_dust_limit_for_output(
             script_pubkey,
-            amount,
             ctx.accounts.config.dust_fee_rate,
         )?;
         require!(amount > fee, LBTCError::FeeGTEAmount);
@@ -69,13 +71,15 @@ pub mod lbtc {
             amount,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
-        );
+            ctx.bumps.token_authority,
+        )?;
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.treasury.to_account_info(),
             fee,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )
     }
 
@@ -96,6 +100,7 @@ pub mod lbtc {
             amount,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )
     }
 
@@ -116,6 +121,7 @@ pub mod lbtc {
             amount,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )
     }
 
@@ -139,15 +145,15 @@ pub mod lbtc {
         }
 
         let amount = validate_mint(
-            ctx.accounts.config,
-            ctx.accounts.recipient,
-            ctx.accounts.used,
+            &ctx.accounts.config,
+            &ctx.accounts.recipient,
+            &mut ctx.accounts.used,
             mint_payload,
             signatures,
             mint_payload_hash,
         )?;
 
-        let fee = validate_fee(ctx.accounts.config, fee_payload, fee_signature, fee_pubkey)?;
+        let fee = validate_fee(&ctx.accounts.config, fee_payload, fee_signature, fee_pubkey)?;
         if fee >= amount {
             return err!(LBTCError::FeeGTEAmount);
         }
@@ -158,19 +164,21 @@ pub mod lbtc {
             fee,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )?;
-
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.recipient.to_account_info(),
             amount - fee,
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
+            ctx.bumps.token_authority,
         )
     }
 
     pub fn set_initial_valset(ctx: Context<Admin>, valset_payload: Vec<u8>) -> Result<()> {
-        let valset_action = decoder::decode_valset_action(ctx.accounts.config, valset_payload)?;
+        let valset_action = decoder::decode_valset_action(&ctx.accounts.config, &valset_payload)?;
+        // TODO
         Ok(())
     }
 
@@ -179,8 +187,9 @@ pub mod lbtc {
         valset_payload: Vec<u8>,
         signatures: Vec<u8>,
     ) -> Result<()> {
-        let valset_action = decoder::decode_valset_action(ctx.accounts.config, valset_payload)?;
-        let signatures = decoder::decode_signatures(signatures)?;
+        let valset_action = decoder::decode_valset_action(&ctx.accounts.config, &valset_payload)?;
+        let signatures = decoder::decode_signatures(&signatures)?;
+        // TODO
         Ok(())
     }
 
@@ -251,14 +260,14 @@ pub mod lbtc {
 }
 
 fn validate_mint(
-    config: Account<'_, Config>,
-    recipient: InterfaceAccount<'_, TokenAccount>,
-    used: Account<'_, Used>,
+    config: &Account<'_, Config>,
+    recipient: &InterfaceAccount<'_, TokenAccount>,
+    used: &mut Account<'_, Used>,
     mint_payload: Vec<u8>,
     signatures: Vec<u8>,
     mint_payload_hash: [u8; 32],
 ) -> Result<u64> {
-    let mint_action = decoder::decode_mint_action(config, mint_payload)?;
+    let mint_action = decoder::decode_mint_action(&config, &mint_payload)?;
     if mint_action.recipient != recipient.key() {
         return err!(LBTCError::RecipientMismatch);
     }
@@ -268,8 +277,8 @@ fn validate_mint(
         return err!(LBTCError::MintPayloadHashMismatch);
     }
 
-    let signatures = decoder::decode_signatures(signatures)?;
-    consortium::check_signatures(config, signatures, payload_hash)?;
+    let signatures = decoder::decode_signatures(&signatures)?;
+    consortium::check_signatures(&config, signatures, payload_hash)?;
 
     if used.used {
         return err!(LBTCError::MintPayloadUsed);
@@ -287,12 +296,12 @@ fn validate_mint(
 }
 
 fn validate_fee(
-    config: Account<'_, Config>,
+    config: &Account<'_, Config>,
     fee_payload: Vec<u8>,
     fee_signature: [u8; 64],
     fee_pubkey: [u8; 64],
 ) -> Result<u64> {
-    let fee_action = decoder::decode_fee_payload(config, fee_payload)?;
+    let fee_action = decoder::decode_fee_payload(&config, &fee_payload)?;
     // Select correct fee
     let fee = if fee_action.fee > config.mint_fee {
         config.mint_fee
@@ -325,13 +334,15 @@ fn validate_fee(
     Ok(fee)
 }
 
-fn execute_mint(
-    token_program: AccountInfo<'_>,
-    to: AccountInfo<'_>,
+fn execute_mint<'info>(
+    token_program: AccountInfo<'info>,
+    to: AccountInfo<'info>,
     amount: u64,
-    mint: AccountInfo<'_>,
-    authority: AccountInfo<'_>,
+    mint: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    token_authority_bump: u8,
 ) -> Result<()> {
+    let token_authority_sig: &[&[&[u8]]] = &[&[TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
     token_interface::mint_to(
         CpiContext::new_with_signer(
             token_program,
@@ -346,13 +357,15 @@ fn execute_mint(
     )
 }
 
-fn execute_burn(
-    token_program: AccountInfo<'_>,
-    from: AccountInfo<'_>,
+fn execute_burn<'info>(
+    token_program: AccountInfo<'info>,
+    from: AccountInfo<'info>,
     amount: u64,
-    mint: AccountInfo<'_>,
-    authority: AccountInfo<'_>,
+    mint: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    token_authority_bump: u8,
 ) -> Result<()> {
+    let token_authority_sig: &[&[&[u8]]] = &[&[TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
     token_interface::burn(
         CpiContext::new_with_signer(
             token_program,
@@ -393,6 +406,10 @@ pub struct MintFromPayload<'info> {
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        seeds = [TOKEN_AUTHORITY_SEED],
+        bump,
+    )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
@@ -404,7 +421,12 @@ pub struct Mint<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        seeds = [TOKEN_AUTHORITY_SEED],
+        bump,
+    )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
 }
 
@@ -415,7 +437,12 @@ pub struct MintWithFee<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        seeds = [TOKEN_AUTHORITY_SEED],
+        bump,
+    )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
     pub treasury: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
@@ -427,7 +454,12 @@ pub struct Redeem<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        seeds = [TOKEN_AUTHORITY_SEED],
+        bump,
+    )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
     pub treasury: InterfaceAccount<'info, TokenAccount>,
 }
