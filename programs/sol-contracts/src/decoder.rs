@@ -121,7 +121,6 @@ pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
     let mut validators_length_bytes = [0u8; 32];
     reader.read_exact(&mut validators_length_bytes)?;
     let validators_length = convert_to_u64_be(validators_length_bytes)?;
-    println!("{validators_length}");
 
     // Read offset
     // We can chop these bytes off minus the initial 32 to immediately arrive at the first element
@@ -141,7 +140,6 @@ pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
         let mut validator_length_bytes = [0u8; 32];
         reader.read_exact(&mut validator_length_bytes)?;
         let validator_length = convert_to_u64_be(validator_length_bytes)?;
-        println!("{validator_length}");
         assert!(validator_length == 65);
 
         // Read public key
@@ -362,7 +360,7 @@ mod tests {
     #[test]
     fn test_decode_signatures() {
         let signatures_payload = hex::decode("00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000405ac3b079f374485585c941449e67e4fd33217c4a5579dc61f9d7b2704a00820c29d588f2981f7a2a429cf2df97ed1ead40f37d1c4fc45257ee37592861b4957000000000000000000000000000000000000000000000000000000000000000404588a44b8309f6602515e4aa5e6868b4b8131bea1a3d7e137049113b31c2ea384a3cea2e1ce7ecdd30cf6caabd22282dc65324de0c14e857c4850c981935a0260000000000000000000000000000000000000000000000000000000000000040b31e60fd4802a7d476dc9a75b280182c718ffd8a0ddf4630b4a91b4450a2c3ca5f9f34229c2c9da7a86881fefe7f41ffcafd96b6157da2729f59c4856e2d437a").unwrap();
-        let signatures = decode_signatures(&signatures_payload).unwrap();
+        let _signatures = decode_signatures(&signatures_payload).unwrap();
     }
 
     #[test]
