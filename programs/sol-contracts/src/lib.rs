@@ -365,20 +365,7 @@ fn validate_fee(
 
     // Check signature
     let hash = KeccakHash::new(&fee_payload).to_bytes();
-    // Check first with v = 27.
-    let pubkey = match secp256k1_recover(&hash, 0, &fee_signature) {
-        Ok(pubkey) => pubkey.to_bytes(),
-        Err(_) => return err!(LBTCError::Secp256k1RecoverError),
-    };
-    if pubkey != fee_pubkey {
-        // If it fails, check with v = 28.
-        let pubkey = match secp256k1_recover(&hash, 1, &fee_signature) {
-            Ok(pubkey) => pubkey.to_bytes(),
-            Err(_) => return err!(LBTCError::Secp256k1RecoverError),
-        };
-        require!(pubkey == fee_pubkey, LBTCError::InvalidFeeSignature);
-    }
-
+    consortium::check_signatures(1, &[fee_pubkey], &[1], 1, vec![fee_signature], hash)?;
     Ok(fee)
 }
 
@@ -607,7 +594,7 @@ pub struct Config {
     // Consortium fields
     pub epoch: u64,
     #[max_len(102)]
-    pub validators: Vec<[u8; 65]>,
+    pub validators: Vec<[u8; 64]>,
     #[max_len(102)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
