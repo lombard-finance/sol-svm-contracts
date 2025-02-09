@@ -421,7 +421,6 @@ pub struct Mint<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
         seeds = [TOKEN_AUTHORITY_SEED],
@@ -437,7 +436,6 @@ pub struct MintWithFee<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
         seeds = [TOKEN_AUTHORITY_SEED],
@@ -454,7 +452,6 @@ pub struct Redeem<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
-    #[account(mut)]
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
         seeds = [TOKEN_AUTHORITY_SEED],
