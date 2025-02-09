@@ -1,7 +1,10 @@
+//! This module implements the validation of Lombard Ledger Consortium signatures.
 use crate::{errors::LBTCError, Config};
 use anchor_lang::prelude::*;
 use solana_program::secp256k1_recover::secp256k1_recover;
 
+/// Checks the given signatures against the currently set consortium, and ensures that the
+/// cumulative weight meets the set weight threshold.
 pub fn check_signatures(
     config: &Account<'_, Config>,
     signatures: Vec<[u8; 64]>,

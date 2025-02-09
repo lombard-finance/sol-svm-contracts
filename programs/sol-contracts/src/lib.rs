@@ -1,3 +1,4 @@
+//! Implements the Lombard Finance protocol on Solana.
 mod bitcoin_utils;
 mod consortium;
 mod decoder;

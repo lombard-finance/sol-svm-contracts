@@ -1,6 +1,9 @@
+//! This module implements the dust limit calculation for the supported output types in the Lombard
+//! protocol.
 use crate::errors::LBTCError;
 use anchor_lang::prelude::*;
 
+// Magic values in bitcoin script.
 const OP_0: u8 = 0x00;
 const OP_1: u8 = 0x51;
 const OP_DATA_32: u8 = 0x20;
@@ -9,12 +12,14 @@ const OP_DATA_20: u8 = 0x14;
 const BASE_SPEND_COST: u64 = 41; // 32 (txid) + 4 (vout) + 1 (scriptSig size) + 4 (nSequence) + 8 (amount)
 const WITNESS_INPUT_SIZE: u64 = 26; // floor(107 / 4), used for witness outputs (P2WPKH, P2WSH, P2TR)
 
+/// The supported output types for the Lombard protocol.
 pub enum OutputType {
     P2WPKH,
     P2TR,
     P2WSH,
 }
 
+/// Compute the dust limit for an output depending on its script pubkey type.
 pub fn get_dust_limit_for_output(script_pubkey: Vec<u8>, dust_fee_rate: u64) -> Result<u64> {
     let script_pubkey_len = script_pubkey.len();
     // Validate correct output type, but we can drop the actual result.
