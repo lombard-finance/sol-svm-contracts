@@ -1,8 +1,9 @@
-use crate::{errors::LBTCError, Config};
+use crate::errors::LBTCError;
 use anchor_lang::prelude::*;
 use std::io::{prelude::*, BufReader};
 
 pub struct MintAction {
+    pub action: u32,
     pub to_chain: [u8; 32],
     pub recipient: Pubkey,
     pub amount: u64,
@@ -11,6 +12,7 @@ pub struct MintAction {
 }
 
 pub struct ValsetAction {
+    pub action: u32,
     pub epoch: u64,
     pub validators: Vec<[u8; 64]>,
     pub weights: Vec<u64>,
@@ -19,26 +21,22 @@ pub struct ValsetAction {
 }
 
 pub struct FeeAction {
+    pub action: u32,
     pub fee: u64,
     pub expiry: u64,
 }
 
-pub fn decode_mint_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<MintAction> {
+pub fn decode_mint_action(bytes: &[u8]) -> Result<MintAction> {
     let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
-    require!(
-        action == config.deposit_btc_action,
-        LBTCError::InvalidActionBytes
-    );
 
     // Read to_chain
     let mut to_chain = [0u8; 32];
     reader.read_exact(&mut to_chain)?;
-    require!(to_chain == config.chain_id, LBTCError::InvalidChainID);
 
     // Read recipient
     let mut recipient_bytes = [0u8; 32];
@@ -72,6 +70,7 @@ pub fn decode_mint_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<
         err!(LBTCError::LeftoverData)
     } else {
         Ok(MintAction {
+            action,
             to_chain,
             recipient,
             amount,
@@ -81,17 +80,13 @@ pub fn decode_mint_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<
     }
 }
 
-pub fn decode_valset_action(config: &Account<'_, Config>, bytes: &[u8]) -> Result<ValsetAction> {
+pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
     let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
-    require!(
-        action == config.set_valset_action,
-        LBTCError::InvalidActionBytes
-    );
 
     // Read epoch
     let mut epoch_bytes = [0u8; 32];
@@ -168,6 +163,7 @@ pub fn decode_valset_action(config: &Account<'_, Config>, bytes: &[u8]) -> Resul
         err!(LBTCError::LeftoverData)
     } else {
         Ok(ValsetAction {
+            action,
             epoch,
             validators,
             weights,
@@ -226,17 +222,13 @@ pub fn decode_signatures(bytes: &[u8]) -> Result<Vec<[u8; 64]>> {
     }
 }
 
-pub fn decode_fee_payload(config: &Account<'_, Config>, bytes: &[u8]) -> Result<FeeAction> {
+pub fn decode_fee_payload(bytes: &[u8]) -> Result<FeeAction> {
     let mut reader = BufReader::new(bytes);
 
     // Check action bytes
     let mut action_bytes = [0u8; 4];
     reader.read_exact(&mut action_bytes)?;
     let action = u32::from_be_bytes(action_bytes);
-    require!(
-        action == config.fee_approval_action,
-        LBTCError::InvalidActionBytes
-    );
 
     // Read fee
     let mut fee_bytes = [0u8; 32];
@@ -254,14 +246,17 @@ pub fn decode_fee_payload(config: &Account<'_, Config>, bytes: &[u8]) -> Result<
     if leftover.len() > 0 {
         err!(LBTCError::LeftoverData)
     } else {
-        Ok(FeeAction { fee, expiry })
+        Ok(FeeAction {
+            action,
+            fee,
+            expiry,
+        })
     }
 }
 
 // Removes left-padded bytes and interprets the value as a big endian u64.
 fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
     let mut result = remove_padding(bytes);
-
     require!(result.len() <= 8, LBTCError::U64TooLarge);
 
     // Insert bytes at the start until we hit 8 bytes in length (big-endian padding).
@@ -278,7 +273,6 @@ fn convert_to_u64_be(bytes: [u8; 32]) -> Result<u64> {
 
 fn convert_to_u32_be(bytes: [u8; 32]) -> Result<u32> {
     let mut result = remove_padding(bytes);
-
     require!(result.len() <= 4, LBTCError::U32TooLarge);
 
     // Insert bytes at the start until we hit 4 bytes in length (big-endian padding).

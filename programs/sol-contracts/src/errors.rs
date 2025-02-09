@@ -22,8 +22,6 @@ pub enum LBTCError {
     FeeApprovalExpired,
     #[msg("Signatures array length mismatch with validators array")]
     SignatureLengthMismatch,
-    #[msg("No validator set added")]
-    NoValidatorSet,
     #[msg("Script pubkey is unsupported")]
     UnsupportedRedeemAddress,
     #[msg("Redeemed amount is below the BTC dust limit")]
@@ -52,4 +50,16 @@ pub enum LBTCError {
     ValidatorSetAlreadySet,
     #[msg("Invalid epoch")]
     InvalidEpoch,
+    #[msg("No validator set exists")]
+    NoValidatorSet,
+    #[msg("Invalid validator set size")]
+    InvalidValidatorSetSize,
+    #[msg("Invalid weight threshold")]
+    InvalidWeightThreshold,
+    #[msg("Mismatch between validators length and weights length")]
+    ValidatorsAndWeightsMismatch,
+    #[msg("Weight for validator is zero")]
+    ZeroWeight,
+    #[msg("Sum of weights is below the threshold")]
+    WeightsBelowThreshold,
 }

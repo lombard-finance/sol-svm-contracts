@@ -5,6 +5,7 @@ pub mod errors;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use decoder::ValsetAction;
 use errors::LBTCError;
 use solana_program::{
     clock::Clock, hash::Hash, keccak::Hash as KeccakHash, secp256k1_recover::secp256k1_recover,
@@ -12,7 +13,9 @@ use solana_program::{
 
 declare_id!("DG958H3tYj3QWTDPjsisb9CxS6TpdMUznYpgVg5bRd8P");
 
-pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
+const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
+const MIN_VALIDATOR_SET_SIZE: usize = 1;
+const MAX_VALIDATOR_SET_SIZE: usize = 102;
 
 #[program]
 pub mod lbtc {
@@ -36,8 +39,6 @@ pub mod lbtc {
             signatures,
             mint_payload_hash,
         )?;
-
-        // TODO save payload hash
 
         execute_mint(
             ctx.accounts.token_program.to_account_info(),
@@ -152,8 +153,6 @@ pub mod lbtc {
             mint_payload_hash,
         )?;
 
-        // TODO save payload hash
-
         let fee = validate_fee(&ctx.accounts.config, fee_payload, fee_signature, fee_pubkey)?;
         require!(fee < amount, LBTCError::FeeGTEAmount);
 
@@ -176,12 +175,13 @@ pub mod lbtc {
     }
 
     pub fn set_initial_valset(ctx: Context<Admin>, valset_payload: Vec<u8>) -> Result<()> {
-        let valset_action = decoder::decode_valset_action(&ctx.accounts.config, &valset_payload)?;
+        let valset_action = validate_valset(&ctx.accounts.config, &valset_payload)?;
         require!(
             ctx.accounts.config.epoch == 0,
             LBTCError::ValidatorSetAlreadySet
         );
         require!(valset_action.epoch != 0, LBTCError::InvalidEpoch);
+
         ctx.accounts.config.epoch = valset_action.epoch;
         ctx.accounts.config.validators = valset_action.validators;
         ctx.accounts.config.weights = valset_action.weights;
@@ -194,9 +194,21 @@ pub mod lbtc {
         valset_payload: Vec<u8>,
         signatures: Vec<u8>,
     ) -> Result<()> {
-        let valset_action = decoder::decode_valset_action(&ctx.accounts.config, &valset_payload)?;
+        let valset_action = validate_valset(&ctx.accounts.config, &valset_payload)?;
         let signatures = decoder::decode_signatures(&signatures)?;
-        // TODO
+        require!(ctx.accounts.config.epoch != 0, LBTCError::NoValidatorSet);
+        require!(
+            valset_action.epoch == ctx.accounts.config.epoch + 1,
+            LBTCError::InvalidEpoch
+        );
+
+        let payload_hash = Hash::new(&valset_payload).to_bytes();
+        consortium::check_signatures(&ctx.accounts.config, signatures, payload_hash)?;
+
+        ctx.accounts.config.epoch = valset_action.epoch;
+        ctx.accounts.config.validators = valset_action.validators;
+        ctx.accounts.config.weights = valset_action.weights;
+        ctx.accounts.config.weight_threshold = valset_action.weight_threshold;
         Ok(())
     }
 
@@ -274,10 +286,19 @@ fn validate_mint(
     signatures: Vec<u8>,
     mint_payload_hash: [u8; 32],
 ) -> Result<u64> {
-    let mint_action = decoder::decode_mint_action(&config, &mint_payload)?;
+    let mint_action = decoder::decode_mint_action(&mint_payload)?;
     if mint_action.recipient != recipient.key() {
         return err!(LBTCError::RecipientMismatch);
     }
+
+    require!(
+        mint_action.action == config.deposit_btc_action,
+        LBTCError::InvalidActionBytes
+    );
+    require!(
+        mint_action.to_chain == config.chain_id,
+        LBTCError::InvalidChainID
+    );
 
     let payload_hash = Hash::new(&mint_payload).to_bytes();
     if payload_hash != mint_payload_hash {
@@ -308,7 +329,12 @@ fn validate_fee(
     fee_signature: [u8; 64],
     fee_pubkey: [u8; 64],
 ) -> Result<u64> {
-    let fee_action = decoder::decode_fee_payload(&config, &fee_payload)?;
+    let fee_action = decoder::decode_fee_payload(&fee_payload)?;
+    require!(
+        fee_action.action == config.fee_approval_action,
+        LBTCError::InvalidActionBytes
+    );
+
     // Select correct fee
     let fee = if fee_action.fee > config.mint_fee {
         config.mint_fee
@@ -339,6 +365,42 @@ fn validate_fee(
     }
 
     Ok(fee)
+}
+
+fn validate_valset(config: &Account<'_, Config>, valset_payload: &[u8]) -> Result<ValsetAction> {
+    let valset_action = decoder::decode_valset_action(valset_payload)?;
+    require!(
+        valset_action.action == config.set_valset_action,
+        LBTCError::InvalidActionBytes
+    );
+    require!(
+        valset_action.validators.len() >= MIN_VALIDATOR_SET_SIZE,
+        LBTCError::InvalidValidatorSetSize
+    );
+    require!(
+        valset_action.validators.len() <= MAX_VALIDATOR_SET_SIZE,
+        LBTCError::InvalidValidatorSetSize
+    );
+    require!(
+        valset_action.weight_threshold > 0,
+        LBTCError::InvalidWeightThreshold
+    );
+    require!(
+        valset_action.validators.len() == valset_action.weights.len(),
+        LBTCError::ValidatorsAndWeightsMismatch
+    );
+
+    let mut sum = 0;
+    for weight in &valset_action.weights {
+        require!(*weight > 0, LBTCError::ZeroWeight);
+        sum += weight;
+    }
+
+    require!(
+        sum >= valset_action.weight_threshold,
+        LBTCError::WeightsBelowThreshold
+    );
+    Ok(valset_action)
 }
 
 fn execute_mint<'info>(
