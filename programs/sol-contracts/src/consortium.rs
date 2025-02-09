@@ -21,13 +21,13 @@ pub fn check_signatures(
             Err(_) => continue,
         };
 
-        if pubkey != config.validators[i] {
+        if pubkey != config.validators[i][1..] {
             // If it fails, check with v = 28.
             let pubkey = match secp256k1_recover(&payload_hash, 1, signature) {
                 Ok(pubkey) => pubkey.to_bytes(),
                 Err(_) => continue,
             };
-            if pubkey != config.validators[i] {
+            if pubkey != config.validators[i][1..] {
                 continue;
             }
         }

@@ -14,7 +14,7 @@ pub struct MintAction {
 pub struct ValsetAction {
     pub action: u32,
     pub epoch: u64,
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; 65]>,
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
     pub height: u64,
@@ -57,6 +57,13 @@ pub fn decode_mint_action(bytes: &[u8]) -> Result<MintAction> {
     // Read txid
     let mut txid = [0u8; 32];
     reader.read_exact(&mut txid)?;
+    // txid is encoded big-endian so it needs to be reversed.
+    txid = txid
+        .into_iter()
+        .rev()
+        .collect::<Vec<u8>>()
+        .try_into()
+        .expect("should be able to reverse and cast to array");
 
     // Read vout
     let mut vout_bytes = [0u8; 32];
@@ -93,12 +100,28 @@ pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
     reader.read_exact(&mut epoch_bytes)?;
     let epoch = convert_to_u64_be(epoch_bytes)?;
 
+    // Chop off two offsets that we won't need
+    let mut useless_offset = [0u8; 32];
+    reader.read_exact(&mut useless_offset)?;
+    reader.read_exact(&mut useless_offset)?;
+
+    // Read weight threshold
+    let mut weight_threshold_bytes = [0u8; 32];
+    reader.read_exact(&mut weight_threshold_bytes)?;
+    let weight_threshold = convert_to_u64_be(weight_threshold_bytes)?;
+
+    // Read height
+    let mut height_bytes = [0u8; 32];
+    reader.read_exact(&mut height_bytes)?;
+    let height = convert_to_u64_be(height_bytes)?;
+
     // Read validators
     let mut validators = vec![];
     // Read length
     let mut validators_length_bytes = [0u8; 32];
     reader.read_exact(&mut validators_length_bytes)?;
     let validators_length = convert_to_u64_be(validators_length_bytes)?;
+    println!("{validators_length}");
 
     // Read offset
     // We can chop these bytes off minus the initial 32 to immediately arrive at the first element
@@ -118,14 +141,11 @@ pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
         let mut validator_length_bytes = [0u8; 32];
         reader.read_exact(&mut validator_length_bytes)?;
         let validator_length = convert_to_u64_be(validator_length_bytes)?;
+        println!("{validator_length}");
         assert!(validator_length == 65);
 
-        // Chop off identifier byte; we don't need it for our purposes.
-        let mut identifier_byte = [0u8; 1];
-        reader.read_exact(&mut identifier_byte)?;
-
         // Read public key
-        let mut validator = [0u8; 64];
+        let mut validator = [0u8; 65];
         reader.read_exact(&mut validator)?;
         validators.push(validator);
 
@@ -145,16 +165,6 @@ pub fn decode_valset_action(bytes: &[u8]) -> Result<ValsetAction> {
         let weight = convert_to_u64_be(weight_bytes)?;
         weights.push(weight);
     }
-
-    // Read weight threshold
-    let mut weight_threshold_bytes = [0u8; 32];
-    reader.read_exact(&mut weight_threshold_bytes)?;
-    let weight_threshold = convert_to_u64_be(weight_threshold_bytes)?;
-
-    // Read height
-    let mut height_bytes = [0u8; 32];
-    reader.read_exact(&mut height_bytes)?;
-    let height = convert_to_u64_be(height_bytes)?;
 
     // Ensure buffer is now empty, to avoid collisions with valsets set previously.
     let mut leftover = vec![];
@@ -222,7 +232,7 @@ pub fn decode_signatures(bytes: &[u8]) -> Result<Vec<[u8; 64]>> {
     }
 }
 
-pub fn decode_fee_payload(bytes: &[u8]) -> Result<FeeAction> {
+pub fn decode_fee_action(bytes: &[u8]) -> Result<FeeAction> {
     let mut reader = BufReader::new(bytes);
 
     // Check action bytes
@@ -301,4 +311,66 @@ fn remove_padding(bytes: [u8; 32]) -> Vec<u8> {
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hex;
+
+    #[test]
+    fn test_decode_mint_payload() {
+        let mint_payload = hex::decode("f2e73f7c0000000000000000000000000000000000000000000000000000000000aa36a70000000000000000000000000f90793a54e809bf708bd0fbcc63d311e3bb1be100000000000000000000000000000000000000000000000000000000000059d85a7c1a028fe68c29a449a6d8c329b9bdd39d8b925ba0f8abbde9fe398430fac40000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let mint_action = decode_mint_action(&mint_payload).unwrap();
+        assert_eq!(mint_action.action, 4075241340);
+        assert_eq!(
+            mint_action.to_chain.to_vec(),
+            hex::decode("0000000000000000000000000000000000000000000000000000000000aa36a7")
+                .unwrap()
+        );
+        assert_eq!(
+            hex::encode(mint_action.recipient),
+            "0000000000000000000000000f90793a54e809bf708bd0fbcc63d311e3bb1be1"
+        );
+        assert_eq!(mint_action.amount, 23000);
+        assert_eq!(
+            hex::encode(mint_action.txid),
+            "c4fa308439fee9bdabf8a05b928b9dd3bdb929c3d8a649a4298ce68f021a7c5a"
+        );
+        assert_eq!(mint_action.vout, 0);
+    }
+
+    #[test]
+    fn test_decode_valset_payload() {
+        let valset_payload = hex::decode("4aab1d6f000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000034000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000041047378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b257200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004104ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004104ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc48829900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004104b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000064").unwrap();
+        let valset_action = decode_valset_action(&valset_payload).unwrap();
+        assert_eq!(valset_action.action, 1252728175);
+        assert_eq!(valset_action.epoch, 2);
+        assert_eq!(valset_action.weight_threshold, 320);
+        assert_eq!(valset_action.validators.len(), 4);
+        assert_eq!(valset_action.weights.len(), 4);
+        assert_eq!(valset_action.validators[0].to_vec(), hex::decode("047378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b2572").unwrap());
+        assert_eq!(valset_action.validators[1].to_vec(), hex::decode("04ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd5").unwrap());
+        assert_eq!(valset_action.validators[2].to_vec(), hex::decode("04ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc488299").unwrap());
+        assert_eq!(valset_action.validators[3].to_vec(), hex::decode("04b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb4").unwrap());
+
+        for weight in valset_action.weights {
+            assert_eq!(weight, 100);
+        }
+    }
+
+    #[test]
+    fn test_decode_signatures() {
+        let signatures_payload = hex::decode("00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000405ac3b079f374485585c941449e67e4fd33217c4a5579dc61f9d7b2704a00820c29d588f2981f7a2a429cf2df97ed1ead40f37d1c4fc45257ee37592861b4957000000000000000000000000000000000000000000000000000000000000000404588a44b8309f6602515e4aa5e6868b4b8131bea1a3d7e137049113b31c2ea384a3cea2e1ce7ecdd30cf6caabd22282dc65324de0c14e857c4850c981935a0260000000000000000000000000000000000000000000000000000000000000040b31e60fd4802a7d476dc9a75b280182c718ffd8a0ddf4630b4a91b4450a2c3ca5f9f34229c2c9da7a86881fefe7f41ffcafd96b6157da2729f59c4856e2d437a").unwrap();
+        let signatures = decode_signatures(&signatures_payload).unwrap();
+    }
+
+    #[test]
+    fn test_decode_fee_payload() {
+        let fee_payload = hex::decode("8175ca940000000000000000000000000000000000000000000000000000000005f5e0ff00000000000000000000000000000000000000000000000000000000678621c7").unwrap();
+        let fee_action = decode_fee_action(&fee_payload).unwrap();
+        assert_eq!(fee_action.action, 2171980436);
+        assert_eq!(fee_action.fee, 99999999);
+        assert_eq!(fee_action.expiry, 1736843719);
+    }
 }

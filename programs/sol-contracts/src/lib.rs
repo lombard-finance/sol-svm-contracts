@@ -329,7 +329,7 @@ fn validate_fee(
     fee_signature: [u8; 64],
     fee_pubkey: [u8; 64],
 ) -> Result<u64> {
-    let fee_action = decoder::decode_fee_payload(&fee_payload)?;
+    let fee_action = decoder::decode_fee_action(&fee_payload)?;
     require!(
         fee_action.action == config.fee_approval_action,
         LBTCError::InvalidActionBytes
@@ -592,7 +592,7 @@ pub struct Config {
     // Consortium fields
     pub epoch: u64,
     #[max_len(102)]
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; 65]>,
     #[max_len(102)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
