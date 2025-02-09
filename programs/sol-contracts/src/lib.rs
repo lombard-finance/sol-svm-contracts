@@ -367,6 +367,8 @@ fn validate_fee<'info>(
     }
 
     // Check signature
+    // Since the caller will not be the recipient, we can not use the ed25519 instruction 'hack'
+    // and unfortunately have to use this more expensive external crate.
     if verify_signature(&recipient.key(), &fee_signature, &fee_payload)
         .map_err(|_| LBTCError::InvalidFeeSignature)?
     {
