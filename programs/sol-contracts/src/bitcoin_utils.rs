@@ -85,4 +85,15 @@ mod tests {
         let dust_limit = get_dust_limit_for_output(pubkey, 3000).unwrap();
         assert_eq!(dust_limit, 330);
     }
+
+    #[test]
+    fn test_p2wsh_size() {
+        let pubkey = vec![
+            OP_0, OP_DATA_32, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
+            12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
+            12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
+        ];
+        let dust_limit = get_dust_limit_for_output(pubkey, 3000).unwrap();
+        assert_eq!(dust_limit, 330);
+    }
 }
