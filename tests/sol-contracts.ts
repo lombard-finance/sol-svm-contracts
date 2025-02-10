@@ -8,8 +8,7 @@ describe("sol-contracts", () => {
 
   const program = anchor.workspace.SolContracts as Program<SolContracts>;
 
-  it("Is initialized!", async () => {
-    // Add your test here.
+  it("is initialized", async () => {
     const tx = await program.methods.initialize().rpc();
     console.log("Your transaction signature", tx);
   });

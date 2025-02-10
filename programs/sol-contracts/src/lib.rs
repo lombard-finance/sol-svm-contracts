@@ -31,6 +31,7 @@ pub mod lbtc {
         signatures: Vec<u8>,
         mint_payload_hash: [u8; 32],
     ) -> Result<()> {
+        require!(!ctx.accounts.config.paused, LBTCError::Paused);
         let amount = validate_mint(
             &ctx.accounts.config,
             &ctx.accounts.recipient,
@@ -51,6 +52,7 @@ pub mod lbtc {
     }
 
     pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Result<()> {
+        require!(!ctx.accounts.config.paused, LBTCError::Paused);
         require!(
             ctx.accounts.config.withdrawals_enabled,
             LBTCError::WithdrawalsDisabled
@@ -87,6 +89,7 @@ pub mod lbtc {
     }
 
     pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
+        require!(!ctx.accounts.config.paused, LBTCError::Paused);
         require!(
             ctx.accounts
                 .config
@@ -107,6 +110,7 @@ pub mod lbtc {
     }
 
     pub fn burn(ctx: Context<Mint>, amount: u64) -> Result<()> {
+        require!(!ctx.accounts.config.paused, LBTCError::Paused);
         require!(
             ctx.accounts
                 .config
@@ -134,6 +138,7 @@ pub mod lbtc {
         fee_payload: Vec<u8>,
         fee_signature: [u8; 64],
     ) -> Result<()> {
+        require!(!ctx.accounts.config.paused, LBTCError::Paused);
         require!(
             ctx.accounts
                 .config
@@ -243,11 +248,6 @@ pub mod lbtc {
         Ok(())
     }
 
-    pub fn set_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-        ctx.accounts.config.pauser = pauser;
-        Ok(())
-    }
-
     pub fn set_operator(ctx: Context<Admin>, operator: Pubkey) -> Result<()> {
         ctx.accounts.config.operator = operator;
         Ok(())
@@ -285,6 +285,87 @@ pub mod lbtc {
 
     pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
         ctx.accounts.config.treasury = treasury;
+        Ok(())
+    }
+
+    pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
+        ctx.accounts.config.minters.push(minter);
+        Ok(())
+    }
+
+    pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
+        let mut found = false;
+        let mut index = 0;
+        for (i, m) in ctx.accounts.config.minters.iter().enumerate() {
+            if *m == minter {
+                found = true;
+                index = i;
+            }
+        }
+
+        if found {
+            ctx.accounts.config.minters.swap_remove(index);
+        }
+        Ok(())
+    }
+
+    pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
+        ctx.accounts.config.claimers.push(claimer);
+        Ok(())
+    }
+
+    pub fn remove_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
+        let mut found = false;
+        let mut index = 0;
+        for (i, c) in ctx.accounts.config.claimers.iter().enumerate() {
+            if *c == claimer {
+                found = true;
+                index = i;
+            }
+        }
+
+        if found {
+            ctx.accounts.config.claimers.swap_remove(index);
+        }
+        Ok(())
+    }
+
+    pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
+        ctx.accounts.config.pausers.push(pauser);
+        Ok(())
+    }
+
+    pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
+        let mut found = false;
+        let mut index = 0;
+        for (i, p) in ctx.accounts.config.pausers.iter().enumerate() {
+            if *p == pauser {
+                found = true;
+                index = i;
+            }
+        }
+
+        if found {
+            ctx.accounts.config.pausers.swap_remove(index);
+        }
+        Ok(())
+    }
+
+    pub fn pause(ctx: Context<CfgWithSigner>) -> Result<()> {
+        require!(
+            ctx.accounts
+                .config
+                .pausers
+                .iter()
+                .any(|pauser| *pauser == ctx.accounts.payer.key()),
+            LBTCError::Unauthorized
+        );
+        ctx.accounts.config.paused = true;
+        Ok(())
+    }
+
+    pub fn unpause(ctx: Context<Admin>) -> Result<()> {
+        ctx.accounts.config.paused = false;
         Ok(())
     }
 }
@@ -555,13 +636,6 @@ pub struct Admin<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Pauser<'info> {
-    #[account(address = config.pauser)]
-    pub payer: Signer<'info>,
-    pub config: Account<'info, Config>,
-}
-
-#[derive(Accounts)]
 pub struct Operator<'info> {
     #[account(address = config.operator)]
     pub payer: Signer<'info>,
@@ -573,13 +647,14 @@ pub struct Operator<'info> {
 pub struct Config {
     // Authorities
     pub admin: Pubkey,
-    pub pauser: Pubkey,
     pub operator: Pubkey,
     pub treasury: Pubkey,
     #[max_len(100)]
     pub minters: Vec<Pubkey>,
     #[max_len(100)]
     pub claimers: Vec<Pubkey>,
+    #[max_len(100)]
+    pub pausers: Vec<Pubkey>,
 
     // Decoder fields
     pub chain_id: [u8; 32],

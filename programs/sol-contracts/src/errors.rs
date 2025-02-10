@@ -61,4 +61,6 @@ pub enum LBTCError {
     ZeroWeight,
     #[msg("Sum of weights is below the threshold")]
     WeightsBelowThreshold,
+    #[msg("LBTC contract is paused")]
+    Paused,
 }
