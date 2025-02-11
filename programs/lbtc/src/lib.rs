@@ -21,7 +21,8 @@ const MAX_VALIDATOR_SET_SIZE: usize = 102;
 pub mod lbtc {
     use super::*;
 
-    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
+        ctx.accounts.config.admin = admin;
         Ok(())
     }
 
@@ -609,6 +610,7 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct Cfg<'info> {
+    #[account(mut)]
     pub config: Account<'info, Config>,
 }
 
@@ -677,6 +679,7 @@ pub struct Redeem<'info> {
 #[derive(Accounts)]
 pub struct CfgWithSigner<'info> {
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub config: Account<'info, Config>,
 }
 
@@ -684,6 +687,7 @@ pub struct CfgWithSigner<'info> {
 pub struct Admin<'info> {
     #[account(address = config.admin)]
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub config: Account<'info, Config>,
 }
 
@@ -691,6 +695,7 @@ pub struct Admin<'info> {
 pub struct Operator<'info> {
     #[account(address = config.operator)]
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub config: Account<'info, Config>,
 }
 
