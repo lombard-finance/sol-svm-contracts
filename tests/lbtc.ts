@@ -48,7 +48,7 @@ describe("sol-contracts", () => {
       })
       .signers([payer])
       .rpc();
-    console.log("Your transaction signature", tx);
+      await provider.connection.confirmTransaction(tx);
   });
 
   it("allows admin to toggle withdrawals", async () => {});
