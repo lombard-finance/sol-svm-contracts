@@ -11,7 +11,7 @@ use errors::LBTCError;
 use solana_ed25519_verify::verify_signature;
 use solana_program::{clock::Clock, hash::Hash};
 
-declare_id!("DG958H3tYj3QWTDPjsisb9CxS6TpdMUznYpgVg5bRd8P");
+declare_id!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx");
 
 const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
 const MIN_VALIDATOR_SET_SIZE: usize = 1;
@@ -598,6 +598,8 @@ pub struct Initialize<'info> {
 
     #[account(
         init,
+        seeds = [b"lbtc_config"],
+        bump,
         payer = payer,
         space = 8 + Config::INIT_SPACE
     )]
