@@ -64,7 +64,7 @@ pub mod lbtc {
 
         let fee = ctx.accounts.config.burn_commission;
         let dust_limit = bitcoin_utils::get_dust_limit_for_output(
-            script_pubkey,
+            &script_pubkey,
             ctx.accounts.config.dust_fee_rate,
         )?;
         require!(amount > fee, LBTCError::FeeGTEAmount);
@@ -85,7 +85,14 @@ pub mod lbtc {
             ctx.accounts.token_mint.to_account_info(),
             ctx.accounts.token_authority.to_account_info(),
             ctx.bumps.token_authority,
-        )
+        )?;
+
+        emit!(UnstakeRequest {
+            from: ctx.accounts.payer.key(),
+            script_pubkey,
+            amount,
+        });
+        Ok(())
     }
 
     pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
@@ -191,10 +198,16 @@ pub mod lbtc {
         );
         require!(valset_action.epoch != 0, LBTCError::InvalidEpoch);
 
-        ctx.accounts.config.epoch = valset_action.epoch;
-        ctx.accounts.config.validators = valset_action.validators;
-        ctx.accounts.config.weights = valset_action.weights;
-        ctx.accounts.config.weight_threshold = valset_action.weight_threshold;
+        ctx.accounts.config.epoch = valset_action.epoch.clone();
+        ctx.accounts.config.validators = valset_action.validators.clone();
+        ctx.accounts.config.weights = valset_action.weights.clone();
+        ctx.accounts.config.weight_threshold = valset_action.weight_threshold.clone();
+        emit!(ValidatorSetUpdated {
+            epoch: valset_action.epoch,
+            validators: valset_action.validators,
+            weights: valset_action.weights,
+            weight_threshold: valset_action.weight_threshold,
+        });
         Ok(())
     }
 
@@ -221,75 +234,100 @@ pub mod lbtc {
             payload_hash,
         )?;
 
-        ctx.accounts.config.epoch = valset_action.epoch;
-        ctx.accounts.config.validators = valset_action.validators;
-        ctx.accounts.config.weights = valset_action.weights;
-        ctx.accounts.config.weight_threshold = valset_action.weight_threshold;
+        ctx.accounts.config.epoch = valset_action.epoch.clone();
+        ctx.accounts.config.validators = valset_action.validators.clone();
+        ctx.accounts.config.weights = valset_action.weights.clone();
+        ctx.accounts.config.weight_threshold = valset_action.weight_threshold.clone();
+        emit!(ValidatorSetUpdated {
+            epoch: valset_action.epoch,
+            validators: valset_action.validators,
+            weights: valset_action.weights,
+            weight_threshold: valset_action.weight_threshold,
+        });
         Ok(())
     }
 
     pub fn toggle_withdrawals(ctx: Context<Admin>) -> Result<()> {
         ctx.accounts.config.withdrawals_enabled = !ctx.accounts.config.withdrawals_enabled;
+        emit!(WithdrawalsEnabled {
+            enabled: ctx.accounts.config.withdrawals_enabled
+        });
         Ok(())
     }
 
     pub fn toggle_bascule(ctx: Context<Admin>) -> Result<()> {
         ctx.accounts.config.bascule_enabled = !ctx.accounts.config.bascule_enabled;
+        emit!(BasculeEnabled {
+            enabled: ctx.accounts.config.bascule_enabled,
+        });
         Ok(())
     }
 
     pub fn set_mint_fee(ctx: Context<Operator>, mint_fee: u64) -> Result<()> {
         ctx.accounts.config.mint_fee = mint_fee;
+        emit!(MintFeeSet { mint_fee });
         Ok(())
     }
 
     pub fn set_burn_commission(ctx: Context<Admin>, commission: u64) -> Result<()> {
         ctx.accounts.config.burn_commission = commission;
+        emit!(BurnCommissionSet {
+            burn_commission: commission
+        });
         Ok(())
     }
 
     pub fn set_operator(ctx: Context<Admin>, operator: Pubkey) -> Result<()> {
         ctx.accounts.config.operator = operator;
+        emit!(OperatorSet { operator });
         Ok(())
     }
 
     pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
         ctx.accounts.config.bascule = bascule;
+        emit!(BasculeAddressChanged { address: bascule });
         Ok(())
     }
 
     pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
         ctx.accounts.config.dust_fee_rate = rate;
+        emit!(DustFeeRateSet { rate });
         Ok(())
     }
 
     pub fn set_chain_id(ctx: Context<Admin>, chain_id: [u8; 32]) -> Result<()> {
         ctx.accounts.config.chain_id = chain_id;
+        emit!(ChainIdSet { chain_id });
         Ok(())
     }
 
     pub fn set_deposit_btc_action(ctx: Context<Admin>, action: u32) -> Result<()> {
         ctx.accounts.config.deposit_btc_action = action;
+        emit!(DepositBtcActionSet { action });
         Ok(())
     }
 
     pub fn set_valset_action(ctx: Context<Admin>, action: u32) -> Result<()> {
         ctx.accounts.config.set_valset_action = action;
+        emit!(ValsetActionSet { action });
         Ok(())
     }
 
     pub fn set_fee_approval_action(ctx: Context<Admin>, action: u32) -> Result<()> {
         ctx.accounts.config.fee_approval_action = action;
+        emit!(FeeActionSet { action });
         Ok(())
     }
 
     pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
         ctx.accounts.config.treasury = treasury;
+        emit!(TreasuryChanged { address: treasury });
         Ok(())
     }
 
     pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
         ctx.accounts.config.minters.push(minter);
+        emit!(MinterAdded { minter });
         Ok(())
     }
 
@@ -305,12 +343,14 @@ pub mod lbtc {
 
         if found {
             ctx.accounts.config.minters.swap_remove(index);
+            emit!(MinterRemoved { minter });
         }
         Ok(())
     }
 
     pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
         ctx.accounts.config.claimers.push(claimer);
+        emit!(ClaimerAdded { claimer });
         Ok(())
     }
 
@@ -326,12 +366,14 @@ pub mod lbtc {
 
         if found {
             ctx.accounts.config.claimers.swap_remove(index);
+            emit!(ClaimerRemoved { claimer });
         }
         Ok(())
     }
 
     pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
         ctx.accounts.config.pausers.push(pauser);
+        emit!(PauserAdded { pauser });
         Ok(())
     }
 
@@ -347,6 +389,7 @@ pub mod lbtc {
 
         if found {
             ctx.accounts.config.pausers.swap_remove(index);
+            emit!(PauserRemoved { pauser });
         }
         Ok(())
     }
@@ -361,11 +404,13 @@ pub mod lbtc {
             LBTCError::Unauthorized
         );
         ctx.accounts.config.paused = true;
+        emit!(PauseEnabled { enabled: true });
         Ok(())
     }
 
     pub fn unpause(ctx: Context<Admin>) -> Result<()> {
         ctx.accounts.config.paused = false;
+        emit!(PauseEnabled { enabled: false });
         Ok(())
     }
 }
@@ -419,6 +464,11 @@ fn validate_mint(
         // This is empty for now, while Bascule is being implemented as a Solana program.
     }
 
+    emit!(MintProofConsumed {
+        recipient: mint_action.recipient,
+        payload_hash,
+        payload: mint_payload,
+    });
     Ok(mint_action.amount)
 }
 
@@ -687,4 +737,121 @@ pub struct Config {
 #[account]
 pub struct Used {
     used: bool,
+}
+
+#[event]
+pub struct WithdrawalsEnabled {
+    enabled: bool,
+}
+
+#[event]
+pub struct BasculeEnabled {
+    enabled: bool,
+}
+
+#[event]
+pub struct MintFeeSet {
+    mint_fee: u64,
+}
+
+#[event]
+pub struct BurnCommissionSet {
+    burn_commission: u64,
+}
+
+#[event]
+pub struct OperatorSet {
+    operator: Pubkey,
+}
+
+#[event]
+pub struct BasculeAddressChanged {
+    address: Pubkey,
+}
+
+#[event]
+pub struct DustFeeRateSet {
+    rate: u64,
+}
+
+#[event]
+pub struct ChainIdSet {
+    chain_id: [u8; 32],
+}
+
+#[event]
+pub struct DepositBtcActionSet {
+    action: u32,
+}
+
+#[event]
+pub struct ValsetActionSet {
+    action: u32,
+}
+
+#[event]
+pub struct FeeActionSet {
+    action: u32,
+}
+
+#[event]
+pub struct TreasuryChanged {
+    address: Pubkey,
+}
+
+#[event]
+pub struct MinterAdded {
+    minter: Pubkey,
+}
+
+#[event]
+pub struct MinterRemoved {
+    minter: Pubkey,
+}
+
+#[event]
+pub struct ClaimerAdded {
+    claimer: Pubkey,
+}
+
+#[event]
+pub struct ClaimerRemoved {
+    claimer: Pubkey,
+}
+
+#[event]
+pub struct PauserAdded {
+    pauser: Pubkey,
+}
+
+#[event]
+pub struct PauserRemoved {
+    pauser: Pubkey,
+}
+
+#[event]
+pub struct PauseEnabled {
+    enabled: bool,
+}
+
+#[event]
+pub struct ValidatorSetUpdated {
+    epoch: u64,
+    validators: Vec<[u8; 64]>,
+    weights: Vec<u64>,
+    weight_threshold: u64,
+}
+
+#[event]
+pub struct UnstakeRequest {
+    from: Pubkey,
+    script_pubkey: Vec<u8>,
+    amount: u64,
+}
+
+#[event]
+pub struct MintProofConsumed {
+    recipient: Pubkey,
+    payload_hash: [u8; 32],
+    payload: Vec<u8>,
 }

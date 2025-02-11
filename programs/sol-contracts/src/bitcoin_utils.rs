@@ -20,7 +20,7 @@ pub enum OutputType {
 }
 
 /// Compute the dust limit for an output depending on its script pubkey type.
-pub fn get_dust_limit_for_output(script_pubkey: Vec<u8>, dust_fee_rate: u64) -> Result<u64> {
+pub fn get_dust_limit_for_output(script_pubkey: &[u8], dust_fee_rate: u64) -> Result<u64> {
     let script_pubkey_len = script_pubkey.len();
     // Validate correct output type, but we can drop the actual result.
     let _ = get_output_type(script_pubkey)?;
@@ -28,7 +28,7 @@ pub fn get_dust_limit_for_output(script_pubkey: Vec<u8>, dust_fee_rate: u64) -> 
     Ok((spend_cost * dust_fee_rate) / 1000)
 }
 
-fn get_output_type(script_pubkey: Vec<u8>) -> Result<OutputType> {
+fn get_output_type(script_pubkey: &[u8]) -> Result<OutputType> {
     match script_pubkey.len() {
         22 => {
             if script_pubkey[0] == OP_0 && script_pubkey[1] == OP_DATA_20 {
@@ -76,7 +76,7 @@ mod tests {
             OP_0, OP_DATA_20, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
         ];
-        let dust_limit = get_dust_limit_for_output(pubkey, 3000).unwrap();
+        let dust_limit = get_dust_limit_for_output(&pubkey, 3000).unwrap();
         assert_eq!(dust_limit, 294);
     }
 
@@ -87,7 +87,7 @@ mod tests {
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
         ];
-        let dust_limit = get_dust_limit_for_output(pubkey, 3000).unwrap();
+        let dust_limit = get_dust_limit_for_output(&pubkey, 3000).unwrap();
         assert_eq!(dust_limit, 330);
     }
 
@@ -98,7 +98,7 @@ mod tests {
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
         ];
-        let dust_limit = get_dust_limit_for_output(pubkey, 3000).unwrap();
+        let dust_limit = get_dust_limit_for_output(&pubkey, 3000).unwrap();
         assert_eq!(dust_limit, 330);
     }
 }
