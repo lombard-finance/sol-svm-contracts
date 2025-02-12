@@ -8,7 +8,7 @@ const web3 = require("@solana/web3.js");
 const assert = require("assert");
 const expect = require("chai").expect;
 
-describe("sol-contracts", () => {
+describe("LBTC setters and getters", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
@@ -490,4 +490,12 @@ describe("sol-contracts", () => {
         .rpc();
     } catch (e) {}
   });
+});
+
+describe('Consortium actions', () => {
+
+});
+
+describe('Minting and redeeming', () => {
+
 });

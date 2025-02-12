@@ -33,3 +33,18 @@ jobs:
         with:
           args: "" # add anchor test args, e.g. "--skip-lint"
           workspace_dir: "." # path to the anchor workspace, e.g. "./my_workspace"
+
+  fmt:
+    if: github.event.pull_request.draft == false
+    name: Fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+            node-version: '18.17.0'
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Check formatting
+        run: yarn lint
