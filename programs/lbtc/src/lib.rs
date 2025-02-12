@@ -2,7 +2,7 @@
 mod bitcoin_utils;
 mod consortium;
 mod decoder;
-pub mod errors;
+pub(crate) mod errors;
 mod events;
 
 use anchor_lang::prelude::*;
