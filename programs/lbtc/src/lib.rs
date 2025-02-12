@@ -3,11 +3,13 @@ mod bitcoin_utils;
 mod consortium;
 mod decoder;
 pub mod errors;
+mod events;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
 use decoder::ValsetAction;
 use errors::LBTCError;
+use events::*;
 use solana_ed25519_verify::verify_signature;
 use solana_program::{clock::Clock, hash::Hash};
 
@@ -744,121 +746,4 @@ pub struct Config {
 #[account]
 pub struct Used {
     used: bool,
-}
-
-#[event]
-pub struct WithdrawalsEnabled {
-    enabled: bool,
-}
-
-#[event]
-pub struct BasculeEnabled {
-    enabled: bool,
-}
-
-#[event]
-pub struct MintFeeSet {
-    mint_fee: u64,
-}
-
-#[event]
-pub struct BurnCommissionSet {
-    burn_commission: u64,
-}
-
-#[event]
-pub struct OperatorSet {
-    operator: Pubkey,
-}
-
-#[event]
-pub struct BasculeAddressChanged {
-    address: Pubkey,
-}
-
-#[event]
-pub struct DustFeeRateSet {
-    rate: u64,
-}
-
-#[event]
-pub struct ChainIdSet {
-    chain_id: [u8; 32],
-}
-
-#[event]
-pub struct DepositBtcActionSet {
-    action: u32,
-}
-
-#[event]
-pub struct ValsetActionSet {
-    action: u32,
-}
-
-#[event]
-pub struct FeeActionSet {
-    action: u32,
-}
-
-#[event]
-pub struct TreasuryChanged {
-    address: Pubkey,
-}
-
-#[event]
-pub struct MinterAdded {
-    minter: Pubkey,
-}
-
-#[event]
-pub struct MinterRemoved {
-    minter: Pubkey,
-}
-
-#[event]
-pub struct ClaimerAdded {
-    claimer: Pubkey,
-}
-
-#[event]
-pub struct ClaimerRemoved {
-    claimer: Pubkey,
-}
-
-#[event]
-pub struct PauserAdded {
-    pauser: Pubkey,
-}
-
-#[event]
-pub struct PauserRemoved {
-    pauser: Pubkey,
-}
-
-#[event]
-pub struct PauseEnabled {
-    enabled: bool,
-}
-
-#[event]
-pub struct ValidatorSetUpdated {
-    epoch: u64,
-    validators: Vec<[u8; 64]>,
-    weights: Vec<u64>,
-    weight_threshold: u64,
-}
-
-#[event]
-pub struct UnstakeRequest {
-    from: Pubkey,
-    script_pubkey: Vec<u8>,
-    amount: u64,
-}
-
-#[event]
-pub struct MintProofConsumed {
-    recipient: Pubkey,
-    payload_hash: [u8; 32],
-    payload: Vec<u8>,
 }
