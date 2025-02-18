@@ -117,3 +117,31 @@ pub struct MintProofConsumed {
     pub payload_hash: [u8; 32],
     pub payload: Vec<u8>,
 }
+
+#[event]
+pub struct MintPayloadPosted {
+    pub hash: [u8; 32],
+    pub payload: Vec<u8>,
+}
+
+#[event]
+pub struct ValsetMetadataPosted {
+    pub hash: [u8; 32],
+    pub validators: Vec<[u8; 64]>,
+    pub weights: Vec<u64>,
+}
+
+#[event]
+pub struct ValsetPayloadCreated {
+    pub hash: [u8; 32],
+    pub epoch: u64,
+    pub weight_threshold: u64,
+    pub height: u64,
+    pub payload: Vec<u8>,
+}
+
+#[event]
+pub struct SignaturesAdded {
+    pub hash: [u8; 32],
+    pub signatures: Vec<([u8; 64], usize)>,
+}

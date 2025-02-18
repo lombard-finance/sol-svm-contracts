@@ -28,10 +28,51 @@ pub mod lbtc {
         Ok(())
     }
 
+    pub fn post_mint_payload(
+        ctx: Context<CfgMintPayload>,
+        mint_payload_hash: [u8; 32],
+        mint_payload: Vec<u8>,
+    ) -> Result<()> {
+        ctx.accounts.payload.payload = mint_payload.clone();
+        emit!(MintPayloadPosted {
+            hash: mint_payload_hash,
+            payload: mint_payload,
+        });
+        Ok(())
+    }
+
+    pub fn post_signatures_for_mint_payload(
+        ctx: Context<CfgMintPayload>,
+        mint_payload_hash: [u8; 32],
+        signatures: Vec<([u8; 64], usize)>,
+    ) -> Result<()> {
+        signatures.iter().for_each(|(signature, index)| {
+            if !ctx
+                .accounts
+                .payload
+                .signatures
+                .iter()
+                .any(|sig| sig == signature)
+                && consortium::check_signature(
+                    &ctx.accounts.config.validators,
+                    signature,
+                    &mint_payload_hash,
+                    *index,
+                )
+            {
+                ctx.accounts.payload.signatures.push(*signature);
+                ctx.accounts.payload.weight += ctx.accounts.config.weights[*index];
+            }
+        });
+        emit!(SignaturesAdded {
+            hash: mint_payload_hash,
+            signatures
+        });
+        Ok(())
+    }
+
     pub fn mint_from_payload(
         ctx: Context<MintFromPayload>,
-        mint_payload: Vec<u8>,
-        signatures: Vec<u8>,
         mint_payload_hash: [u8; 32],
     ) -> Result<()> {
         require!(!ctx.accounts.config.paused, LBTCError::Paused);
@@ -39,8 +80,8 @@ pub mod lbtc {
             &ctx.accounts.config,
             &ctx.accounts.recipient,
             &mut ctx.accounts.used,
-            mint_payload,
-            signatures,
+            &ctx.accounts.payload.payload,
+            ctx.accounts.payload.weight,
             mint_payload_hash,
         )?;
 
@@ -142,8 +183,6 @@ pub mod lbtc {
 
     pub fn mint_with_fee(
         ctx: Context<MintWithFee>,
-        mint_payload: Vec<u8>,
-        signatures: Vec<u8>,
         mint_payload_hash: [u8; 32],
         fee_payload: Vec<u8>,
         fee_signature: [u8; 64],
@@ -162,8 +201,8 @@ pub mod lbtc {
             &ctx.accounts.config,
             &ctx.accounts.recipient,
             &mut ctx.accounts.used,
-            mint_payload,
-            signatures,
+            &ctx.accounts.payload.payload,
+            ctx.accounts.payload.weight,
             mint_payload_hash,
         )?;
 
@@ -193,60 +232,137 @@ pub mod lbtc {
         )
     }
 
-    pub fn set_initial_valset(ctx: Context<Admin>, valset_payload: Vec<u8>) -> Result<()> {
-        let valset_action = validate_valset(&ctx.accounts.config, &valset_payload)?;
+    pub fn set_initial_valset(ctx: Context<Valset>) -> Result<()> {
+        let valset_action = validate_valset(
+            &ctx.accounts.config,
+            &ctx.accounts.metadata.validators,
+            &ctx.accounts.metadata.weights,
+            ctx.accounts.payload.weight_threshold,
+        )?;
         require!(
             ctx.accounts.config.epoch == 0,
             LBTCError::ValidatorSetAlreadySet
         );
-        require!(valset_action.epoch != 0, LBTCError::InvalidEpoch);
+        require!(ctx.accounts.payload.epoch != 0, LBTCError::InvalidEpoch);
 
-        ctx.accounts.config.epoch = valset_action.epoch.clone();
-        ctx.accounts.config.validators = valset_action.validators.clone();
-        ctx.accounts.config.weights = valset_action.weights.clone();
-        ctx.accounts.config.weight_threshold = valset_action.weight_threshold.clone();
+        ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
+        ctx.accounts.config.validators = ctx.accounts.metadata.validators;
+        ctx.accounts.config.weights = ctx.accounts.metadata.weights;
+        ctx.accounts.config.weight_threshold = ctx.accounts.payload.weight_threshold;
         emit!(ValidatorSetUpdated {
-            epoch: valset_action.epoch,
-            validators: valset_action.validators,
-            weights: valset_action.weights,
-            weight_threshold: valset_action.weight_threshold,
+            epoch: ctx.accounts.config.epoch,
+            validators: ctx.accounts.config.validators,
+            weights: ctx.accounts.config.weights,
+            weight_threshold: ctx.accounts.config.weight_threshold,
         });
         Ok(())
     }
 
-    pub fn set_next_valset(
-        ctx: Context<Cfg>,
-        valset_payload: Vec<u8>,
-        signatures: Vec<u8>,
-    ) -> Result<()> {
-        let valset_action = validate_valset(&ctx.accounts.config, &valset_payload)?;
-        let signatures = decoder::decode_signatures(&signatures)?;
+    pub fn set_next_valset(ctx: Context<Valset>) -> Result<()> {
+        let valset_action = validate_valset(
+            &ctx.accounts.config,
+            &ctx.accounts.metadata.validators,
+            &ctx.accounts.metadata.weights,
+            ctx.accounts.payload.weight_threshold,
+        )?;
+        require!(
+            ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
+            LBTCError::WeightsBelowThreshold
+        );
         require!(ctx.accounts.config.epoch != 0, LBTCError::NoValidatorSet);
         require!(
-            valset_action.epoch == ctx.accounts.config.epoch + 1,
+            ctx.accounts.payload.epoch == ctx.accounts.config.epoch + 1,
             LBTCError::InvalidEpoch
         );
+        require!(
+            ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
+            LBTCError::WeightsBelowThreshold
+        );
 
-        let payload_hash = Hash::new(&valset_payload).to_bytes();
-        consortium::check_signatures(
-            ctx.accounts.config.epoch,
-            &ctx.accounts.config.validators,
-            &ctx.accounts.config.weights,
-            ctx.accounts.config.weight_threshold,
-            signatures,
-            payload_hash,
-        )?;
-
-        ctx.accounts.config.epoch = valset_action.epoch.clone();
-        ctx.accounts.config.validators = valset_action.validators.clone();
-        ctx.accounts.config.weights = valset_action.weights.clone();
-        ctx.accounts.config.weight_threshold = valset_action.weight_threshold.clone();
+        ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
+        ctx.accounts.config.validators = ctx.accounts.metadata.validators;
+        ctx.accounts.config.weights = ctx.accounts.metadata.weights;
+        ctx.accounts.config.weight_threshold = ctx.accounts.payload.weight_threshold;
         emit!(ValidatorSetUpdated {
-            epoch: valset_action.epoch,
-            validators: valset_action.validators,
-            weights: valset_action.weights,
-            weight_threshold: valset_action.weight_threshold,
+            epoch: ctx.accounts.config.epoch,
+            validators: ctx.accounts.config.validators,
+            weights: ctx.accounts.config.weights,
+            weight_threshold: ctx.accounts.config.weight_threshold,
         });
+        Ok(())
+    }
+
+    pub fn post_metadata_for_valset_payload(
+        ctx: Context<ValsetMetadata>,
+        hash: [u8; 32],
+        validators: Vec<[u8; 64]>,
+        weights: Vec<u64>,
+    ) -> Result<()> {
+        ctx.accounts.metadata.validators.extend(validators);
+        ctx.accounts.metadata.weights.extend(weights);
+        emit!(ValsetMetadataPosted {
+            hash,
+            validators,
+            weights
+        });
+        Ok(())
+    }
+
+    pub fn create_valset_payload(
+        ctx: Context<CreateValset>,
+        hash: [u8; 32],
+        epoch: u64,
+        weight_threshold: u64,
+        height: u64,
+    ) -> Result<()> {
+        let payload = ValsetAction {
+            action: ctx.accounts.config.set_valset_action,
+            epoch,
+            validators: ctx.accounts.metadata.validators,
+            weights: ctx.accounts.metadata.weights,
+            weight_threshold,
+            height,
+        };
+        let bytes = payload.abi_encode();
+        let bytes_hash = Hash::new(&bytes).to_bytes();
+        require!(bytes_hash == hash, LBTCError::ValsetPayloadHashMismatch);
+        ctx.accounts.payload.epoch = epoch;
+        ctx.accounts.payload.weight_threshold = weight_threshold;
+        ctx.accounts.payload.payload = bytes;
+        emit!(ValsetPayloadCreated {
+            hash,
+            epoch,
+            weight_threshold,
+            height,
+            payload: bytes
+        });
+        Ok(())
+    }
+
+    pub fn post_signatures_for_valset_payload(
+        ctx: Context<AddSignature>,
+        hash: [u8; 32],
+        signatures: Vec<([u8; 64], usize)>,
+    ) -> Result<()> {
+        signatures.iter().for_each(|(signature, index)| {
+            if !ctx
+                .accounts
+                .payload
+                .signatures
+                .iter()
+                .any(|sig| sig == signature)
+                && consortium::check_signature(
+                    &ctx.accounts.config.validators,
+                    signature,
+                    &hash,
+                    *index,
+                )
+            {
+                ctx.accounts.payload.signatures.push(*signature);
+                ctx.accounts.payload.weight += ctx.accounts.config.weights[*index];
+            }
+        });
+        emit!(SignaturesAdded { hash, signatures });
         Ok(())
     }
 
@@ -422,8 +538,8 @@ fn validate_mint(
     config: &Account<'_, Config>,
     recipient: &InterfaceAccount<'_, TokenAccount>,
     used: &mut Account<'_, Used>,
-    mint_payload: Vec<u8>,
-    signatures: Vec<u8>,
+    mint_payload: &[u8],
+    weight: u64,
     mint_payload_hash: [u8; 32],
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
@@ -445,15 +561,10 @@ fn validate_mint(
         return err!(LBTCError::MintPayloadHashMismatch);
     }
 
-    let signatures = decoder::decode_signatures(&signatures)?;
-    consortium::check_signatures(
-        config.epoch,
-        &config.validators,
-        &config.weights,
-        config.weight_threshold,
-        signatures,
-        payload_hash,
-    )?;
+    require!(
+        weight >= config.weight_threshold,
+        LBTCError::WeightsBelowThreshold
+    );
 
     if used.used {
         return err!(LBTCError::MintPayloadUsed);
@@ -470,7 +581,7 @@ fn validate_mint(
     emit!(MintProofConsumed {
         recipient: mint_action.recipient,
         payload_hash,
-        payload: mint_payload,
+        payload: mint_payload.to_vec(),
     });
     Ok(mint_action.amount)
 }
@@ -512,40 +623,34 @@ fn validate_fee<'info>(
     }
 }
 
-fn validate_valset(config: &Account<'_, Config>, valset_payload: &[u8]) -> Result<ValsetAction> {
-    let valset_action = decoder::decode_valset_action(valset_payload)?;
+fn validate_valset(
+    config: &Account<'_, Config>,
+    validators: &[[u8; 64]],
+    weights: &[u64],
+    weight_threshold: u64,
+) -> Result<()> {
     require!(
-        valset_action.action == config.set_valset_action,
-        LBTCError::InvalidActionBytes
-    );
-    require!(
-        valset_action.validators.len() >= MIN_VALIDATOR_SET_SIZE,
+        validators.len() >= MIN_VALIDATOR_SET_SIZE,
         LBTCError::InvalidValidatorSetSize
     );
     require!(
-        valset_action.validators.len() <= MAX_VALIDATOR_SET_SIZE,
+        validators.len() <= MAX_VALIDATOR_SET_SIZE,
         LBTCError::InvalidValidatorSetSize
     );
+    require!(weight_threshold > 0, LBTCError::InvalidWeightThreshold);
     require!(
-        valset_action.weight_threshold > 0,
-        LBTCError::InvalidWeightThreshold
-    );
-    require!(
-        valset_action.validators.len() == valset_action.weights.len(),
+        validators.len() == weights.len(),
         LBTCError::ValidatorsAndWeightsMismatch
     );
 
     let mut sum = 0;
-    for weight in &valset_action.weights {
+    for weight in weights {
         require!(*weight > 0, LBTCError::ZeroWeight);
         sum += weight;
     }
 
-    require!(
-        sum >= valset_action.weight_threshold,
-        LBTCError::WeightsBelowThreshold
-    );
-    Ok(valset_action)
+    require!(sum >= weight_threshold, LBTCError::WeightsBelowThreshold);
+    Ok(())
 }
 
 fn execute_mint<'info>(
@@ -618,6 +723,14 @@ pub struct Cfg<'info> {
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: Vec<u8>)]
+pub struct CfgMintPayload<'info> {
+    pub config: Account<'info, Config>,
+    #[account(mut, seeds = [&mint_payload_hash], bump)]
+    pub payload: Account<'info, MintPayload>,
+}
+
+#[derive(Accounts)]
+#[instruction(mint_payload_hash: Vec<u8>)]
 pub struct MintFromPayload<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -630,6 +743,8 @@ pub struct MintFromPayload<'info> {
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
+    #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
+    pub payload: Account<'info, MintPayload>,
 }
 
 #[derive(Accounts)]
@@ -662,6 +777,8 @@ pub struct MintWithFee<'info> {
     pub treasury: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
+    #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
+    pub payload: Account<'info, MintPayload>,
 }
 
 #[derive(Accounts)]
@@ -699,6 +816,50 @@ pub struct Operator<'info> {
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
+}
+
+#[derive(Accounts)]
+#[instruction(hash: Vec<u8>)]
+pub struct AddSignature<'info> {
+    #[account(mut)]
+    pub config: Account<'info, Config>,
+    #[account(mut, seeds = [&hash], bump)]
+    pub payload: Account<'info, ValsetPayload>,
+}
+
+#[derive(Accounts)]
+#[instruction(hash: Vec<u8>)]
+pub struct Valset<'info> {
+    #[account(address = config.admin)]
+    pub payer: Signer<'info>,
+    #[account(mut)]
+    pub config: Account<'info, Config>,
+    #[account(mut, close = payer, seeds = [&hash, b"metadata"], bump)]
+    pub metadata: Account<'info, Metadata>,
+    #[account(mut, close = payer, seeds = [&hash], bump)]
+    pub payload: Account<'info, ValsetPayload>,
+}
+
+#[derive(Accounts)]
+#[instruction(hash: Vec<u8>)]
+pub struct ValsetMetadata<'info> {
+    #[account(address = config.admin)]
+    pub payer: Signer<'info>,
+    pub config: Account<'info, Config>,
+    #[account(mut, seeds = [&hash, b"metadata"], bump)]
+    pub metadata: Account<'info, Metadata>,
+}
+
+#[derive(Accounts)]
+#[instruction(hash: Vec<u8>)]
+pub struct CreateValset<'info> {
+    #[account(address = config.admin)]
+    pub payer: Signer<'info>,
+    pub config: Account<'info, Config>,
+    #[account(mut, seeds = [&hash, b"metadata"], bump)]
+    pub metadata: Account<'info, Metadata>,
+    #[account(mut, seeds = [&hash], bump)]
+    pub payload: Account<'info, ValsetPayload>,
 }
 
 #[account]
@@ -746,4 +907,26 @@ pub struct Config {
 #[account]
 pub struct Used {
     used: bool,
+}
+
+#[account]
+pub struct MintPayload {
+    payload: Vec<u8>,
+    signatures: Vec<[u8; 64]>,
+    weight: u64,
+}
+
+#[account]
+pub struct Metadata {
+    validators: Vec<[u8; 64]>,
+    weights: Vec<u64>,
+}
+
+#[account]
+pub struct ValsetPayload {
+    epoch: u64,
+    weight_threshold: u64,
+    payload: Vec<u8>,
+    signatures: Vec<[u8; 64]>,
+    weight: u64,
 }

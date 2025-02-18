@@ -21,28 +21,37 @@ pub fn check_signatures(
 
     let mut weight = 0;
     for (i, signature) in signatures.iter().enumerate() {
-        // Check first with v = 27.
-        let pubkey = match secp256k1_recover(&payload_hash, 0, signature) {
-            Ok(pubkey) => pubkey.to_bytes(),
-            Err(_) => continue,
-        };
-
-        if pubkey != validators[i] {
-            // If it fails, check with v = 28.
-            let pubkey = match secp256k1_recover(&payload_hash, 1, signature) {
-                Ok(pubkey) => pubkey.to_bytes(),
-                Err(_) => continue,
-            };
-            if pubkey != validators[i] {
-                continue;
-            }
+        if check_signature(validators, signature, &payload_hash, i) {
+            weight += weights[i];
         }
-
-        weight += weights[i];
     }
 
     require!(weight >= weight_threshold, LBTCError::NotEnoughSignatures);
     Ok(())
+}
+
+pub fn check_signature(
+    validators: &[[u8; 64]],
+    signature: &[u8; 64],
+    payload_hash: &[u8; 32],
+    index: usize,
+) -> bool {
+    // Check first with v = 27.
+    let pubkey = match secp256k1_recover(payload_hash, 0, signature) {
+        Ok(pubkey) => pubkey.to_bytes(),
+        Err(_) => return false,
+    };
+
+    if pubkey == validators[index] {
+        true
+    } else {
+        // If it fails, check with v = 28.
+        let pubkey = match secp256k1_recover(payload_hash, 1, signature) {
+            Ok(pubkey) => pubkey.to_bytes(),
+            Err(_) => return false,
+        };
+        pubkey == validators[index]
+    }
 }
 
 #[cfg(test)]

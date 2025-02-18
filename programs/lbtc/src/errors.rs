@@ -13,6 +13,8 @@ pub enum LBTCError {
     MintPayloadUsed,
     #[msg("Passed mint payload hash does not match computed hash")]
     MintPayloadHashMismatch,
+    #[msg("Passed valset payload hash does not match computed hash")]
+    ValsetPayloadHashMismatch,
     #[msg("Withdrawals are disabled")]
     WithdrawalsDisabled,
     #[msg("Fee is greater than or equal to amount")]
