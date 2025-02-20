@@ -292,6 +292,7 @@ pub mod lbtc {
         Ok(())
     }
 
+    // TODO not privileged, use key in seed
     pub fn post_metadata_for_valset_payload(
         ctx: Context<ValsetMetadata>,
         hash: [u8; 32],
@@ -821,44 +822,42 @@ pub struct Operator<'info> {
 #[derive(Accounts)]
 #[instruction(hash: Vec<u8>)]
 pub struct AddSignature<'info> {
+    pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash], bump)]
+    #[account(mut, seeds = [&hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
 }
 
 #[derive(Accounts)]
 #[instruction(hash: Vec<u8>)]
 pub struct Valset<'info> {
-    #[account(address = config.admin)]
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
-    #[account(mut, close = payer, seeds = [&hash, b"metadata"], bump)]
+    #[account(mut, close = payer, seeds = [&hash, b"metadata", &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
-    #[account(mut, close = payer, seeds = [&hash], bump)]
+    #[account(mut, close = payer, seeds = [&hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
 }
 
 #[derive(Accounts)]
 #[instruction(hash: Vec<u8>)]
 pub struct ValsetMetadata<'info> {
-    #[account(address = config.admin)]
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash, b"metadata"], bump)]
+    #[account(mut, seeds = [&hash, b"metadata", &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
 }
 
 #[derive(Accounts)]
 #[instruction(hash: Vec<u8>)]
 pub struct CreateValset<'info> {
-    #[account(address = config.admin)]
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash, b"metadata"], bump)]
+    #[account(mut, seeds = [&hash, b"metadata", &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
-    #[account(mut, seeds = [&hash], bump)]
+    #[account(mut, seeds = [&hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
 }
 
