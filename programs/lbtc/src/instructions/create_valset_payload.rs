@@ -40,8 +40,8 @@ pub fn create_valset_payload(
     let payload = ValsetAction {
         action: constants::NEW_VALSET_ACTION,
         epoch,
-        validators: ctx.accounts.metadata.validators,
-        weights: ctx.accounts.metadata.weights,
+        validators: ctx.accounts.metadata.validators.clone(),
+        weights: ctx.accounts.metadata.weights.clone(),
         weight_threshold,
         height,
     };
