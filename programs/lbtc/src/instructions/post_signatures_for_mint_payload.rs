@@ -1,5 +1,6 @@
 //! Functionality to post signatures for a posted mint payload.
 use crate::{
+    errors::LBTCError,
     events::SignaturesAdded,
     state::{Config, MintPayload},
     utils::signatures,
@@ -19,6 +20,7 @@ pub fn post_signatures_for_mint_payload(
     mint_payload_hash: [u8; 32],
     signatures: Vec<([u8; 64], usize)>,
 ) -> Result<()> {
+    require!(ctx.accounts.config.epoch != 0, LBTCError::NoValidatorSet);
     signatures.iter().for_each(|(signature, index)| {
         if !ctx
             .accounts
@@ -27,10 +29,9 @@ pub fn post_signatures_for_mint_payload(
             .iter()
             .any(|sig| sig == signature)
             && signatures::check_signature(
-                &ctx.accounts.config.validators,
+                &ctx.accounts.config.validators[*index],
                 signature,
                 &mint_payload_hash,
-                *index,
             )
         {
             ctx.accounts.payload.signatures.push(*signature);

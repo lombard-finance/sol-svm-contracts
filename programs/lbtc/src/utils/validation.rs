@@ -39,7 +39,7 @@ pub fn validate_mint(
 
     require!(
         weight >= config.weight_threshold,
-        LBTCError::WeightsBelowThreshold
+        LBTCError::NotEnoughSignatures
     );
 
     if used.used {

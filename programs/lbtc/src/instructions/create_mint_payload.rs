@@ -1,5 +1,5 @@
 //! Instruction to post a mint payload against which signatures can be posted.
-use crate::{state::MintPayload, events::MintPayloadPosted, constants::MINT_PAYLOAD_LEN};
+use crate::{constants::MINT_PAYLOAD_LEN, events::MintPayloadPosted, state::MintPayload};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -8,10 +8,10 @@ pub struct CreateMintPayload<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(
-        init, 
-        payer = payer, 
-        space = MintPayload::INIT_SPACE, 
-        seeds = [&mint_payload_hash], 
+        init,
+        payer = payer,
+        space = MintPayload::INIT_SPACE,
+        seeds = [&mint_payload_hash],
         bump,
     )]
     pub payload: Account<'info, MintPayload>,

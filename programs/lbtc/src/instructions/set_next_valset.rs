@@ -36,7 +36,7 @@ pub fn set_next_valset(ctx: Context<SetNextValset>) -> Result<()> {
     );
     require!(
         ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
-        LBTCError::WeightsBelowThreshold
+        LBTCError::NotEnoughSignatures
     );
 
     ctx.accounts.config.epoch = ctx.accounts.payload.epoch;

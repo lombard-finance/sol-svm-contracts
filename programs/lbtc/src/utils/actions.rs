@@ -140,7 +140,11 @@ mod tests {
         let action = ValsetAction {
             action: crate::constants::NEW_VALSET_ACTION,
             epoch: 2,
-            validators: vec![hex::decode("04434be45682238709526d562c099570f7e7c19f670be0a41eff5fde784b0841cea3097052b8389e6424b799eb0a4b7e7a53abb4a62016cb7a7e0ffffb3b28e270").unwrap().try_into().unwrap(), hex::decode("0420b2a4abde0bd0a5943c8740b69d244a419ece11505afc6234f62b86c4e3575075dde75b95b988853231f210b28592bc31fa749b29dda5204186aca273413431").unwrap().try_into().unwrap(), hex::decode("041e706ef040f760e5f97504a97479d34bffa6205b35dd97a0815e9bbd1ab8add0fb73442ff761f27d2aebab49b7b0f1ace226c56bd3391c4e47af8071358a93a1").unwrap().try_into().unwrap()],
+            validators: vec![
+                hex::decode("04434be45682238709526d562c099570f7e7c19f670be0a41eff5fde784b0841cea3097052b8389e6424b799eb0a4b7e7a53abb4a62016cb7a7e0ffffb3b28e270").unwrap().try_into().unwrap(),
+                hex::decode("0420b2a4abde0bd0a5943c8740b69d244a419ece11505afc6234f62b86c4e3575075dde75b95b988853231f210b28592bc31fa749b29dda5204186aca273413431").unwrap().try_into().unwrap(), 
+                hex::decode("041e706ef040f760e5f97504a97479d34bffa6205b35dd97a0815e9bbd1ab8add0fb73442ff761f27d2aebab49b7b0f1ace226c56bd3391c4e47af8071358a93a1").unwrap().try_into().unwrap()
+            ],
             weights: vec![100, 100, 100],
             weight_threshold: 240,
             height: 29,
@@ -157,7 +161,12 @@ mod tests {
         let action = ValsetAction {
             action: crate::constants::NEW_VALSET_ACTION,
             epoch: 2,
-            validators: vec![hex::decode("047378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b2572").unwrap().try_into().unwrap(), hex::decode("04ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd5").unwrap().try_into().unwrap(), hex::decode("04ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc488299").unwrap().try_into().unwrap(), hex::decode("04b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb4").unwrap().try_into().unwrap()],
+            validators: vec![
+                hex::decode("047378e006183e9a5de1537b788aa9d107c67189cd358efc1d53a5642dc0a373113e8808ff945b2e03470bc19d0d11284ed24fee8bbf2c90908b640a91931b2572").unwrap().try_into().unwrap(), 
+                hex::decode("04ca1bf4568f0e73ed993c9cb80bb46492101e0847000288d1cdc246ff67ecda20da20c13b7ed03a97c1c9667ebfdaf1933e1c731d496b62d82d0b8cb71b33bfd5").unwrap().try_into().unwrap(), 
+                hex::decode("04ac2fec1927f210f2056d13c9ba0706666f333ed821d2032672d71acf47677eae4c474ec4b2ee94be26655a1103ddbd0b97807a39b1551a8c52eeece8cc488299").unwrap().try_into().unwrap(), 
+                hex::decode("04b56056d0cb993765f963aeb530f7687c44d875bd34e38edc719bb117227901c5823dc3a6511d67dc5d081ac2a9d41219168f060f80c672c0391009cd267e4eb4").unwrap().try_into().unwrap()
+            ],
             weights: vec![100, 100, 100, 100],
             weight_threshold: 320,
             height: 6,

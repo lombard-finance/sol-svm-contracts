@@ -1,11 +1,11 @@
 //! Posts a validator set payload against which signatures can be posted, or which can be
 //! immediately used for an initial validator set.
 use crate::{
+    constants,
     errors::LBTCError,
     events::ValsetPayloadCreated,
     state::{Config, Metadata, ValsetPayload},
     utils::actions::ValsetAction,
-    constants,
 };
 use anchor_lang::prelude::*;
 use solana_program::hash::Hash;
@@ -19,10 +19,10 @@ pub struct CreateValset<'info> {
     #[account(mut, seeds = [&hash, b"metadata", &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
     #[account(
-        init, 
+        init,
         payer = payer,
         space = ValsetPayload::INIT_SPACE,
-        seeds = [&hash, &payer.key.to_bytes().to_vec()], 
+        seeds = [&hash, &payer.key.to_bytes().to_vec()],
         bump,
     )]
     pub payload: Account<'info, ValsetPayload>,
