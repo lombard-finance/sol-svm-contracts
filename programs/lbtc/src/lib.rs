@@ -1,6 +1,7 @@
 //! Implements the Lombard Finance protocol on Solana.
 mod bitcoin_utils;
 mod consortium;
+pub(crate) mod constants;
 mod decoder;
 pub(crate) mod errors;
 mod events;
@@ -246,13 +247,13 @@ pub mod lbtc {
         require!(ctx.accounts.payload.epoch != 0, LBTCError::InvalidEpoch);
 
         ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
-        ctx.accounts.config.validators = ctx.accounts.metadata.validators;
-        ctx.accounts.config.weights = ctx.accounts.metadata.weights;
+        ctx.accounts.config.validators = ctx.accounts.metadata.validators.clone();
+        ctx.accounts.config.weights = ctx.accounts.metadata.weights.clone();
         ctx.accounts.config.weight_threshold = ctx.accounts.payload.weight_threshold;
         emit!(ValidatorSetUpdated {
             epoch: ctx.accounts.config.epoch,
-            validators: ctx.accounts.config.validators,
-            weights: ctx.accounts.config.weights,
+            validators: ctx.accounts.config.validators.clone(),
+            weights: ctx.accounts.config.weights.clone(),
             weight_threshold: ctx.accounts.config.weight_threshold,
         });
         Ok(())
@@ -280,27 +281,26 @@ pub mod lbtc {
         );
 
         ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
-        ctx.accounts.config.validators = ctx.accounts.metadata.validators;
-        ctx.accounts.config.weights = ctx.accounts.metadata.weights;
+        ctx.accounts.config.validators = ctx.accounts.metadata.validators.clone();
+        ctx.accounts.config.weights = ctx.accounts.metadata.weights.clone();
         ctx.accounts.config.weight_threshold = ctx.accounts.payload.weight_threshold;
         emit!(ValidatorSetUpdated {
             epoch: ctx.accounts.config.epoch,
-            validators: ctx.accounts.config.validators,
-            weights: ctx.accounts.config.weights,
+            validators: ctx.accounts.config.validators.clone(),
+            weights: ctx.accounts.config.weights.clone(),
             weight_threshold: ctx.accounts.config.weight_threshold,
         });
         Ok(())
     }
 
-    // TODO not privileged, use key in seed
     pub fn post_metadata_for_valset_payload(
         ctx: Context<ValsetMetadata>,
         hash: [u8; 32],
         validators: Vec<[u8; 64]>,
         weights: Vec<u64>,
     ) -> Result<()> {
-        ctx.accounts.metadata.validators.extend(validators);
-        ctx.accounts.metadata.weights.extend(weights);
+        ctx.accounts.metadata.validators.extend(validators.clone());
+        ctx.accounts.metadata.weights.extend(weights.clone());
         emit!(ValsetMetadataPosted {
             hash,
             validators,
@@ -317,7 +317,7 @@ pub mod lbtc {
         height: u64,
     ) -> Result<()> {
         let payload = ValsetAction {
-            action: ctx.accounts.config.set_valset_action,
+            action: constants::NEW_VALSET_ACTION,
             epoch,
             validators: ctx.accounts.metadata.validators,
             weights: ctx.accounts.metadata.weights,
@@ -406,30 +406,6 @@ pub mod lbtc {
     pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
         ctx.accounts.config.dust_fee_rate = rate;
         emit!(DustFeeRateSet { rate });
-        Ok(())
-    }
-
-    pub fn set_chain_id(ctx: Context<Admin>, chain_id: [u8; 32]) -> Result<()> {
-        ctx.accounts.config.chain_id = chain_id;
-        emit!(ChainIdSet { chain_id });
-        Ok(())
-    }
-
-    pub fn set_deposit_btc_action(ctx: Context<Admin>, action: u32) -> Result<()> {
-        ctx.accounts.config.deposit_btc_action = action;
-        emit!(DepositBtcActionSet { action });
-        Ok(())
-    }
-
-    pub fn set_valset_action(ctx: Context<Admin>, action: u32) -> Result<()> {
-        ctx.accounts.config.set_valset_action = action;
-        emit!(ValsetActionSet { action });
-        Ok(())
-    }
-
-    pub fn set_fee_approval_action(ctx: Context<Admin>, action: u32) -> Result<()> {
-        ctx.accounts.config.fee_approval_action = action;
-        emit!(FeeActionSet { action });
         Ok(())
     }
 
@@ -543,11 +519,11 @@ fn validate_mint(
     }
 
     require!(
-        mint_action.action == config.deposit_btc_action,
+        mint_action.action == constants::DEPOSIT_BTC_ACTION,
         LBTCError::InvalidActionBytes
     );
     require!(
-        mint_action.to_chain == config.chain_id,
+        mint_action.to_chain == constants::CHAIN_ID,
         LBTCError::InvalidChainID
     );
 
@@ -589,7 +565,7 @@ fn validate_fee<'info>(
 ) -> Result<u64> {
     let fee_action = decoder::decode_fee_action(&fee_payload)?;
     require!(
-        fee_action.action == config.fee_approval_action,
+        fee_action.action == constants::FEE_APPROVAL_ACTION,
         LBTCError::InvalidActionBytes
     );
 
@@ -874,12 +850,6 @@ pub struct Config {
     pub claimers: Vec<Pubkey>,
     #[max_len(10)]
     pub pausers: Vec<Pubkey>,
-
-    // Decoder fields
-    pub chain_id: [u8; 32],
-    pub deposit_btc_action: u32,
-    pub set_valset_action: u32,
-    pub fee_approval_action: u32,
 
     // Mint/redeem fields
     pub burn_commission: u64,

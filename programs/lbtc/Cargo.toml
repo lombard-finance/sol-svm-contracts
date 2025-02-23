@@ -10,6 +10,9 @@ name = "lbtc"
 
 [features]
 default = []
+mainnet = []
+testnet = []
+devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
