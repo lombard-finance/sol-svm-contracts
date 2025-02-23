@@ -4,7 +4,7 @@ use crate::{
     errors::LBTCError,
     events::ValsetPayloadCreated,
     state::{Config, Metadata, ValsetPayload},
-    utils::decoder::ValsetAction,
+    utils::actions::ValsetAction,
     constants,
 };
 use anchor_lang::prelude::*;

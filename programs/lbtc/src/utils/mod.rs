@@ -1,3 +1,4 @@
+pub(crate) mod actions;
 pub(crate) mod bitcoin_utils;
 pub(crate) mod decoder;
 pub(crate) mod signatures;
@@ -5,7 +6,7 @@ pub(crate) mod validation;
 
 use crate::constants;
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface;
 
 pub fn execute_mint<'info>(
     token_program: AccountInfo<'info>,

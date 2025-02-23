@@ -18,7 +18,7 @@ pub struct ValsetMetadata<'info> {
 pub fn post_metadata_for_valset_payload(
     ctx: Context<ValsetMetadata>,
     hash: [u8; 32],
-    validators: Vec<[u8; 64]>,
+    validators: Vec<[u8; 65]>,
     weights: Vec<u64>,
 ) -> Result<()> {
     ctx.accounts.metadata.validators.extend(validators.clone());

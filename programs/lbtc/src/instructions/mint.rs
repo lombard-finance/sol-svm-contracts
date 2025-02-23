@@ -1,7 +1,7 @@
 //! Minting and burning instructions for privileged users.
 use crate::{errors::LBTCError, state::Config, utils};
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 pub struct Mint<'info> {

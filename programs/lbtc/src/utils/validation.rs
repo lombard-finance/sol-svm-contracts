@@ -6,7 +6,7 @@ use crate::{
     state::{Config, Used},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
 use solana_program::hash::Hash;
 
@@ -110,7 +110,7 @@ pub fn validate_fee<'info>(
 }
 
 pub fn validate_valset(
-    validators: &[[u8; 64]],
+    validators: &[[u8; 65]],
     weights: &[u64],
     weight_threshold: u64,
 ) -> Result<()> {

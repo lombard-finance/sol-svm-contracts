@@ -6,7 +6,7 @@ use crate::{
     utils::{self, validation},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: Vec<u8>)]

@@ -30,7 +30,7 @@ pub struct Config {
     // Consortium fields
     pub epoch: u64,
     #[max_len(102)]
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; 65]>,
     #[max_len(102)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
@@ -52,7 +52,7 @@ pub struct MintPayload {
 
 #[account]
 pub struct Metadata {
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; 65]>,
     pub weights: Vec<u64>,
 }
 

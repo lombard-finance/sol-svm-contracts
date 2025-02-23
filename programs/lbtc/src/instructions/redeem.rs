@@ -6,7 +6,7 @@ use crate::{
     utils::{self, bitcoin_utils},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 pub struct Redeem<'info> {
