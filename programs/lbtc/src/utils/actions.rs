@@ -36,7 +36,7 @@ impl ValsetAction {
     pub fn abi_encode(&self) -> Vec<u8> {
         let mut buffer = vec![];
 
-        // First, simply encode action bytes.
+        // First, simply encode action bytes as if it were the function selector.
         buffer.extend(self.action.to_be_bytes());
 
         // Encode epoch. We encode all following values into 32-byte slots as per the EVM ABI
@@ -57,7 +57,7 @@ impl ValsetAction {
         // For the weights, some extra calculation is needed.
         // It'll be 3 slots + validators length slot + offset slot for each validator + 4 slots per
         // validator public key + zero slot + slot for weights data part.
-        let weights_offset = 96 + 32 + 5 * 32 * self.validators.len() + 64;
+        let weights_offset = 3 * 32 + 32 + 5 * 32 * self.validators.len() + 2 * 32;
         let weights_bytes = weights_offset.to_be_bytes();
         let mut weights_slot = vec![0u8; 32 - weights_bytes.len()];
         weights_slot.extend(weights_bytes);
@@ -85,7 +85,7 @@ impl ValsetAction {
         // Now, we encode offsets for each validator, since they are `bytes` and treated as dynamic
         // elements. We will have `validators.len()` offsets, so the first offset will be 32 *
         // validators.len(). Each thereafter is 128 bytes further along, 32 bytes for the length
-        // slot, and 96 bytes (3 slots to encode each public key).
+        // slot, and 96 bytes to encode each public key.
         let mut offset = 32 * self.validators.len();
         self.validators.iter().for_each(|_| {
             let offset_bytes = offset.to_be_bytes();
@@ -97,7 +97,7 @@ impl ValsetAction {
         });
 
         // Now we encode the validator public keys. Each public key is prefixed by a length slot,
-        // and then the left-padded bytes of the public key.
+        // and then the bytes of the public key followed by right-padding up to mod 32.
         self.validators.iter().for_each(|validator| {
             let length_bytes = 65u64.to_be_bytes();
             let mut length_slot = vec![0u8; 32 - length_bytes.len()];
