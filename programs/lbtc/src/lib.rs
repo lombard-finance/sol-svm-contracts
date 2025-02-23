@@ -403,12 +403,6 @@ pub mod lbtc {
         Ok(())
     }
 
-    pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
-        ctx.accounts.config.bascule = bascule;
-        emit!(BasculeAddressChanged { address: bascule });
-        Ok(())
-    }
-
     pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
         ctx.accounts.config.dust_fee_rate = rate;
         emit!(DustFeeRateSet { rate });
@@ -746,6 +740,9 @@ pub struct MintFromPayload<'info> {
     pub used: Account<'info, Used>,
     #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
+    /// CHECK: This can be left empty in case of bascule being disabled, so we forego the check
+    /// here.
+    pub bascule: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -780,6 +777,9 @@ pub struct MintWithFee<'info> {
     pub used: Account<'info, Used>,
     #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
+    /// CHECK: This can be left empty in case of bascule being disabled, so we forego the check
+    /// here.
+    pub bascule: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -886,7 +886,6 @@ pub struct Config {
     pub withdrawals_enabled: bool,
     pub dust_fee_rate: u64,
     pub bascule_enabled: bool,
-    pub bascule: Pubkey,
 
     // Global pause
     pub paused: bool,
