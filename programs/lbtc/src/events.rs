@@ -1,4 +1,5 @@
 //! Defines all events for the Lombard Finance protocol.
+use crate::constants::MINT_PAYLOAD_LEN;
 use anchor_lang::prelude::*;
 
 #[event]
@@ -121,7 +122,7 @@ pub struct MintProofConsumed {
 #[event]
 pub struct MintPayloadPosted {
     pub hash: [u8; 32],
-    pub payload: Vec<u8>,
+    pub payload: [u8; MINT_PAYLOAD_LEN],
 }
 
 #[event]
@@ -137,7 +138,6 @@ pub struct ValsetPayloadCreated {
     pub epoch: u64,
     pub weight_threshold: u64,
     pub height: u64,
-    pub payload: Vec<u8>,
 }
 
 #[event]

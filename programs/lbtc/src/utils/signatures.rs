@@ -57,7 +57,7 @@ pub fn check_signature(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decoder::decode_signatures;
+    use crate::utils::decoder::decode_signatures;
 
     #[test]
     fn test_valid_signatures() {
