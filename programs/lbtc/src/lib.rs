@@ -5,6 +5,7 @@ pub(crate) mod constants;
 mod decoder;
 pub(crate) mod errors;
 mod events;
+pub mod instructions;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
@@ -15,10 +16,6 @@ use solana_ed25519_verify::verify_signature;
 use solana_program::{clock::Clock, hash::Hash};
 
 declare_id!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx");
-
-const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
-const MIN_VALIDATOR_SET_SIZE: usize = 1;
-const MAX_VALIDATOR_SET_SIZE: usize = 102;
 
 #[program]
 pub mod lbtc {
@@ -605,11 +602,11 @@ fn validate_fee<'info>(
 
 fn validate_valset(validators: &[[u8; 64]], weights: &[u64], weight_threshold: u64) -> Result<()> {
     require!(
-        validators.len() >= MIN_VALIDATOR_SET_SIZE,
+        validators.len() >= constants::MIN_VALIDATOR_SET_SIZE,
         LBTCError::InvalidValidatorSetSize
     );
     require!(
-        validators.len() <= MAX_VALIDATOR_SET_SIZE,
+        validators.len() <= constants::MAX_VALIDATOR_SET_SIZE,
         LBTCError::InvalidValidatorSetSize
     );
     require!(weight_threshold > 0, LBTCError::InvalidWeightThreshold);
@@ -636,7 +633,8 @@ fn execute_mint<'info>(
     authority: AccountInfo<'info>,
     token_authority_bump: u8,
 ) -> Result<()> {
-    let token_authority_sig: &[&[&[u8]]] = &[&[TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
+    let token_authority_sig: &[&[&[u8]]] =
+        &[&[constants::TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
     token_interface::mint_to(
         CpiContext::new_with_signer(
             token_program,
@@ -659,7 +657,8 @@ fn execute_burn<'info>(
     authority: AccountInfo<'info>,
     token_authority_bump: u8,
 ) -> Result<()> {
-    let token_authority_sig: &[&[&[u8]]] = &[&[TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
+    let token_authority_sig: &[&[&[u8]]] =
+        &[&[constants::TOKEN_AUTHORITY_SEED, &[token_authority_bump]]];
     token_interface::burn(
         CpiContext::new_with_signer(
             token_program,
@@ -712,7 +711,7 @@ pub struct MintFromPayload<'info> {
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        seeds = [TOKEN_AUTHORITY_SEED],
+        seeds = [constants::TOKEN_AUTHORITY_SEED],
         bump,
     )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
@@ -733,7 +732,7 @@ pub struct Mint<'info> {
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        seeds = [TOKEN_AUTHORITY_SEED],
+        seeds = [constants::TOKEN_AUTHORITY_SEED],
         bump,
     )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
@@ -748,7 +747,7 @@ pub struct MintWithFee<'info> {
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        seeds = [TOKEN_AUTHORITY_SEED],
+        seeds = [constants::TOKEN_AUTHORITY_SEED],
         bump,
     )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,
@@ -769,7 +768,7 @@ pub struct Redeem<'info> {
     pub token_program: Interface<'info, TokenInterface>,
     pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        seeds = [TOKEN_AUTHORITY_SEED],
+        seeds = [constants::TOKEN_AUTHORITY_SEED],
         bump,
     )]
     pub token_authority: InterfaceAccount<'info, TokenAccount>,

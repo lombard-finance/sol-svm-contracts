@@ -13,3 +13,6 @@ pub const CHAIN_ID: [u8; 32] = [
 pub const DEPOSIT_BTC_ACTION: u32 = 0xf2e73f7c;
 pub const FEE_APPROVAL_ACTION: u32 = 0x8175ca94;
 pub const NEW_VALSET_ACTION: u32 = 0x4aab1d6f;
+pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
+pub const MIN_VALIDATOR_SET_SIZE: usize = 1;
+pub const MAX_VALIDATOR_SET_SIZE: usize = 102;
