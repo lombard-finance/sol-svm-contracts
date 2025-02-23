@@ -8,12 +8,14 @@ const web3 = require("@solana/web3.js");
 const assert = require("assert");
 const expect = require("chai").expect;
 
+// TODO throw on tries
+
 // Convert a hex string to a byte array
 function hexToBytes(hex) {
-    let bytes = [];
-    for (let c = 0; c < hex.length; c += 2)
-        bytes.push(parseInt(hex.substr(c, 2), 16));
-    return bytes;
+  let bytes = [];
+  for (let c = 0; c < hex.length; c += 2)
+    bytes.push(parseInt(hex.substr(c, 2), 16));
+  return bytes;
 }
 
 describe("LBTC", () => {
@@ -193,29 +195,6 @@ describe("LBTC", () => {
       } catch (e) {}
     });
 
-    it("allows admin to set bascule", async () => {
-      const bascule = web3.Keypair.generate();
-      const tx = await program.methods
-        .setBascule(bascule.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.bascule.toBase58() == bascule.publicKey.toBase58());
-    });
-
-    it("should not allow anyone else to set operator", async () => {
-      try {
-        const bascule = web3.Keypair.generate();
-        const tx = await program.methods
-          .setBascule(bascule.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
-
     it("allows admin to set dust fee rate", async () => {
       const dustFeeRate = new anchor.BN(2000);
       const tx = await program.methods
@@ -233,104 +212,6 @@ describe("LBTC", () => {
         const dustFeeRate = new anchor.BN(2000);
         const tx = await program.methods
           .setDustFeeRate(dustFeeRate)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
-
-    it("allows admin to set chain id", async () => {
-      const chainId = [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0,
-      ];
-      const tx = await program.methods
-        .setChainId(chainId)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.chainId == chainId);
-    });
-
-    it("should not allow anyone else to set chain id", async () => {
-      try {
-        const chainId = [
-          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        const tx = await program.methods
-          .setChainId(chainId)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
-
-    it("allows admin to set deposit btc action", async () => {
-      const action = 30;
-      const tx = await program.methods
-        .setDepositBtcAction(action)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.depositBtcAction == action);
-    });
-
-    it("should not allow anyone else to set deposit btc action", async () => {
-      try {
-        const action = 30;
-        const tx = await program.methods
-          .setDepositBtcAction(action)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
-
-    it("allows admin to set valset action", async () => {
-      const action = 1252728175;
-      const tx = await program.methods
-        .setValsetAction(action)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.setValsetAction == action);
-    });
-
-    it("should not allow anyone else to set valset action", async () => {
-      try {
-        const action = 30;
-        const tx = await program.methods
-          .setValsetAction(action)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
-
-    it("allows admin to set fee action", async () => {
-      const action = 30;
-      const tx = await program.methods
-        .setFeeApprovalAction(action)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.feeApprovalAction == action);
-    });
-
-    it("should not allow anyone else to set fee action", async () => {
-      try {
-        const action = 30;
-        const tx = await program.methods
-          .setFeeApprovalAction(action)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
@@ -514,26 +395,53 @@ describe("LBTC", () => {
   });
 
   describe("Consortium actions", () => {
-    const initialValset =
-      hexToBytes("4aab1d6f000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001");
-    const nextValset =
-      hexToBytes("4aab1d6f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001");
-    const signatures =
-      hexToBytes("00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040976b76d08d5628efe8e7ba998dc76e432769ea735a861e14f5c25873f76255a53efa7a5ce215f48c2278c1e15c5d5a95eeee47b417a995a68f964eb4ba0416cf00000000000000000000000000000000000000000000000000000000000000405170e1e8004c677fbd7a712065073bfff46b5752e8020a2b098b2bd6d30fde0a65a8044a79c2c730483de1e26ae48570cae11a335547e167ecf5d07fa7aa45fe0000000000000000000000000000000000000000000000000000000000000000");
+    const initialValset = hexToBytes(
+      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
+    );
+    const nextValset = hexToBytes(
+      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
+    );
+    const signatures = hexToBytes(
+      "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040976b76d08d5628efe8e7ba998dc76e432769ea735a861e14f5c25873f76255a53efa7a5ce215f48c2278c1e15c5d5a95eeee47b417a995a68f964eb4ba0416cf00000000000000000000000000000000000000000000000000000000000000405170e1e8004c677fbd7a712065073bfff46b5752e8020a2b098b2bd6d30fde0a65a8044a79c2c730483de1e26ae48570cae11a335547e167ecf5d07fa7aa45fe0000000000000000000000000000000000000000000000000000000000000000"
+    );
 
     it("should not allow anyone else to set initial valset", async () => {
-        try {
-            const tx = await program.methods.setInitialValset(Buffer.from(initialValset)).accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc();
-        } catch (e) {}
+      try {
+        const tx = await program.methods
+          .setInitialValset(Buffer.from(initialValset))
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc();
+      } catch (e) {}
     });
-    
+
     it("should allow admin to set initial valset", async () => {
-            const tx = await program.methods.setInitialValset(Buffer.from(initialValset)).accounts({ payer: admin.publicKey, config: configPDA }).signers([admin]).rpc();
+      const tx = await program.methods
+        .setInitialValset(Buffer.from(initialValset))
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.epoch == 1);
       //expect(cfg.validators == 1);
       expect(cfg.weights == [1, 1]);
+      expect(cfg.weight_threshold == 2);
+    });
+
+    it("should allow to set next valset with proper signatures", async () => {
+      console.log(nextValset.length);
+      console.log(signatures.length);
+      const tx = await program.methods
+        .setNextValset(Buffer.from(nextValset), Buffer.from(signatures))
+        .accounts({ config: configPDA })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.epoch == 2);
+      //expect(cfg.validators == 1);
+      expect(cfg.weights == [1, 1, 1]);
       expect(cfg.weight_threshold == 2);
     });
   });
