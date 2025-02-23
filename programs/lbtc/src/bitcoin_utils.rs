@@ -70,6 +70,9 @@ fn var_int_serialize_size(val: usize) -> u64 {
 mod tests {
     use super::*;
 
+    // https://github.com/bitcoin/bitcoin/blob/43740f4971f45cd5499470b6a085b3ecd8b96d28/src/policy/policy.cpp#L41
+    // dictates that p2wpkh should have a dust limit of 294 satoshis at a default rate of
+    // 3000 sat/kvB.
     #[test]
     fn test_p2wpkh_size() {
         let pubkey = vec![
@@ -80,10 +83,13 @@ mod tests {
         assert_eq!(dust_limit, 294);
     }
 
+    // https://bitcoin.stackexchange.com/questions/95580/is-the-dust-output-limit-the-same-for-p2wpkh-and-p2wsh
+    // dictates that p2wsh should have a dust limit of 330 satoshis at a default rate of
+    // 3000 sat/kvB.
     #[test]
-    fn test_p2tr_size() {
+    fn test_p2wsh_size() {
         let pubkey = vec![
-            OP_1, OP_DATA_32, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
+            OP_0, OP_DATA_32, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
         ];
@@ -91,10 +97,11 @@ mod tests {
         assert_eq!(dust_limit, 330);
     }
 
+    // Since p2wsh and p2tr are the same size, it should also have a dust limit of 330.
     #[test]
-    fn test_p2wsh_size() {
+    fn test_p2tr_size() {
         let pubkey = vec![
-            OP_0, OP_DATA_32, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
+            OP_1, OP_DATA_32, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
             12u8, 12u8, 12u8, 12u8, 12u8, 12u8, 12u8,
         ];
