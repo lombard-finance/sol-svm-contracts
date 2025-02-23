@@ -66,7 +66,7 @@ pub fn validate_fee<'info>(
     config: &Account<'info, Config>,
     program_id: Pubkey,
     recipient: &AccountInfo<'info>,
-    fee_payload: Vec<u8>,
+    fee_payload: [u8; constants::FEE_PAYLOAD_LEN],
     fee_signature: [u8; 64],
 ) -> Result<u64> {
     let fee_action = decoder::decode_fee_action(&fee_payload)?;

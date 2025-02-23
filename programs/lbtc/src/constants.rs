@@ -17,3 +17,4 @@ pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
 pub const MIN_VALIDATOR_SET_SIZE: usize = 1;
 pub const MAX_VALIDATOR_SET_SIZE: usize = 102;
 pub const MINT_PAYLOAD_LEN: usize = 164;
+pub const FEE_PAYLOAD_LEN: usize = 132;

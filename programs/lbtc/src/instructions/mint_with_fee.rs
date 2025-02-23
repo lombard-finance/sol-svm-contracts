@@ -1,6 +1,7 @@
 //! Minting functionality from a notarized payload where Lombard pays for the transaction fee, in
 //! return for a small rebate in LBTC.
 use crate::{
+    constants::FEE_PAYLOAD_LEN,
     errors::LBTCError,
     state::{Config, MintPayload, Used},
     utils::{self, validation},
@@ -34,7 +35,7 @@ pub struct MintWithFee<'info> {
 pub fn mint_with_fee(
     ctx: Context<MintWithFee>,
     mint_payload_hash: [u8; 32],
-    fee_payload: Vec<u8>,
+    fee_payload: [u8; FEE_PAYLOAD_LEN],
     fee_signature: [u8; 64],
 ) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);

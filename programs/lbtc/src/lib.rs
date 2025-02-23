@@ -7,7 +7,7 @@ pub(crate) mod state;
 pub(crate) mod utils;
 
 use anchor_lang::prelude::*;
-use constants::MINT_PAYLOAD_LEN;
+use constants::{FEE_PAYLOAD_LEN, MINT_PAYLOAD_LEN};
 use instructions::*;
 
 declare_id!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx");
@@ -58,7 +58,7 @@ pub mod lbtc {
     pub fn mint_with_fee(
         ctx: Context<MintWithFee>,
         mint_payload_hash: [u8; 32],
-        fee_payload: Vec<u8>,
+        fee_payload: [u8; FEE_PAYLOAD_LEN],
         fee_signature: [u8; 64],
     ) -> Result<()> {
         instructions::mint_with_fee(ctx, mint_payload_hash, fee_payload, fee_signature)
