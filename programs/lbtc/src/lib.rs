@@ -209,6 +209,7 @@ pub mod lbtc {
 
         let fee = validate_fee(
             &ctx.accounts.config,
+            *ctx.program_id,
             &ctx.accounts.recipient.to_account_info(),
             fee_payload,
             fee_signature,
@@ -234,8 +235,7 @@ pub mod lbtc {
     }
 
     pub fn set_initial_valset(ctx: Context<Valset>) -> Result<()> {
-        let valset_action = validate_valset(
-            &ctx.accounts.config,
+        validate_valset(
             &ctx.accounts.metadata.validators,
             &ctx.accounts.metadata.weights,
             ctx.accounts.payload.weight_threshold,
@@ -260,8 +260,7 @@ pub mod lbtc {
     }
 
     pub fn set_next_valset(ctx: Context<Valset>) -> Result<()> {
-        let valset_action = validate_valset(
-            &ctx.accounts.config,
+        validate_valset(
             &ctx.accounts.metadata.validators,
             &ctx.accounts.metadata.weights,
             ctx.accounts.payload.weight_threshold,
@@ -559,6 +558,7 @@ fn validate_mint(
 
 fn validate_fee<'info>(
     config: &Account<'info, Config>,
+    program_id: Pubkey,
     recipient: &AccountInfo<'info>,
     fee_payload: Vec<u8>,
     fee_signature: [u8; 64],
@@ -567,6 +567,15 @@ fn validate_fee<'info>(
     require!(
         fee_action.action == constants::FEE_APPROVAL_ACTION,
         LBTCError::InvalidActionBytes
+    );
+
+    require!(
+        fee_action.chain_id == constants::CHAIN_ID,
+        LBTCError::InvalidChainID
+    );
+    require!(
+        fee_action.verifying_contract == program_id,
+        LBTCError::InvalidVerifyingcontract
     );
 
     // Select correct fee
@@ -594,12 +603,7 @@ fn validate_fee<'info>(
     }
 }
 
-fn validate_valset(
-    config: &Account<'_, Config>,
-    validators: &[[u8; 64]],
-    weights: &[u64],
-    weight_threshold: u64,
-) -> Result<()> {
+fn validate_valset(validators: &[[u8; 64]], weights: &[u64], weight_threshold: u64) -> Result<()> {
     require!(
         validators.len() >= MIN_VALIDATOR_SET_SIZE,
         LBTCError::InvalidValidatorSetSize

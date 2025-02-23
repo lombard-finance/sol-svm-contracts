@@ -65,4 +65,6 @@ pub enum LBTCError {
     WeightsBelowThreshold,
     #[msg("LBTC contract is paused")]
     Paused,
+    #[msg("Invalid verifying contract")]
+    InvalidVerifyingcontract,
 }
