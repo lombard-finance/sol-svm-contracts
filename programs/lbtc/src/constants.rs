@@ -18,3 +18,6 @@ pub const MIN_VALIDATOR_SET_SIZE: usize = 1;
 pub const MAX_VALIDATOR_SET_SIZE: usize = 102;
 pub const MINT_PAYLOAD_LEN: usize = 164;
 pub const FEE_PAYLOAD_LEN: usize = 132;
+pub const METADATA_SEED: [u8; 32] = [
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+];

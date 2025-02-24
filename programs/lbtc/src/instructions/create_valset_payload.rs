@@ -4,25 +4,24 @@ use crate::{
     constants,
     errors::LBTCError,
     events::ValsetPayloadCreated,
-    state::{Config, Metadata, ValsetPayload},
+    state::{Metadata, ValsetPayload},
     utils::actions::ValsetAction,
 };
 use anchor_lang::prelude::*;
-use solana_program::hash::Hash;
+use solana_program::hash::hash as sha256;
 
 #[derive(Accounts)]
-#[instruction(hash: Vec<u8>)]
+#[instruction(hash: [u8; 32])]
 pub struct CreateValset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash, b"metadata", &payer.key.to_bytes()], bump)]
+    #[account(mut, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
     #[account(
         init,
         payer = payer,
         space = ValsetPayload::INIT_SPACE,
-        seeds = [&hash, &payer.key.to_bytes().to_vec()],
+        seeds = [&hash, &payer.key.to_bytes()],
         bump,
     )]
     pub payload: Account<'info, ValsetPayload>,
@@ -46,7 +45,8 @@ pub fn create_valset_payload(
         height,
     };
     let bytes = payload.abi_encode();
-    let bytes_hash = Hash::new(&bytes).to_bytes();
+    msg!("{:?}", bytes);
+    let bytes_hash = sha256(&bytes).to_bytes();
     require!(bytes_hash == hash, LBTCError::ValsetPayloadHashMismatch);
     ctx.accounts.payload.epoch = epoch;
     ctx.accounts.payload.weight_threshold = weight_threshold;

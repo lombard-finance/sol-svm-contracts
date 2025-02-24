@@ -5,13 +5,11 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 
-// TODO metadata creation instruction
 #[derive(Accounts)]
-#[instruction(hash: Vec<u8>)]
+#[instruction(hash: [u8; 32])]
 pub struct ValsetMetadata<'info> {
     pub payer: Signer<'info>,
-    pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash, b"metadata", &payer.key.to_bytes().to_vec()], bump)]
+    #[account(mut, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
 }
 

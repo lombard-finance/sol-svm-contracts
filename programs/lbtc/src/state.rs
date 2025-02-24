@@ -51,8 +51,11 @@ pub struct MintPayload {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct Metadata {
+    #[max_len(102)]
     pub validators: Vec<[u8; 65]>,
+    #[max_len(102)]
     pub weights: Vec<u64>,
 }
 

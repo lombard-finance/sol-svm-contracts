@@ -8,7 +8,7 @@ use crate::{
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
-use solana_program::hash::Hash;
+use solana_program::hash::hash as sha256;
 
 pub fn validate_mint(
     config: &Account<'_, Config>,
@@ -32,7 +32,7 @@ pub fn validate_mint(
         LBTCError::InvalidChainID
     );
 
-    let payload_hash = Hash::new(&mint_payload).to_bytes();
+    let payload_hash = sha256(&mint_payload).to_bytes();
     if payload_hash != mint_payload_hash {
         return err!(LBTCError::MintPayloadHashMismatch);
     }

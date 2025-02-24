@@ -126,6 +126,11 @@ pub struct MintPayloadPosted {
 }
 
 #[event]
+pub struct ValsetMetadataCreated {
+    pub hash: [u8; 32],
+}
+
+#[event]
 pub struct ValsetMetadataPosted {
     pub hash: [u8; 32],
     pub validators: Vec<[u8; 65]>,

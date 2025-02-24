@@ -64,12 +64,19 @@ pub mod lbtc {
         instructions::mint_with_fee(ctx, mint_payload_hash, fee_payload, fee_signature)
     }
 
-    pub fn set_initial_valset(ctx: Context<SetInitialValset>, hash: Vec<u8>) -> Result<()> {
+    pub fn set_initial_valset(ctx: Context<SetInitialValset>, hash: [u8; 32]) -> Result<()> {
         instructions::set_initial_valset(ctx, hash)
     }
 
     pub fn set_next_valset(ctx: Context<SetNextValset>) -> Result<()> {
         instructions::set_next_valset(ctx)
+    }
+
+    pub fn create_metadata_for_valset_payload(
+        ctx: Context<CreateValsetMetadata>,
+        hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::create_metadata_for_valset_payload(ctx, hash)
     }
 
     pub fn post_metadata_for_valset_payload(
