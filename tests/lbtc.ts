@@ -783,7 +783,10 @@ describe("LBTC", () => {
       assert.equal(payload.signatures.length, 0);
 
       const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [new anchor.BN(0), new anchor.BN(1)])
+        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [
+          new anchor.BN(0),
+          new anchor.BN(1),
+        ])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
@@ -810,7 +813,10 @@ describe("LBTC", () => {
       assert.equal(payload.signatures.length, 0);
 
       const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [new anchor.BN(0), new anchor.BN(1)])
+        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [
+          new anchor.BN(0),
+          new anchor.BN(1),
+        ])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
@@ -838,13 +844,127 @@ describe("LBTC", () => {
   });
 
   describe("Minting and redeeming", () => {
-    it("should not allow non-minter to mint", async () => {});
+    let mint;
+    let userTA;
+    let minterTA;
+    const minter = web3.Keypair.generate();
+    const tokenAuth = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("token_authority")],
+      program.programId
+    )[0];
 
-    it("should allow minter to mint freely", async () => {});
+    before(async () => {
+      mint = await spl.createMint(
+        provider.connection,
+        admin,
+        tokenAuth,
+        null,
+        8
+      );
+      userTA = await spl.createAssociatedTokenAccount(
+        provider.connection,
+        user,
+        mint,
+        user.publicKey
+      );
 
-    it("should not allow non-minter to burn", async () => {});
+      await fundWallet(minter, 25 * web3.LAMPORTS_PER_SOL);
+      const tx = await program.methods
+        .addMinter(minter.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
 
-    it("should allow minter to burn freely", async () => {});
+      minterTA = await spl.createAssociatedTokenAccount(
+        provider.connection,
+        minter,
+        mint,
+        minter.publicKey
+      );
+    });
+
+    it("should not allow non-minter to mint", async () => {
+      try {
+        const tx = await program.methods
+          .mint(new anchor.BN(1000))
+          .accounts({
+            payer: user.publicKey,
+            config: configPDA,
+            recipient: userTA,
+            mint: mint,
+            tokenAuthority: tokenAuth,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should allow minter to mint freely", async () => {
+      const tx = await program.methods
+        .mint(new anchor.BN(1000))
+        .accounts({
+          payer: minter.publicKey,
+          config: configPDA,
+          recipient: userTA,
+          mint: mint,
+          tokenAuthority: tokenAuth,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+        })
+        .signers([minter])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+    });
+
+    it("should not allow non-minter to burn", async () => {
+      try {
+        const tx = await program.methods
+          .burn(new anchor.BN(1000))
+          .accounts({
+            payer: user.publicKey,
+            config: configPDA,
+            recipient: userTA,
+            mint: mint,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should allow minter to burn freely", async () => {
+      const tx = await program.methods
+        .mint(new anchor.BN(1000))
+        .accounts({
+          payer: minter.publicKey,
+          config: configPDA,
+          recipient: minterTA,
+          mint: mint,
+          tokenAuthority: tokenAuth,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+        })
+        .signers([minter])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const tx2 = await program.methods
+        .burn(new anchor.BN(1000))
+        .accounts({
+          payer: minter.publicKey,
+          config: configPDA,
+          recipient: minterTA,
+          mint: mint,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+        })
+        .signers([minter])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+    });
 
     it("should allow anyone to create mint payload", async () => {});
 
