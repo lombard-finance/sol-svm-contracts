@@ -1,10 +1,5 @@
 use super::decoder;
-use crate::{
-    constants,
-    errors::LBTCError,
-    events::MintProofConsumed,
-    state::{Config, Used},
-};
+use crate::{constants, errors::LBTCError, events::MintProofConsumed, state::Config};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
@@ -31,12 +26,6 @@ pub fn validate_mint<'info>(
         mint_action.to_chain == constants::CHAIN_ID,
         LBTCError::InvalidChainID
     );
-
-    let payload_hash = sha256(&mint_payload).to_bytes();
-    if payload_hash != mint_payload_hash {
-        return err!(LBTCError::MintPayloadHashMismatch);
-    }
-
     require!(
         weight >= config.weight_threshold,
         LBTCError::NotEnoughSignatures
@@ -50,7 +39,7 @@ pub fn validate_mint<'info>(
 
     emit!(MintProofConsumed {
         recipient: mint_action.recipient,
-        payload_hash,
+        payload_hash: mint_payload_hash,
     });
     Ok(mint_action.amount)
 }
@@ -59,6 +48,7 @@ pub fn validate_fee<'info>(
     config: &Account<'info, Config>,
     program_id: Pubkey,
     recipient: &AccountInfo<'info>,
+    recipient_auth: &AccountInfo<'info>,
     fee_payload: [u8; constants::FEE_PAYLOAD_LEN],
     fee_signature: [u8; 64],
 ) -> Result<u64> {
@@ -93,7 +83,7 @@ pub fn validate_fee<'info>(
     // Check signature
     // Since the caller will not be the recipient, we can not use the ed25519 instruction 'hack'
     // and unfortunately have to use this more expensive external crate.
-    if verify_signature(&recipient.key(), &fee_signature, &fee_payload)
+    if verify_signature(&recipient_auth.key(), &fee_signature, &fee_payload)
         .map_err(|_| LBTCError::InvalidFeeSignature)?
     {
         Ok(fee)

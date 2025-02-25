@@ -4,6 +4,7 @@ import { Lbtc } from "../target/types/lbtc";
 import * as spl from "@solana/spl-token";
 import * as fs from "fs";
 import { sha256 } from "js-sha256";
+import nacl from "tweetnacl";
 
 const web3 = require("@solana/web3.js");
 const assert = require("assert");
@@ -293,8 +294,8 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to add minter", async () => {
+      const minter = web3.Keypair.generate();
       try {
-        const minter = web3.Keypair.generate();
         const tx = await program.methods
           .addMinter(minter.publicKey)
           .accounts({ payer: payer.publicKey, config: configPDA })
@@ -888,14 +889,14 @@ describe("LBTC", () => {
       0, 20, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
     ];
 
-    const feePayload = Buffer.from(
+    const mintPayload = Buffer.from(
       "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f8000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "hex"
     );
-    const feeHash = sha256(feePayload);
+    const mintHash = sha256(mintPayload);
 
     // Index 0 and 2
-    const feeSigs = [
+    const mintSigs = [
       Buffer.from(
         "b70c5823843bc2ad3b86ea83c1b8a0972ee21ecd81f54f88c35da9a4c3d881927b377d38800a37213b0c919a54d576ebfa0579d7bc3b1b94474133ba3c4465c0",
         "hex"
@@ -906,8 +907,35 @@ describe("LBTC", () => {
       ),
     ];
 
+    const mintPayload2 = Buffer.from(
+      "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f80000000000000000000000000000000000000000000000000000000000004e2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "hex"
+    );
+    const mintHash2 = sha256(mintPayload2);
+
+    const mintSigs2 = [
+      Buffer.from(
+        "b88022c1f81803c7d4b7e03a7ea03da40ac4d305fb531695b7a620d99d1a95b80ec9f3b36bf1d30778ff089f5cf267f108b01ae1bbf39315ea83dcaab12d4f49",
+        "hex"
+      ),
+      Buffer.from(
+        "cee02758d818b78d192408119e6ae17b60d1a23839bcfd2c993070eb17dacdbd68c58339ba01580b0f6174a2af5ac221095df03566696ede4c6656c93caa0ed3",
+        "hex"
+      ),
+    ];
+
+    const feePayload = Buffer.from(
+      "04acbbb20259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab42ed4c495cbedc8a5d4b213fe18ba748ebe91264b9a64bea611054af21ad0a8d000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000ffffffff",
+      "hex"
+    );
+    const feePayloadSig = nacl.sign.detached(feePayload, recipient.secretKey);
+
     const feePayloadPDA = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from(feeHash, "hex")],
+      [Buffer.from(mintHash, "hex")],
+      program.programId
+    )[0];
+    const feePayloadPDA2 = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from(mintHash2, "hex")],
       program.programId
     )[0];
 
@@ -1020,7 +1048,7 @@ describe("LBTC", () => {
 
     it("should allow anyone to create mint payload", async () => {
       const tx = await program.methods
-        .createMintPayload(Buffer.from(feeHash, "hex"), feePayload)
+        .createMintPayload(Buffer.from(mintHash, "hex"), mintPayload)
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
@@ -1034,7 +1062,7 @@ describe("LBTC", () => {
     it("should not allow to mint without proper signatures", async () => {
       try {
         const tx = await program.methods
-          .mintFromPayload(Buffer.from(feeHash, "hex"))
+          .mintFromPayload(Buffer.from(mintHash, "hex"))
           .accounts({
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -1053,7 +1081,7 @@ describe("LBTC", () => {
 
     it("should allow anyone to post signatures for mint payload", async () => {
       const tx = await program.methods
-        .postMintSignatures(Buffer.from(feeHash, "hex"), feeSigs, [
+        .postMintSignatures(Buffer.from(mintHash, "hex"), mintSigs, [
           new anchor.BN(0),
           new anchor.BN(2),
         ])
@@ -1064,7 +1092,7 @@ describe("LBTC", () => {
 
     it("should allow to mint with proper signatures", async () => {
       const tx = await program.methods
-        .mintFromPayload(Buffer.from(feeHash, "hex"))
+        .mintFromPayload(Buffer.from(mintHash, "hex"))
         .accounts({
           config: configPDA,
           tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -1078,11 +1106,110 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
     });
 
-    it("should not allow non-claimer to mint with fee", async () => {});
+    it("should not allow non-claimer to mint with fee", async () => {
+      const tx = await program.methods
+        .createMintPayload(Buffer.from(mintHash2, "hex"), mintPayload2)
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          payload: feePayloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
 
-    it("should allow claimer to mint with fee to wrong treasury", async () => {});
+      const tx2 = await program.methods
+        .postMintSignatures(Buffer.from(mintHash2, "hex"), mintSigs2, [
+          new anchor.BN(0),
+          new anchor.BN(2),
+        ])
+        .accounts({ config: configPDA, payload: feePayloadPDA2 })
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
 
-    it("should allow claimer to mint with fee", async () => {});
+      try {
+        const tx3 = await program.methods
+          .mintWithFee(
+            Buffer.from(mintHash2, "hex"),
+            feePayload,
+            Buffer.from(feePayloadSig)
+          )
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            recipientAuth: recipient.publicKey,
+            recipient: recipientTA,
+            mint: mint,
+            tokenAuthority: tokenAuth,
+            treasury: treasury,
+            payload: feePayloadPDA2,
+            bascule: payer.publicKey,
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx3);
+        assert.fail("shouldnt work");
+      } catch (e) {}
+    });
+
+    it("should allow claimer to mint with fee to wrong treasury", async () => {
+      try {
+        const tx = await program.methods
+          .mintWithFee(
+            Buffer.from(mintHash2, "hex"),
+            feePayload,
+            Buffer.from(feePayloadSig)
+          )
+          .accounts({
+            payer: minter.publicKey,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            recipientAuth: recipient.publicKey,
+            recipient: recipientTA,
+            mint: mint,
+            tokenAuthority: tokenAuth,
+            treasury: recipientTA,
+            payload: feePayloadPDA2,
+            bascule: payer.publicKey,
+          })
+          .signers([minter])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("shouldnt work");
+      } catch (e) {}
+    });
+
+    it("should allow claimer to mint with fee", async () => {
+      const tx = await program.methods
+        .addClaimer(minter.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const tx2 = await program.methods
+        .mintWithFee(
+          Buffer.from(mintHash2, "hex"),
+          feePayload,
+          Buffer.from(feePayloadSig)
+        )
+        .accounts({
+          payer: minter.publicKey,
+          config: configPDA,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          recipientAuth: recipient.publicKey,
+          recipient: recipientTA,
+          mint: mint,
+          tokenAuthority: tokenAuth,
+          treasury: treasury,
+          payload: feePayloadPDA2,
+          bascule: payer.publicKey,
+        })
+        .signers([minter])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+    });
 
     it("should not allow user to redeem if they don't have enough LBTC", async () => {
       try {

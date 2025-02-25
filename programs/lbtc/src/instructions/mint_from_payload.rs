@@ -1,7 +1,7 @@
 //! Minting functionality from a notarized payload.
 use crate::{
     errors::LBTCError,
-    state::{Config, MintPayload, Used},
+    state::{Config, MintPayload},
     utils::{self, validation},
 };
 use anchor_lang::prelude::*;
@@ -30,7 +30,6 @@ pub struct MintFromPayload<'info> {
     pub bascule: UncheckedAccount<'info>,
 }
 
-// TODO can we close payload and leave something to squat the hash?
 pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 32]) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
     let amount = validation::validate_mint(

@@ -37,11 +37,6 @@ pub struct Config {
 }
 
 #[account]
-pub struct Used {
-    pub used: bool,
-}
-
-#[account]
 #[derive(InitSpace)]
 pub struct MintPayload {
     pub payload: [u8; MINT_PAYLOAD_LEN],

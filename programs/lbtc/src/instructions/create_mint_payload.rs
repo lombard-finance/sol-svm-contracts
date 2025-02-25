@@ -6,6 +6,7 @@ use crate::{
     state::{Config, MintPayload},
 };
 use anchor_lang::prelude::*;
+use solana_program::hash::hash as sha256;
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: [u8; 32])]
@@ -30,6 +31,12 @@ pub fn create_mint_payload(
     mint_payload: [u8; MINT_PAYLOAD_LEN],
 ) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
+
+    let payload_hash = sha256(&mint_payload).to_bytes();
+    if payload_hash != mint_payload_hash {
+        return err!(LBTCError::MintPayloadHashMismatch);
+    }
+
     ctx.accounts.payload.payload = mint_payload.clone();
     emit!(MintPayloadPosted {
         hash: mint_payload_hash,

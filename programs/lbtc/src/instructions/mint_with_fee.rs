@@ -3,21 +3,24 @@
 use crate::{
     constants::FEE_PAYLOAD_LEN,
     errors::LBTCError,
-    state::{Config, MintPayload, Used},
+    state::{Config, MintPayload},
     utils::{self, validation},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
-#[instruction(mint_payload_hash: Vec<u8>)]
+#[instruction(mint_payload_hash: [u8; 32])]
 pub struct MintWithFee<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    /// CHECK: This will be verified by the token authority on recipient.
+    pub recipient_auth: UncheckedAccount<'info>,
     #[account(
         mut,
         token::mint = mint,
+        token::authority = recipient_auth,
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
@@ -35,7 +38,6 @@ pub struct MintWithFee<'info> {
     pub bascule: UncheckedAccount<'info>,
 }
 
-// TODO hash squatting
 pub fn mint_with_fee(
     ctx: Context<MintWithFee>,
     mint_payload_hash: [u8; 32],
@@ -65,6 +67,7 @@ pub fn mint_with_fee(
         &ctx.accounts.config,
         *ctx.program_id,
         &ctx.accounts.recipient.to_account_info(),
+        &ctx.accounts.recipient_auth.to_account_info(),
         fee_payload,
         fee_signature,
     )?;
