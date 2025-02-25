@@ -1,6 +1,4 @@
 //! This module implements the validation of Lombard Ledger Consortium signatures.
-use crate::errors::LBTCError;
-use anchor_lang::prelude::*;
 use solana_program::secp256k1_recover::secp256k1_recover;
 
 // Simply performs public key recovery on a signature and hash, and checks if it matches the given

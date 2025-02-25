@@ -1,8 +1,5 @@
 //! Adds validators and weights for a validator set being constructed.
-use crate::{
-    events::ValsetMetadataPosted,
-    state::{Config, Metadata},
-};
+use crate::{events::ValsetMetadataPosted, state::Metadata};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]

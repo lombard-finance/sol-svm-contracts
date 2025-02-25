@@ -1,7 +1,7 @@
 //! Creates a `Metadata` account for us to construct a validator set.
 use crate::{
     events::ValsetMetadataCreated,
-    state::{Config, Metadata},
+    state::{Metadata},
 };
 use anchor_lang::prelude::*;
 

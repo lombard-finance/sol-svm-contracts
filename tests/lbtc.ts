@@ -9,8 +9,6 @@ const web3 = require("@solana/web3.js");
 const assert = require("assert");
 const expect = require("chai").expect;
 
-// TODO throw on tries
-
 describe("LBTC", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -87,6 +85,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -108,6 +107,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -145,6 +145,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -168,6 +169,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -189,6 +191,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -212,6 +215,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -235,6 +239,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -258,6 +263,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -281,6 +287,7 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -304,6 +311,18 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should not allow anyone else to pause", async () => {
+      try {
+        const tx = await program.methods
+          .pause()
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -326,13 +345,30 @@ describe("LBTC", () => {
       expect(cfg.paused == true);
     });
 
-    it("should not allow anyone else to pause", async () => {
+    it("should not allow anyone else to unpause", async () => {
+      const pauser = web3.Keypair.generate();
+      const tx = await program.methods
+        .addPauser(pauser.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const tx2 = await program.methods
+        .pause()
+        .accounts({ payer: pauser.publicKey, config: configPDA })
+        .signers([pauser])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.paused == true);
       try {
-        const tx = await program.methods
-          .pause()
+        const tx3 = await program.methods
+          .unpause()
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
@@ -363,43 +399,20 @@ describe("LBTC", () => {
       const cfg2 = await program.account.config.fetch(configPDA);
       expect(cfg2.paused == false);
     });
-
-    it("should not allow anyone else to unpause", async () => {
-      const pauser = web3.Keypair.generate();
-      const tx = await program.methods
-        .addPauser(pauser.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
-      const tx2 = await program.methods
-        .pause()
-        .accounts({ payer: pauser.publicKey, config: configPDA })
-        .signers([pauser])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.paused == true);
-      try {
-        const tx3 = await program.methods
-          .unpause()
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-      } catch (e) {}
-    });
   });
 
   describe("Consortium actions", () => {
     const initialValset = Buffer.from(
-      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001", 'hex'
+      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
+      "hex"
     );
     const nextValset = Buffer.from(
-      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001", 'hex'
+      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
+      "hex"
     );
     const signatures = Buffer.from(
-      "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040976b76d08d5628efe8e7ba998dc76e432769ea735a861e14f5c25873f76255a53efa7a5ce215f48c2278c1e15c5d5a95eeee47b417a995a68f964eb4ba0416cf00000000000000000000000000000000000000000000000000000000000000405170e1e8004c677fbd7a712065073bfff46b5752e8020a2b098b2bd6d30fde0a65a8044a79c2c730483de1e26ae48570cae11a335547e167ecf5d07fa7aa45fe0000000000000000000000000000000000000000000000000000000000000000", 'hex'
+      "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040976b76d08d5628efe8e7ba998dc76e432769ea735a861e14f5c25873f76255a53efa7a5ce215f48c2278c1e15c5d5a95eeee47b417a995a68f964eb4ba0416cf00000000000000000000000000000000000000000000000000000000000000405170e1e8004c677fbd7a712065073bfff46b5752e8020a2b098b2bd6d30fde0a65a8044a79c2c730483de1e26ae48570cae11a335547e167ecf5d07fa7aa45fe0000000000000000000000000000000000000000000000000000000000000000",
+      "hex"
     );
 
     it("should not allow anyone else to set initial valset", async () => {
@@ -409,18 +422,19 @@ describe("LBTC", () => {
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
+        assert.fail("should not be allowed");
       } catch (e) {}
     });
 
     it("should allow admin to set initial valset", async () => {
       const hash = sha256(initialValset);
       const metadataPDA = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, 'hex'), metadata_seed, admin.publicKey.toBuffer()],
+        [Buffer.from(hash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
         program.programId
       )[0];
 
       const tx = await program.methods
-        .createMetadataForValsetPayload(Buffer.from(hash, 'hex'))
+        .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
         .accounts({
           payer: admin.publicKey,
           metadata: metadataPDA,
@@ -431,15 +445,21 @@ describe("LBTC", () => {
 
       const validators = [
         Buffer.from(
-          "04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4", 'hex'
+          "04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+          "hex"
         ),
         Buffer.from(
-          "049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb", 'hex'
+          "049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
+          "hex"
         ),
       ];
       const weights = [new anchor.BN(1), new anchor.BN(1)];
       const tx2 = await program.methods
-        .postMetadataForValsetPayload(Buffer.from(hash, 'hex'), validators, weights)
+        .postMetadataForValsetPayload(
+          Buffer.from(hash, "hex"),
+          validators,
+          weights
+        )
         .accounts({
           payer: admin.publicKey,
           metadata: metadataPDA,
@@ -449,28 +469,33 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx2);
 
       const payloadPDA = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, 'hex'), admin.publicKey.toBuffer()],
+        [Buffer.from(hash, "hex"), admin.publicKey.toBuffer()],
         program.programId
       )[0];
 
       try {
-      const tx3 = await program.methods
-        .createValsetPayload(Buffer.from(hash, 'hex'), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
-        .accounts({
-          payer: admin.publicKey,
-          metadata: metadataPDA,
-          payload: payloadPDA,
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx3);
+        const tx3 = await program.methods
+          .createValsetPayload(
+            Buffer.from(hash, "hex"),
+            new anchor.BN(1),
+            new anchor.BN(1),
+            new anchor.BN(1)
+          )
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA,
+            payload: payloadPDA,
+          })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx3);
       } catch (e) {
-          console.log(e);
-          throw e;
+        console.log(e);
+        throw e;
       }
 
       const tx4 = await program.methods
-        .setInitialValset(Buffer.from(hash, 'hex'))
+        .setInitialValset(Buffer.from(hash, "hex"))
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
