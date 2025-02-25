@@ -1,5 +1,6 @@
 //! Collection of admin-privileged functionality.
 use crate::{
+    errors::LBTCError,
     events::{
         BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved, DustFeeRateSet,
         MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded, PauserRemoved,
@@ -129,6 +130,7 @@ pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
 }
 
 pub fn unpause(ctx: Context<Admin>) -> Result<()> {
+    require!(ctx.accounts.config.paused, LBTCError::NotPaused);
     ctx.accounts.config.paused = false;
     emit!(PauseEnabled { enabled: false });
     Ok(())

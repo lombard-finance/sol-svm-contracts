@@ -1,5 +1,10 @@
 //! Instruction to post a mint payload against which signatures can be posted.
-use crate::{constants::MINT_PAYLOAD_LEN, events::MintPayloadPosted, state::MintPayload};
+use crate::{
+    constants::MINT_PAYLOAD_LEN,
+    errors::LBTCError,
+    events::MintPayloadPosted,
+    state::{Config, MintPayload},
+};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -7,6 +12,7 @@ use anchor_lang::prelude::*;
 pub struct CreateMintPayload<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub config: Account<'info, Config>,
     #[account(
         init,
         payer = payer,
@@ -23,6 +29,7 @@ pub fn create_mint_payload(
     mint_payload_hash: [u8; 32],
     mint_payload: [u8; MINT_PAYLOAD_LEN],
 ) -> Result<()> {
+    require!(!ctx.accounts.config.paused, LBTCError::Paused);
     ctx.accounts.payload.payload = mint_payload.clone();
     emit!(MintPayloadPosted {
         hash: mint_payload_hash,

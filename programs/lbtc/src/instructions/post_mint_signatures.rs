@@ -21,6 +21,7 @@ pub fn post_mint_signatures(
     signatures: Vec<[u8; 64]>,
     indices: Vec<u64>,
 ) -> Result<()> {
+    require!(!ctx.accounts.config.paused, LBTCError::Paused);
     require!(ctx.accounts.config.epoch != 0, LBTCError::NoValidatorSet);
     require!(
         signatures.len() == indices.len(),
