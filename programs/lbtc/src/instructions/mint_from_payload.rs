@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
-#[instruction(mint_payload_hash: Vec<u8>)]
+#[instruction(mint_payload_hash: [u8; 32])]
 pub struct MintFromPayload<'info> {
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -24,20 +24,18 @@ pub struct MintFromPayload<'info> {
     #[account(seeds = [crate::constants::TOKEN_AUTHORITY_SEED], bump)]
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
-    pub used: Account<'info, Used>,
-    #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
     /// CHECK: This can be left empty in case of bascule being disabled, so we forego the check
     /// here.
     pub bascule: UncheckedAccount<'info>,
 }
 
+// TODO can we close payload and leave something to squat the hash?
 pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 32]) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
     let amount = validation::validate_mint(
         &ctx.accounts.config,
         &ctx.accounts.recipient,
-        &mut ctx.accounts.used,
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
         mint_payload_hash,

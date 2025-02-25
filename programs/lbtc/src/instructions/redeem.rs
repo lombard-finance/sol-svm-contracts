@@ -42,8 +42,6 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
     require!(amount > fee, LBTCError::FeeGTEAmount);
     require!(amount - fee > dust_limit, LBTCError::AmountBelowDustLimit);
 
-    msg!("{:?}", ctx.accounts.treasury.amount);
-    msg!("{:?}", ctx.accounts.holder.amount);
     anchor_spl::token_interface::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -55,10 +53,7 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
         ),
         fee,
     )?;
-    msg!("{:?}", ctx.accounts.treasury.amount);
 
-    msg!("{:?}", amount - fee);
-    msg!("{:?}", ctx.accounts.holder.amount);
     utils::execute_burn(
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.holder.to_account_info(),

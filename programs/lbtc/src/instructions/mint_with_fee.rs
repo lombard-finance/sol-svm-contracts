@@ -29,14 +29,13 @@ pub struct MintWithFee<'info> {
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
-    pub used: Account<'info, Used>,
-    #[account(mut, close = recipient, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
     /// CHECK: This can be left empty in case of bascule being disabled, so we forego the check
     /// here.
     pub bascule: UncheckedAccount<'info>,
 }
 
+// TODO hash squatting
 pub fn mint_with_fee(
     ctx: Context<MintWithFee>,
     mint_payload_hash: [u8; 32],
@@ -56,7 +55,6 @@ pub fn mint_with_fee(
     let amount = validation::validate_mint(
         &ctx.accounts.config,
         &ctx.accounts.recipient,
-        &mut ctx.accounts.used,
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
         mint_payload_hash,

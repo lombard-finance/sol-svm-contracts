@@ -116,7 +116,6 @@ pub struct UnstakeRequest {
 pub struct MintProofConsumed {
     pub recipient: Pubkey,
     pub payload_hash: [u8; 32],
-    pub payload: Vec<u8>,
 }
 
 #[event]

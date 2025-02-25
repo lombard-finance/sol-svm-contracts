@@ -13,17 +13,16 @@ use solana_program::hash::hash as sha256;
 pub fn validate_mint<'info>(
     config: &Account<'_, Config>,
     recipient: &InterfaceAccount<'_, TokenAccount>,
-    used: &mut Account<'_, Used>,
     mint_payload: &[u8],
     weight: u64,
     mint_payload_hash: [u8; 32],
     bascule: &UncheckedAccount<'info>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
-    if mint_action.recipient != recipient.key() {
-        return err!(LBTCError::RecipientMismatch);
-    }
-
+    require!(
+        mint_action.recipient == recipient.key(),
+        LBTCError::RecipientMismatch
+    );
     require!(
         mint_action.action == constants::DEPOSIT_BTC_ACTION,
         LBTCError::InvalidActionBytes
@@ -43,12 +42,6 @@ pub fn validate_mint<'info>(
         LBTCError::NotEnoughSignatures
     );
 
-    if used.used {
-        return err!(LBTCError::MintPayloadUsed);
-    } else {
-        used.used = true;
-    }
-
     // Confirm deposit against bascule, if using.
     if config.bascule_enabled {
         // TODO
@@ -58,7 +51,6 @@ pub fn validate_mint<'info>(
     emit!(MintProofConsumed {
         recipient: mint_action.recipient,
         payload_hash,
-        payload: mint_payload.to_vec(),
     });
     Ok(mint_action.amount)
 }
