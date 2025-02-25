@@ -15,13 +15,22 @@ pub struct MintWithFee<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    #[account(
+        mut,
+        token::mint = mint,
+        token::authority = token_authority,
+        token::token_program = token_program,
+    )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    pub token_mint: InterfaceAccount<'info, TokenAccount>,
+    pub mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
         seeds = [crate::constants::TOKEN_AUTHORITY_SEED],
         bump,
     )]
-    pub token_authority: InterfaceAccount<'info, TokenAccount>,
+    /// CHECK: This just needs to be the account of the recipient. Minting will fail if this is
+    /// improperly specified.
+    pub token_authority: UncheckedAccount<'info>,
+    #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub used: Account<'info, Used>,
@@ -55,6 +64,7 @@ pub fn mint_with_fee(
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
         mint_payload_hash,
+        &ctx.accounts.bascule,
     )?;
 
     let fee = validation::validate_fee(
@@ -70,16 +80,14 @@ pub fn mint_with_fee(
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.treasury.to_account_info(),
         fee,
-        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
-        ctx.bumps.token_authority,
     )?;
     utils::execute_mint(
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.recipient.to_account_info(),
         amount - fee,
-        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
-        ctx.bumps.token_authority,
     )
 }

@@ -148,5 +148,5 @@ pub struct ValsetPayloadCreated {
 #[event]
 pub struct SignaturesAdded {
     pub hash: [u8; 32],
-    pub signatures: Vec<([u8; 64], usize)>,
+    pub signatures: Vec<[u8; 64]>,
 }

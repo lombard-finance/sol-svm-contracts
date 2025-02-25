@@ -28,12 +28,13 @@ pub mod lbtc {
         instructions::create_mint_payload(ctx, mint_payload_hash, mint_payload)
     }
 
-    pub fn post_signatures_for_mint_payload(
-        ctx: Context<PostSignaturesForMintPayload>,
+    pub fn post_mint_signatures(
+        ctx: Context<PostMintSignatures>,
         mint_payload_hash: [u8; 32],
-        signatures: Vec<([u8; 64], usize)>,
+        signatures: Vec<[u8; 64]>,
+        indices: Vec<u64>,
     ) -> Result<()> {
-        instructions::post_signatures_for_mint_payload(ctx, mint_payload_hash, signatures)
+        instructions::post_mint_signatures(ctx, mint_payload_hash, signatures, indices)
     }
 
     pub fn mint_from_payload(
@@ -68,8 +69,8 @@ pub mod lbtc {
         instructions::set_initial_valset(ctx, hash)
     }
 
-    pub fn set_next_valset(ctx: Context<SetNextValset>) -> Result<()> {
-        instructions::set_next_valset(ctx)
+    pub fn set_next_valset(ctx: Context<SetNextValset>, hash: [u8; 32]) -> Result<()> {
+        instructions::set_next_valset(ctx, hash)
     }
 
     pub fn create_metadata_for_valset_payload(
@@ -98,12 +99,13 @@ pub mod lbtc {
         instructions::create_valset_payload(ctx, hash, epoch, weight_threshold, height)
     }
 
-    pub fn post_signatures_for_valset_payload(
-        ctx: Context<AddSignature>,
+    pub fn post_valset_signatures(
+        ctx: Context<PostValsetSignatures>,
         hash: [u8; 32],
-        signatures: Vec<([u8; 64], usize)>,
+        signatures: Vec<[u8; 64]>,
+        indices: Vec<u64>,
     ) -> Result<()> {
-        instructions::post_signatures_for_valset_payload(ctx, hash, signatures)
+        instructions::post_valset_signatures(ctx, hash, signatures, indices)
     }
 
     pub fn toggle_withdrawals(ctx: Context<Admin>) -> Result<()> {

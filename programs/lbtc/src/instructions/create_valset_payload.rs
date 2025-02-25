@@ -45,7 +45,6 @@ pub fn create_valset_payload(
         height,
     };
     let bytes = payload.abi_encode();
-    msg!("{:?}", bytes);
     let bytes_hash = sha256(&bytes).to_bytes();
     require!(bytes_hash == hash, LBTCError::ValsetPayloadHashMismatch);
     ctx.accounts.payload.epoch = epoch;

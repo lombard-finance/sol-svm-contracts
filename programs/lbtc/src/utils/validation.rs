@@ -10,13 +10,14 @@ use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
 use solana_program::hash::hash as sha256;
 
-pub fn validate_mint(
+pub fn validate_mint<'info>(
     config: &Account<'_, Config>,
     recipient: &InterfaceAccount<'_, TokenAccount>,
     used: &mut Account<'_, Used>,
     mint_payload: &[u8],
     weight: u64,
     mint_payload_hash: [u8; 32],
+    bascule: &UncheckedAccount<'info>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
     if mint_action.recipient != recipient.key() {

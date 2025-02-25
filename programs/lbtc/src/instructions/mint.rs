@@ -8,13 +8,17 @@ pub struct Mint<'info> {
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
-    pub recipient: InterfaceAccount<'info, TokenAccount>,
-    pub token_mint: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        seeds = [crate::constants::TOKEN_AUTHORITY_SEED],
-        bump,
+        mut,
+        token::mint = mint,
+        token::authority = token_authority,
+        token::token_program = token_program,
     )]
-    pub token_authority: InterfaceAccount<'info, TokenAccount>,
+    pub recipient: InterfaceAccount<'info, TokenAccount>,
+    pub mint: InterfaceAccount<'info, TokenAccount>,
+    /// CHECK: This just needs to be the account of the recipient. Minting will fail if this is
+    /// improperly specified.
+    pub token_authority: UncheckedAccount<'info>,
 }
 
 pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
@@ -32,9 +36,8 @@ pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.recipient.to_account_info(),
         amount,
-        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
-        ctx.bumps.token_authority,
     )
 }
 
@@ -53,8 +56,7 @@ pub fn burn(ctx: Context<Mint>, amount: u64) -> Result<()> {
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.recipient.to_account_info(),
         amount,
-        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
-        ctx.bumps.token_authority,
     )
 }

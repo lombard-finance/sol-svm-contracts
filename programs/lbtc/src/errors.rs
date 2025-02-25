@@ -67,4 +67,6 @@ pub enum LBTCError {
     Paused,
     #[msg("Invalid verifying contract")]
     InvalidVerifyingcontract,
+    #[msg("Mismatch between signatures and indices length")]
+    SignaturesIndicesMismatch,
 }

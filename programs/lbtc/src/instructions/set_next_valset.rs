@@ -8,18 +8,19 @@ use crate::{
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(hash: Vec<u8>)]
+#[instruction(hash: [u8; 32])]
 pub struct SetNextValset<'info> {
+    #[account(mut)]
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
-    #[account(mut, close = payer, seeds = [&hash, b"metadata", &payer.key.to_bytes().to_vec()], bump)]
+    #[account(mut, close = payer, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
-    #[account(mut, close = payer, seeds = [&hash, &payer.key.to_bytes().to_vec()], bump)]
+    #[account(mut, close = payer, seeds = [&hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
 }
 
-pub fn set_next_valset(ctx: Context<SetNextValset>) -> Result<()> {
+pub fn set_next_valset(ctx: Context<SetNextValset>, hash: [u8; 32]) -> Result<()> {
     validation::validate_valset(
         &ctx.accounts.metadata.validators,
         &ctx.accounts.metadata.weights,
