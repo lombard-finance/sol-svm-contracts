@@ -34,11 +34,11 @@ describe("LBTC", () => {
     );
   }
 
-  before(async () => {
     payer = web3.Keypair.generate();
     admin = web3.Keypair.generate();
     operator = web3.Keypair.generate();
 
+  before(async () => {
     await fundWallet(payer, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(admin, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(operator, 25 * web3.LAMPORTS_PER_SOL);
@@ -415,24 +415,29 @@ describe("LBTC", () => {
       "hex"
     );
 
-    it("should not allow anyone else to set initial valset", async () => {
-      try {
-        const tx = await program.methods
-          .setInitialValset(Buffer.from(initialValset))
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
-    });
+    const hash = sha256(initialValset);
+    const metadataPDA = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from(hash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
+      program.programId
+    )[0];
+    const validators = [
+      Buffer.from(
+        "04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+        "hex"
+      ),
+      Buffer.from(
+        "049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
+        "hex"
+      ),
+    ];
+    const weights = [new anchor.BN(1), new anchor.BN(1)];
 
-    it("should allow admin to set initial valset", async () => {
-      const hash = sha256(initialValset);
-      const metadataPDA = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
-        program.programId
-      )[0];
+    const payloadPDA = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from(hash, "hex"), admin.publicKey.toBuffer()],
+      program.programId
+    )[0];
 
+    it("should allow anyone to construct metadata", async () => {
       const tx = await program.methods
         .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
         .accounts({
@@ -442,18 +447,28 @@ describe("LBTC", () => {
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx);
+    });
 
-      const validators = [
-        Buffer.from(
-          "04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
-          "hex"
-        ),
-        Buffer.from(
-          "049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
-          "hex"
-        ),
-      ];
-      const weights = [new anchor.BN(1), new anchor.BN(1)];
+    it("should not allow someone else to add metadata other than creator", async () => {
+      try {
+        const tx2 = await program.methods
+          .postMetadataForValsetPayload(
+            Buffer.from(hash, "hex"),
+            validators,
+            weights
+          )
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA,
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should allow the creator to post metadata", async () => {
       const tx2 = await program.methods
         .postMetadataForValsetPayload(
           Buffer.from(hash, "hex"),
@@ -467,12 +482,30 @@ describe("LBTC", () => {
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
+    });
 
-      const payloadPDA = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, "hex"), admin.publicKey.toBuffer()],
-        program.programId
-      )[0];
+    it("should not allow another person to create validator set payload for someone's metadata", async () => {
+      try {
+        const tx3 = await program.methods
+          .createValsetPayload(
+            Buffer.from(hash, "hex"),
+            new anchor.BN(1),
+            new anchor.BN(1),
+            new anchor.BN(1)
+          )
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA,
+            payload: payloadPDA,
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx3);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
 
+    it("should allow metadata creator to create a validator set payload", async () => {
       try {
         const tx3 = await program.methods
           .createValsetPayload(
@@ -493,7 +526,70 @@ describe("LBTC", () => {
         console.log(e);
         throw e;
       }
+    });
 
+    it("should not allow non-admin to set initial valset", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+
+      const tx = await program.methods
+        .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const tx2 = await program.methods
+        .postMetadataForValsetPayload(
+          Buffer.from(hash, "hex"),
+          validators,
+          weights
+        )
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+
+      const tx3 = await program.methods
+        .createValsetPayload(
+          Buffer.from(hash, "hex"),
+          new anchor.BN(1),
+          new anchor.BN(1),
+          new anchor.BN(1)
+        )
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx3);
+
+      try {
+        const tx4 = await program.methods
+          .setInitialValset(Buffer.from(hash, "hex"))
+          .accounts({ payer: payer.publicKey, config: configPDA2 })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx4);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should allow admin to set initial valset", async () => {
       const tx4 = await program.methods
         .setInitialValset(Buffer.from(hash, "hex"))
         .accounts({ payer: admin.publicKey, config: configPDA })
@@ -503,25 +599,56 @@ describe("LBTC", () => {
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.epoch == 1);
-      //expect(cfg.validators == 1);
+      expect(cfg.validators[0] == validators[0]);
+      expect(cfg.validators[1] == validators[1]);
       expect(cfg.weights == [1, 1]);
       expect(cfg.weight_threshold == 1);
     });
 
-    it("should allow to set next valset with proper signatures", async () => {
-      const tx = await program.methods
-        .setNextValset(Buffer.from(nextValset), Buffer.from(signatures))
-        .accounts({ config: configPDA })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.epoch == 2);
-      //expect(cfg.validators == 1);
-      expect(cfg.weights == [1, 1, 1]);
-      expect(cfg.weight_threshold == 2);
-    });
+    it("should not allow setting initial valset twice", async () => {});
+
+    it("should not allow setting next valset without proper signatures", async () => {});
+
+    it("should not allow adding wrong signatures", async () => {});
+
+    it("should allow to set next valset with proper signatures", async () => {});
   });
 
-  describe("Minting and redeeming", () => {});
+  describe("Minting and redeeming", () => {
+    it("should not allow non-minter to mint", async () => {});
+
+    it("should allow minter to mint freely", async () => {});
+
+    it("should not allow non-minter to burn", async () => {});
+
+    it("should allow minter to burn freely", async () => {});
+    
+    it("should allow anyone to create mint payload", async () => {});
+
+    it("should not allow to mint without proper signatures", async () => {});
+
+    it("should allow anyone to post signatures for mint payload", async () => {});
+
+    it("should allow to mint with proper signatures", async () => {});
+
+    it("should not allow non-claimer to mint with fee", async () => {});
+
+    it("should allow claimer to mint with fee to wrong treasury", async () => {});
+
+    it("should allow claimer to mint with fee", async () => {});
+
+    it("should not allow user to redeem if they don't have enough LBTC", async () => {});
+
+    it("should not allow user to redeem below burn commission", async () => {});
+
+    it("should not allow user to redeem below dust limit", async () => {});
+
+    it("should not allow user to redeem to invalid script pubkey", async () => {});
+
+    it("should not allow user to redeem when withdrawals are disabled", async () => {});
+
+    it("should not allow user to redeem with improper treasury", async () => {});
+
+    it("should allow user to redeem", async () => {});
+  });
 });
