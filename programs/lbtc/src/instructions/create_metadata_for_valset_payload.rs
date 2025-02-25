@@ -22,7 +22,7 @@ pub struct CreateValsetMetadata<'info> {
 }
 
 pub fn create_metadata_for_valset_payload(
-    ctx: Context<CreateValsetMetadata>,
+    _ctx: Context<CreateValsetMetadata>,
     hash: [u8; 32],
 ) -> Result<()> {
     emit!(ValsetMetadataCreated {

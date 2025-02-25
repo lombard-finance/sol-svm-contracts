@@ -66,7 +66,6 @@ pub fn mint_with_fee(
     let fee = validation::validate_fee(
         &ctx.accounts.config,
         *ctx.program_id,
-        &ctx.accounts.recipient.to_account_info(),
         &ctx.accounts.recipient_auth.to_account_info(),
         fee_payload,
         fee_signature,

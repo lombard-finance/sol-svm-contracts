@@ -20,7 +20,7 @@ pub struct SetInitialValset<'info> {
     pub payload: Account<'info, ValsetPayload>,
 }
 
-pub fn set_initial_valset(ctx: Context<SetInitialValset>, hash: [u8; 32]) -> Result<()> {
+pub fn set_initial_valset(ctx: Context<SetInitialValset>, _hash: [u8; 32]) -> Result<()> {
     validation::validate_valset(
         &ctx.accounts.metadata.validators,
         &ctx.accounts.metadata.weights,

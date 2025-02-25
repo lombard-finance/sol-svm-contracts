@@ -20,7 +20,7 @@ pub struct SetNextValset<'info> {
     pub payload: Account<'info, ValsetPayload>,
 }
 
-pub fn set_next_valset(ctx: Context<SetNextValset>, hash: [u8; 32]) -> Result<()> {
+pub fn set_next_valset(ctx: Context<SetNextValset>, _hash: [u8; 32]) -> Result<()> {
     validation::validate_valset(
         &ctx.accounts.metadata.validators,
         &ctx.accounts.metadata.weights,

@@ -44,9 +44,11 @@ pub fn create_valset_payload(
         weight_threshold,
         height,
     };
+
     let bytes = payload.abi_encode();
     let bytes_hash = sha256(&bytes).to_bytes();
     require!(bytes_hash == hash, LBTCError::ValsetPayloadHashMismatch);
+
     ctx.accounts.payload.epoch = epoch;
     ctx.accounts.payload.weight_threshold = weight_threshold;
     emit!(ValsetPayloadCreated {

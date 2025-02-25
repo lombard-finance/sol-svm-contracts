@@ -3,7 +3,6 @@ use crate::{constants, errors::LBTCError, events::MintProofConsumed, state::Conf
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
-use solana_program::hash::hash as sha256;
 
 pub fn validate_mint<'info>(
     config: &Account<'_, Config>,
@@ -11,7 +10,7 @@ pub fn validate_mint<'info>(
     mint_payload: &[u8],
     weight: u64,
     mint_payload_hash: [u8; 32],
-    bascule: &UncheckedAccount<'info>,
+    _bascule: &UncheckedAccount<'info>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
     require!(
@@ -47,7 +46,6 @@ pub fn validate_mint<'info>(
 pub fn validate_fee<'info>(
     config: &Account<'info, Config>,
     program_id: Pubkey,
-    recipient: &AccountInfo<'info>,
     recipient_auth: &AccountInfo<'info>,
     fee_payload: [u8; constants::FEE_PAYLOAD_LEN],
     fee_signature: [u8; 64],
