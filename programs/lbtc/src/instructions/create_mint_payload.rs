@@ -3,7 +3,7 @@ use crate::{constants::MINT_PAYLOAD_LEN, events::MintPayloadPosted, state::MintP
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(mint_payload_hash: Vec<u8>, mint_payload: [u8; MINT_PAYLOAD_LEN])]
+#[instruction(mint_payload_hash: [u8; 32])]
 pub struct CreateMintPayload<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,

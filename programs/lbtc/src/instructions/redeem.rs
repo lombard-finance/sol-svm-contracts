@@ -10,6 +10,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 pub struct Redeem<'info> {
+    #[account(mut)]
     pub payer: Signer<'info>,
     #[account(
         mut,
@@ -17,9 +18,10 @@ pub struct Redeem<'info> {
         token::authority = payer,
         token::token_program = token_program,
     )]
-    pub recipient: InterfaceAccount<'info, TokenAccount>,
+    pub holder: InterfaceAccount<'info, TokenAccount>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
@@ -40,21 +42,26 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
     require!(amount > fee, LBTCError::FeeGTEAmount);
     require!(amount - fee > dust_limit, LBTCError::AmountBelowDustLimit);
 
+    msg!("{:?}", ctx.accounts.treasury.amount);
+    msg!("{:?}", ctx.accounts.holder.amount);
     anchor_spl::token_interface::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             anchor_spl::token_interface::Transfer {
-                from: ctx.accounts.recipient.to_account_info(),
+                from: ctx.accounts.holder.to_account_info(),
                 to: ctx.accounts.treasury.to_account_info(),
                 authority: ctx.accounts.payer.to_account_info(),
             },
         ),
         fee,
     )?;
+    msg!("{:?}", ctx.accounts.treasury.amount);
 
+    msg!("{:?}", amount - fee);
+    msg!("{:?}", ctx.accounts.holder.amount);
     utils::execute_burn(
         ctx.accounts.token_program.to_account_info(),
-        ctx.accounts.payer.to_account_info(),
+        ctx.accounts.holder.to_account_info(),
         amount - fee,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.payer.to_account_info(),

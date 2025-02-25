@@ -9,6 +9,8 @@ const web3 = require("@solana/web3.js");
 const assert = require("assert");
 const expect = require("chai").expect;
 
+// TODO proper error checking????
+
 describe("LBTC", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -20,6 +22,12 @@ describe("LBTC", () => {
   let admin;
   let operator;
   let configPDA;
+  let treasury;
+  let mint;
+    const tokenAuth = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("token_authority")],
+      program.programId
+    )[0];
   let metadata_seed = new Uint8Array(32);
   for (let i = 0; i < metadata_seed.length; i++) {
     metadata_seed[i] = 1;
@@ -39,16 +47,26 @@ describe("LBTC", () => {
   user = web3.Keypair.generate();
   admin = web3.Keypair.generate();
   operator = web3.Keypair.generate();
+  const t = web3.Keypair.generate();
 
   before(async () => {
     await fundWallet(payer, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(user, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(admin, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(operator, 25 * web3.LAMPORTS_PER_SOL);
+    await fundWallet(t, 25 * web3.LAMPORTS_PER_SOL);
 
+    mint = await spl.createMint(provider.connection, admin, tokenAuth, null, 8);
     [configPDA] = web3.PublicKey.findProgramAddressSync(
       [Buffer.from("lbtc_config")],
       program.programId
+    );
+
+    treasury = await spl.createAssociatedTokenAccount(
+      provider.connection,
+      t,
+      mint,
+      t.publicKey
     );
   });
 
@@ -197,7 +215,7 @@ describe("LBTC", () => {
     });
 
     it("allows admin to set dust fee rate", async () => {
-      const dustFeeRate = new anchor.BN(2000);
+      const dustFeeRate = new anchor.BN(3000);
       const tx = await program.methods
         .setDustFeeRate(dustFeeRate)
         .accounts({ payer: admin.publicKey, config: configPDA })
@@ -210,7 +228,7 @@ describe("LBTC", () => {
 
     it("should not allow anyone else to set dust fee rate", async () => {
       try {
-        const dustFeeRate = new anchor.BN(2000);
+        const dustFeeRate = new anchor.BN(3000);
         const tx = await program.methods
           .setDustFeeRate(dustFeeRate)
           .accounts({ payer: payer.publicKey, config: configPDA })
@@ -220,28 +238,26 @@ describe("LBTC", () => {
       } catch (e) {}
     });
 
-    it("allows admin to set treasury", async () => {
-      const treasury = web3.Keypair.generate();
-      const tx = await program.methods
-        .setTreasury(treasury.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.treasury.toBase58() == treasury.publicKey.toBase58());
-    });
-
     it("should not allow anyone else to set treasury", async () => {
       try {
-        const treasury = web3.Keypair.generate();
         const tx = await program.methods
-          .setTreasury(treasury.publicKey)
+          .setTreasury(treasury)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
         assert.fail("should not be allowed");
       } catch (e) {}
+    });
+
+    it("allows admin to set treasury", async () => {
+      const tx = await program.methods
+        .setTreasury(treasury)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.treasury.toBase58() == treasury.toBase58());
     });
 
     it("allows admin to add minter", async () => {
@@ -844,23 +860,15 @@ describe("LBTC", () => {
   });
 
   describe("Minting and redeeming", () => {
-    let mint;
     let userTA;
     let minterTA;
     const minter = web3.Keypair.generate();
-    const tokenAuth = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("token_authority")],
-      program.programId
-    )[0];
+
+    const scriptPubkey = [
+      0, 20, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    ];
 
     before(async () => {
-      mint = await spl.createMint(
-        provider.connection,
-        admin,
-        tokenAuth,
-        null,
-        8
-      );
       userTA = await spl.createAssociatedTokenAccount(
         provider.connection,
         user,
@@ -937,6 +945,7 @@ describe("LBTC", () => {
       } catch (e) {}
     });
 
+    // NOTE: minters can only burn from their own wallets.
     it("should allow minter to burn freely", async () => {
       const tx = await program.methods
         .mint(new anchor.BN(1000))
@@ -980,18 +989,150 @@ describe("LBTC", () => {
 
     it("should allow claimer to mint with fee", async () => {});
 
-    it("should not allow user to redeem if they don't have enough LBTC", async () => {});
+    it("should not allow user to redeem if they don't have enough LBTC", async () => {
+      try {
+        const tx = await program.methods
+          .redeem(Buffer.from(scriptPubkey), new anchor.BN(2000))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: treasury,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not work");
+      } catch (e) {}
+    });
 
-    it("should not allow user to redeem below burn commission", async () => {});
+    it("should not allow user to redeem below burn commission", async () => {
+      try {
+        // 10 burn commission
+        const tx = await program.methods
+          .redeem(Buffer.from(scriptPubkey), new anchor.BN(10))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: treasury,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not work");
+      } catch (e) {}
+    });
 
-    it("should not allow user to redeem below dust limit", async () => {});
+    it("should not allow user to redeem below dust limit", async () => {
+      try {
+        // 10 burn commission + 294 dust limit
+        const tx = await program.methods
+          .redeem(Buffer.from(scriptPubkey), new anchor.BN(304))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: treasury,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not work");
+      } catch (e) {}
+    });
 
-    it("should not allow user to redeem to invalid script pubkey", async () => {});
+    it("should not allow user to redeem to invalid script pubkey", async () => {
+      try {
+        const tx = await program.methods
+          .redeem(Buffer.from([0, 1, 2]), new anchor.BN(1000))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: treasury,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not work");
+      } catch (e) {}
+    });
 
-    it("should not allow user to redeem when withdrawals are disabled", async () => {});
+    it("should not allow user to redeem when withdrawals are disabled", async () => {
+      const tx = await program.methods
+        .toggleWithdrawals()
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
 
-    it("should not allow user to redeem with improper treasury", async () => {});
+      try {
+        const tx2 = await program.methods
+          .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: treasury,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
+        assert.fail("should not work");
+      } catch (e) {}
 
-    it("should allow user to redeem", async () => {});
+      const tx3 = await program.methods
+        .toggleWithdrawals()
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx3);
+    });
+
+    it("should not allow user to redeem with improper treasury", async () => {
+      try {
+        const tx = await program.methods
+          .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
+          .accounts({
+            payer: user.publicKey,
+            holder: userTA,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            mint: mint,
+            treasury: userTA,
+          })
+          .signers([user])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        assert.fail("should not work");
+      } catch (e) {}
+    });
+
+    it("should allow user to redeem", async () => {
+      const tx = await program.methods
+        .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
+        .accounts({
+          payer: user.publicKey,
+          holder: userTA,
+          config: configPDA,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          mint: mint,
+          treasury: treasury,
+        })
+        .signers([user])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+    });
   });
 });

@@ -1,4 +1,5 @@
 //! Burning instruction for privileged users.
+//! NOTE: In solana, you can only burn tokens from your own wallet.
 use crate::{errors::LBTCError, state::Config, utils};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint as MintInterface, TokenAccount, TokenInterface};
