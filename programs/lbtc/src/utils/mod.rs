@@ -13,15 +13,18 @@ pub fn execute_mint<'info>(
     amount: u64,
     mint: AccountInfo<'info>,
     authority: AccountInfo<'info>,
+    bump: u8,
 ) -> Result<()> {
+    let token_authority_sig: &[&[&[u8]]] = &[&[crate::constants::TOKEN_AUTHORITY_SEED, &[bump]]];
     token_interface::mint_to(
-        CpiContext::new(
+        CpiContext::new_with_signer(
             token_program,
             token_interface::MintTo {
                 mint,
                 to,
                 authority,
             },
+            token_authority_sig,
         ),
         amount,
     )

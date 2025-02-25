@@ -7,7 +7,7 @@ use crate::{
     utils::{self, validation},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: Vec<u8>)]
@@ -18,17 +18,13 @@ pub struct MintWithFee<'info> {
     #[account(
         mut,
         token::mint = mint,
-        token::authority = token_authority,
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    pub mint: InterfaceAccount<'info, TokenAccount>,
-    #[account(
-        seeds = [crate::constants::TOKEN_AUTHORITY_SEED],
-        bump,
-    )]
-    /// CHECK: This just needs to be the account of the recipient. Minting will fail if this is
-    /// improperly specified.
+    #[account(mut)]
+    pub mint: InterfaceAccount<'info, Mint>,
+    /// CHECK: The seeds constraint ensures the correct address is passed.
+    #[account(seeds = [crate::constants::TOKEN_AUTHORITY_SEED], bump)]
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
@@ -82,6 +78,7 @@ pub fn mint_with_fee(
         fee,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
+        ctx.bumps.token_authority,
     )?;
     utils::execute_mint(
         ctx.accounts.token_program.to_account_info(),
@@ -89,5 +86,6 @@ pub fn mint_with_fee(
         amount - fee,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.token_authority.to_account_info(),
+        ctx.bumps.token_authority,
     )
 }

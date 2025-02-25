@@ -6,7 +6,7 @@ use crate::{
     utils::{self, bitcoin_utils},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(Accounts)]
 pub struct Redeem<'info> {
@@ -20,7 +20,7 @@ pub struct Redeem<'info> {
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
-    pub mint: InterfaceAccount<'info, TokenAccount>,
+    pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
 }

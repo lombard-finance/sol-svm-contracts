@@ -52,7 +52,7 @@ pub mod lbtc {
         instructions::mint(ctx, amount)
     }
 
-    pub fn burn(ctx: Context<Mint>, amount: u64) -> Result<()> {
+    pub fn burn(ctx: Context<Burn>, amount: u64) -> Result<()> {
         instructions::burn(ctx, amount)
     }
 
