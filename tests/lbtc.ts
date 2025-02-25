@@ -16,6 +16,7 @@ describe("LBTC", () => {
   const program = anchor.workspace.Lbtc as Program<Lbtc>;
 
   let payer;
+  let user;
   let admin;
   let operator;
   let configPDA;
@@ -34,12 +35,14 @@ describe("LBTC", () => {
     );
   }
 
-    payer = web3.Keypair.generate();
-    admin = web3.Keypair.generate();
-    operator = web3.Keypair.generate();
+  payer = web3.Keypair.generate();
+  user = web3.Keypair.generate();
+  admin = web3.Keypair.generate();
+  operator = web3.Keypair.generate();
 
   before(async () => {
     await fundWallet(payer, 25 * web3.LAMPORTS_PER_SOL);
+    await fundWallet(user, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(admin, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(operator, 25 * web3.LAMPORTS_PER_SOL);
 
@@ -47,8 +50,6 @@ describe("LBTC", () => {
       [Buffer.from("lbtc_config")],
       program.programId
     );
-
-    await fundWallet(configPDA, 1 * web3.LAMPORTS_PER_SOL);
   });
 
   describe("Setters and getters", () => {
@@ -407,15 +408,16 @@ describe("LBTC", () => {
       "hex"
     );
     const nextValset = Buffer.from(
-      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
+      "4aab1d6f000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000004104ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000410420b871f3ced029e14472ec4ebc3c0448164942b123aa6af91a3386c1c403e0ebd3b4a5752a2b6c49e574619e6aa0549eb9ccd036b9bbc507e1f7f9712a236092000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
       "hex"
     );
     const signatures = Buffer.from(
-      "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040976b76d08d5628efe8e7ba998dc76e432769ea735a861e14f5c25873f76255a53efa7a5ce215f48c2278c1e15c5d5a95eeee47b417a995a68f964eb4ba0416cf00000000000000000000000000000000000000000000000000000000000000405170e1e8004c677fbd7a712065073bfff46b5752e8020a2b098b2bd6d30fde0a65a8044a79c2c730483de1e26ae48570cae11a335547e167ecf5d07fa7aa45fe0000000000000000000000000000000000000000000000000000000000000000",
+      "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000040dd9cbefb2570d94d82095766a142e7f3eb115313f364db7c0fa01ac246aca5ff3654b5f6dbcdbfe086c86e5e7ae8e5178986944dafb077303a99e2bd75663c8600000000000000000000000000000000000000000000000000000000000000407474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
       "hex"
     );
 
     const hash = sha256(initialValset);
+    const hash2 = sha256(nextValset);
     const metadataPDA = web3.PublicKey.findProgramAddressSync(
       [Buffer.from(hash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
       program.programId
@@ -430,7 +432,43 @@ describe("LBTC", () => {
         "hex"
       ),
     ];
+    const validators2 = [
+      Buffer.from(
+        "04ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+        "hex"
+      ),
+      Buffer.from(
+        "049d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
+        "hex"
+      ),
+      Buffer.from(
+        "0420b871f3ced029e14472ec4ebc3c0448164942b123aa6af91a3386c1c403e0ebd3b4a5752a2b6c49e574619e6aa0549eb9ccd036b9bbc507e1f7f9712a236092",
+        "hex"
+      ),
+    ];
     const weights = [new anchor.BN(1), new anchor.BN(1)];
+    const weights2 = [new anchor.BN(1), new anchor.BN(1), new anchor.BN(1)];
+
+    const sigs = [
+      Buffer.from(
+        "dd9cbefb2570d94d82095766a142e7f3eb115313f364db7c0fa01ac246aca5ff3654b5f6dbcdbfe086c86e5e7ae8e5178986944dafb077303a99e2bd75663c86",
+        "hex"
+      ),
+      Buffer.from(
+        "7474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
+        "hex"
+      ),
+    ];
+    const wrongSigs = [
+      Buffer.from(
+        "ad9cbefb2570d94d82095766a142e7f3eb115313f364db7c0fa01ac246aca5ff3654b5f6dbcdbfe086c86e5e7ae8e5178986944dafb077303a99e2bd75663c86",
+        "hex"
+      ),
+      Buffer.from(
+        "a474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
+        "hex"
+      ),
+    ];
 
     const payloadPDA = web3.PublicKey.findProgramAddressSync(
       [Buffer.from(hash, "hex"), admin.publicKey.toBuffer()],
@@ -581,7 +619,7 @@ describe("LBTC", () => {
       try {
         const tx4 = await program.methods
           .setInitialValset(Buffer.from(hash, "hex"))
-          .accounts({ payer: payer.publicKey, config: configPDA2 })
+          .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
         await provider.connection.confirmTransaction(tx4);
@@ -605,13 +643,198 @@ describe("LBTC", () => {
       expect(cfg.weight_threshold == 1);
     });
 
-    it("should not allow setting initial valset twice", async () => {});
+    it("should not allow setting initial valset twice", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), metadata_seed, admin.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), admin.publicKey.toBuffer()],
+        program.programId
+      )[0];
 
-    it("should not allow setting next valset without proper signatures", async () => {});
+      const tx = await program.methods
+        .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
+        .accounts({
+          payer: admin.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
 
-    it("should not allow adding wrong signatures", async () => {});
+      const tx2 = await program.methods
+        .postMetadataForValsetPayload(
+          Buffer.from(hash2, "hex"),
+          validators2,
+          weights2
+        )
+        .accounts({
+          payer: admin.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
 
-    it("should allow to set next valset with proper signatures", async () => {});
+      const tx3 = await program.methods
+        .createValsetPayload(
+          Buffer.from(hash2, "hex"),
+          new anchor.BN(2),
+          new anchor.BN(2),
+          new anchor.BN(1)
+        )
+        .accounts({
+          payer: admin.publicKey,
+          metadata: metadataPDA2,
+          payload: payloadPDA2,
+        })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx3);
+
+      try {
+        const tx4 = await program.methods
+          .setInitialValset(Buffer.from(hash2, "hex"))
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx4);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should not allow setting next valset without proper signatures", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+
+      const tx = await program.methods
+        .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const tx2 = await program.methods
+        .postMetadataForValsetPayload(
+          Buffer.from(hash2, "hex"),
+          validators2,
+          weights2
+        )
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+
+      const tx3 = await program.methods
+        .createValsetPayload(
+          Buffer.from(hash2, "hex"),
+          new anchor.BN(2),
+          new anchor.BN(2),
+          new anchor.BN(1)
+        )
+        .accounts({
+          payer: payer.publicKey,
+          metadata: metadataPDA2,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx3);
+
+      try {
+        const tx4 = await program.methods
+          .setNextValset(Buffer.from(hash2, "hex"))
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            metadata: metadataPDA2,
+            payload: payloadPDA2,
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx4);
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should not allow adding wrong signatures", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload.signatures.length, 0);
+
+      const tx = await program.methods
+        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [new anchor.BN(0), new anchor.BN(1)])
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload2.signatures.length, 0);
+    });
+
+    it("should allow to set next valset with proper signatures", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload.signatures.length, 0);
+
+      const tx = await program.methods
+        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [new anchor.BN(0), new anchor.BN(1)])
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload2.signatures.length, 2);
+
+      const tx4 = await program.methods
+        .setNextValset(Buffer.from(hash2, "hex"))
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          metadata: metadataPDA2,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx4);
+    });
   });
 
   describe("Minting and redeeming", () => {
@@ -622,7 +845,7 @@ describe("LBTC", () => {
     it("should not allow non-minter to burn", async () => {});
 
     it("should allow minter to burn freely", async () => {});
-    
+
     it("should allow anyone to create mint payload", async () => {});
 
     it("should not allow to mint without proper signatures", async () => {});
