@@ -9,9 +9,8 @@ crate-type = ["cdylib", "lib"]
 name = "lbtc"
 
 [features]
-default = ["testnet"]
+default = ["devnet"]
 mainnet = []
-testnet = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []

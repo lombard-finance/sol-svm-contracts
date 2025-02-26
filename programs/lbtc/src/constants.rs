@@ -6,7 +6,7 @@ pub const CHAIN_ID: [u8; 32] = [
 ];
 
 /// 0x0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab
-#[cfg(any(feature = "testnet", feature = "devnet"))]
+#[cfg(any(feature = "devnet"))]
 pub const CHAIN_ID: [u8; 32] = [
     2, 89, 219, 80, 128, 252, 44, 109, 59, 207, 124, 169, 7, 18, 211, 194, 229, 230, 194, 143, 39,
     240, 223, 187, 153, 83, 189, 176, 137, 76, 3, 171,
