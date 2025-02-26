@@ -21,15 +21,6 @@ pub struct SetNextValset<'info> {
 }
 
 pub fn set_next_valset(ctx: Context<SetNextValset>, _hash: [u8; 32]) -> Result<()> {
-    validation::validate_valset(
-        &ctx.accounts.metadata.validators,
-        &ctx.accounts.metadata.weights,
-        ctx.accounts.payload.weight_threshold,
-    )?;
-    require!(
-        ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
-        LBTCError::WeightsBelowThreshold
-    );
     require!(ctx.accounts.config.epoch != 0, LBTCError::NoValidatorSet);
     require!(
         ctx.accounts.payload.epoch == ctx.accounts.config.epoch + 1,
@@ -39,6 +30,11 @@ pub fn set_next_valset(ctx: Context<SetNextValset>, _hash: [u8; 32]) -> Result<(
         ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
         LBTCError::NotEnoughSignatures
     );
+    validation::validate_valset(
+        &ctx.accounts.metadata.validators,
+        &ctx.accounts.metadata.weights,
+        ctx.accounts.payload.weight_threshold,
+    )?;
 
     ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
     ctx.accounts.config.validators = ctx.accounts.metadata.validators.clone();
