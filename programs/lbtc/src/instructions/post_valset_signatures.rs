@@ -31,19 +31,14 @@ pub fn post_valset_signatures(
         .iter()
         .zip(indices.iter())
         .for_each(|(signature, index)| {
-            if !ctx
-                .accounts
-                .payload
-                .signatures
-                .iter()
-                .any(|sig| sig == signature)
+            if !ctx.accounts.payload.signed[*index as usize]
                 && signatures::check_signature(
                     &ctx.accounts.config.validators[*index as usize],
                     signature,
                     &hash,
                 )
             {
-                ctx.accounts.payload.signatures.push(*signature);
+                ctx.accounts.payload.signed[*index as usize] = true;
                 ctx.accounts.payload.weight += ctx.accounts.config.weights[*index as usize];
             }
         });

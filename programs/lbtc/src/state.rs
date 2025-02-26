@@ -41,7 +41,7 @@ pub struct Config {
 pub struct MintPayload {
     pub payload: [u8; MINT_PAYLOAD_LEN],
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub signatures: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
+    pub signed: Vec<bool>,
     pub weight: u64,
 }
 
@@ -60,6 +60,6 @@ pub struct ValsetPayload {
     pub epoch: u64,
     pub weight_threshold: u64,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub signatures: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
+    pub signed: Vec<bool>,
     pub weight: u64,
 }

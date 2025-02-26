@@ -570,6 +570,7 @@ describe("LBTC", () => {
           )
           .accounts({
             payer: admin.publicKey,
+            config: configPDA,
             metadata: metadataPDA,
             payload: payloadPDA,
           })
@@ -591,6 +592,7 @@ describe("LBTC", () => {
           )
           .accounts({
             payer: admin.publicKey,
+            config: configPDA,
             metadata: metadataPDA,
             payload: payloadPDA,
           })
@@ -646,6 +648,7 @@ describe("LBTC", () => {
         )
         .accounts({
           payer: payer.publicKey,
+          config: configPDA,
           metadata: metadataPDA2,
           payload: payloadPDA2,
         })
@@ -723,6 +726,7 @@ describe("LBTC", () => {
         )
         .accounts({
           payer: admin.publicKey,
+          config: configPDA,
           metadata: metadataPDA2,
           payload: payloadPDA2,
         })
@@ -784,6 +788,7 @@ describe("LBTC", () => {
         )
         .accounts({
           payer: payer.publicKey,
+          config: configPDA,
           metadata: metadataPDA2,
           payload: payloadPDA2,
         })
@@ -817,7 +822,7 @@ describe("LBTC", () => {
         program.programId
       )[0];
       const payload = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload.signatures.length, 0);
+      assert.equal(payload.weight, 0);
 
       const tx = await program.methods
         .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [
@@ -834,7 +839,54 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
 
       const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload2.signatures.length, 0);
+      assert.equal(payload2.weight, 0);
+    });
+
+    it("should not allow for double-adding signatures", async () => {
+      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+
+      const tx = await program.methods
+        .postValsetSignatures(
+          Buffer.from(hash2, "hex"),
+          [sigs[0]],
+          [new anchor.BN(0)]
+        )
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload.weight, 1);
+
+      const tx2 = await program.methods
+        .postValsetSignatures(
+          Buffer.from(hash2, "hex"),
+          [sigs[0]],
+          [new anchor.BN(0)]
+        )
+        .accounts({
+          payer: payer.publicKey,
+          config: configPDA,
+          payload: payloadPDA2,
+        })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+
+      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+      assert.equal(payload2.weight, 1);
     });
 
     it("should allow to set next valset with proper signatures", async () => {
@@ -847,7 +899,7 @@ describe("LBTC", () => {
         program.programId
       )[0];
       const payload = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload.signatures.length, 0);
+      assert.equal(payload.weight, 1);
 
       const tx = await program.methods
         .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [
@@ -864,7 +916,7 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
 
       const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload2.signatures.length, 2);
+      assert.equal(payload2.weight, 2);
 
       const tx4 = await program.methods
         .setNextValset(Buffer.from(hash2, "hex"))
@@ -930,11 +982,11 @@ describe("LBTC", () => {
     );
     const feePayloadSig = nacl.sign.detached(feePayload, recipient.secretKey);
 
-    const feePayloadPDA = web3.PublicKey.findProgramAddressSync(
+    const mintPayloadPDA = web3.PublicKey.findProgramAddressSync(
       [Buffer.from(mintHash, "hex")],
       program.programId
     )[0];
-    const feePayloadPDA2 = web3.PublicKey.findProgramAddressSync(
+    const mintPayloadPDA2 = web3.PublicKey.findProgramAddressSync(
       [Buffer.from(mintHash2, "hex")],
       program.programId
     )[0];
@@ -1052,7 +1104,7 @@ describe("LBTC", () => {
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: feePayloadPDA,
+          payload: mintPayloadPDA,
         })
         .signers([payer])
         .rpc();
@@ -1069,7 +1121,7 @@ describe("LBTC", () => {
             recipient: recipientTA,
             mint: mint,
             tokenAuthority: tokenAuth,
-            payload: feePayloadPDA,
+            payload: mintPayloadPDA,
             bascule: payer.publicKey,
           })
           .signers([payer])
@@ -1079,13 +1131,41 @@ describe("LBTC", () => {
       } catch (e) {}
     });
 
+    it("should not allow for double-adding signatures", async () => {
+      const tx = await program.methods
+        .postMintSignatures(
+          Buffer.from(mintHash, "hex"),
+          [mintSigs[0]],
+          [new anchor.BN(0)]
+        )
+        .accounts({ config: configPDA, payload: mintPayloadPDA })
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+
+      const payload = await program.account.mintPayload.fetch(mintPayloadPDA);
+      assert.equal(payload.weight, 1);
+
+      const tx2 = await program.methods
+        .postMintSignatures(
+          Buffer.from(mintHash, "hex"),
+          [mintSigs[0]],
+          [new anchor.BN(0)]
+        )
+        .accounts({ config: configPDA, payload: mintPayloadPDA })
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+
+      const payload2 = await program.account.mintPayload.fetch(mintPayloadPDA);
+      assert.equal(payload2.weight, 1);
+    });
+
     it("should allow anyone to post signatures for mint payload", async () => {
       const tx = await program.methods
         .postMintSignatures(Buffer.from(mintHash, "hex"), mintSigs, [
           new anchor.BN(0),
           new anchor.BN(2),
         ])
-        .accounts({ config: configPDA, payload: feePayloadPDA })
+        .accounts({ config: configPDA, payload: mintPayloadPDA })
         .rpc();
       await provider.connection.confirmTransaction(tx);
     });
@@ -1099,7 +1179,7 @@ describe("LBTC", () => {
           recipient: recipientTA,
           mint: mint,
           tokenAuthority: tokenAuth,
-          payload: feePayloadPDA,
+          payload: mintPayloadPDA,
           bascule: payer.publicKey,
         })
         .rpc();
@@ -1112,7 +1192,7 @@ describe("LBTC", () => {
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: feePayloadPDA2,
+          payload: mintPayloadPDA2,
         })
         .signers([payer])
         .rpc();
@@ -1123,7 +1203,7 @@ describe("LBTC", () => {
           new anchor.BN(0),
           new anchor.BN(2),
         ])
-        .accounts({ config: configPDA, payload: feePayloadPDA2 })
+        .accounts({ config: configPDA, payload: mintPayloadPDA2 })
         .rpc();
       await provider.connection.confirmTransaction(tx2);
 
@@ -1143,7 +1223,7 @@ describe("LBTC", () => {
             mint: mint,
             tokenAuthority: tokenAuth,
             treasury: treasury,
-            payload: feePayloadPDA2,
+            payload: mintPayloadPDA2,
             bascule: payer.publicKey,
           })
           .signers([payer])
@@ -1170,7 +1250,7 @@ describe("LBTC", () => {
             mint: mint,
             tokenAuthority: tokenAuth,
             treasury: recipientTA,
-            payload: feePayloadPDA2,
+            payload: mintPayloadPDA2,
             bascule: payer.publicKey,
           })
           .signers([minter])
@@ -1203,7 +1283,7 @@ describe("LBTC", () => {
           mint: mint,
           tokenAuthority: tokenAuth,
           treasury: treasury,
-          payload: feePayloadPDA2,
+          payload: mintPayloadPDA2,
           bascule: payer.publicKey,
         })
         .signers([minter])

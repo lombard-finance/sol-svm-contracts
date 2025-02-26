@@ -4,7 +4,7 @@ use crate::{
     constants,
     errors::LBTCError,
     events::ValsetPayloadCreated,
-    state::{Metadata, ValsetPayload},
+    state::{Config, Metadata, ValsetPayload},
     utils::actions::ValsetAction,
 };
 use anchor_lang::prelude::*;
@@ -15,6 +15,7 @@ use solana_program::hash::hash as sha256;
 pub struct CreateValset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub config: Account<'info, Config>,
     #[account(mut, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
     #[account(
@@ -51,6 +52,7 @@ pub fn create_valset_payload(
 
     ctx.accounts.payload.epoch = epoch;
     ctx.accounts.payload.weight_threshold = weight_threshold;
+    ctx.accounts.payload.signed = vec![false; ctx.accounts.config.validators.len()];
     emit!(ValsetPayloadCreated {
         hash,
         epoch,

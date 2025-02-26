@@ -38,6 +38,7 @@ pub fn create_mint_payload(
     }
 
     ctx.accounts.payload.payload = mint_payload.clone();
+    ctx.accounts.payload.signed = vec![false; ctx.accounts.config.validators.len()];
     emit!(MintPayloadPosted {
         hash: mint_payload_hash,
         payload: mint_payload,
