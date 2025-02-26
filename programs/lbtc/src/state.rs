@@ -44,6 +44,7 @@ pub struct MintPayload {
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub signed: Vec<bool>,
     pub weight: u64,
+    pub minted: bool,
 }
 
 #[account]

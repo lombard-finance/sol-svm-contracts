@@ -138,6 +138,14 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
       assert.equal(cfg.basculeEnabled, true);
+
+      // Turn back off for posterity
+      const tx2 = await program.methods
+        .toggleBascule()
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
     });
 
     it("should not allow anyone else to toggle bascule", async () => {
