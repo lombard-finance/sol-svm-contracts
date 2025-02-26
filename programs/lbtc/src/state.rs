@@ -39,6 +39,7 @@ pub struct Config {
 #[account]
 #[derive(InitSpace)]
 pub struct MintPayload {
+    pub epoch: u64,
     pub payload: [u8; MINT_PAYLOAD_LEN],
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub signed: Vec<bool>,

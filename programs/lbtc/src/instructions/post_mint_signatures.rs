@@ -27,6 +27,15 @@ pub fn post_mint_signatures(
         signatures.len() == indices.len(),
         LBTCError::SignaturesIndicesMismatch
     );
+
+    // If the validator set has changed inbetween posting the mint payload and finalizing it,
+    // we need to start from scratch.
+    if ctx.accounts.payload.epoch != ctx.accounts.config.epoch {
+        ctx.accounts.payload.epoch = ctx.accounts.config.epoch;
+        ctx.accounts.payload.signed = vec![false; ctx.accounts.config.validators.len()];
+        ctx.accounts.payload.weight = 0;
+    }
+
     signatures
         .iter()
         .zip(indices.iter())

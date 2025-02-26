@@ -37,6 +37,7 @@ pub fn create_mint_payload(
         return err!(LBTCError::MintPayloadHashMismatch);
     }
 
+    ctx.accounts.payload.epoch = ctx.accounts.config.epoch;
     ctx.accounts.payload.payload = mint_payload.clone();
     ctx.accounts.payload.signed = vec![false; ctx.accounts.config.validators.len()];
     emit!(MintPayloadPosted {
