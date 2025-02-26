@@ -100,7 +100,7 @@ pub struct PauseEnabled {
 #[event]
 pub struct ValidatorSetUpdated {
     pub epoch: u64,
-    pub validators: Vec<[u8; 65]>,
+    pub validators: Vec<[u8; 64]>,
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
 }
@@ -132,7 +132,7 @@ pub struct ValsetMetadataCreated {
 #[event]
 pub struct ValsetMetadataPosted {
     pub hash: [u8; 32],
-    pub validators: Vec<[u8; 65]>,
+    pub validators: Vec<[u8; 64]>,
     pub weights: Vec<u64>,
 }
 

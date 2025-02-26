@@ -83,7 +83,7 @@ pub mod lbtc {
     pub fn post_metadata_for_valset_payload(
         ctx: Context<ValsetMetadata>,
         hash: [u8; 32],
-        validators: Vec<[u8; 65]>,
+        validators: Vec<[u8; 64]>,
         weights: Vec<u64>,
     ) -> Result<()> {
         instructions::post_metadata_for_valset_payload(ctx, hash, validators, weights)
