@@ -27,3 +27,4 @@ pub const FEE_PAYLOAD_LEN: usize = 132;
 pub const METADATA_SEED: [u8; 32] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
+pub const VALIDATOR_PUBKEY_SIZE: usize = 64;

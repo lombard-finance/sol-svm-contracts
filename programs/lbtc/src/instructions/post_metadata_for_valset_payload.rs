@@ -1,5 +1,5 @@
 //! Adds validators and weights for a validator set being constructed.
-use crate::{events::ValsetMetadataPosted, state::Metadata};
+use crate::{constants::VALIDATOR_PUBKEY_SIZE, events::ValsetMetadataPosted, state::Metadata};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -13,7 +13,7 @@ pub struct ValsetMetadata<'info> {
 pub fn post_metadata_for_valset_payload(
     ctx: Context<ValsetMetadata>,
     hash: [u8; 32],
-    validators: Vec<[u8; 64]>,
+    validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     weights: Vec<u64>,
 ) -> Result<()> {
     ctx.accounts.metadata.validators.extend(validators.clone());

@@ -7,6 +7,7 @@ pub(crate) mod state;
 pub(crate) mod utils;
 
 use anchor_lang::prelude::*;
+use constants::VALIDATOR_PUBKEY_SIZE;
 use constants::{FEE_PAYLOAD_LEN, MINT_PAYLOAD_LEN};
 use instructions::*;
 
@@ -83,7 +84,7 @@ pub mod lbtc {
     pub fn post_metadata_for_valset_payload(
         ctx: Context<ValsetMetadata>,
         hash: [u8; 32],
-        validators: Vec<[u8; 64]>,
+        validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
         weights: Vec<u64>,
     ) -> Result<()> {
         instructions::post_metadata_for_valset_payload(ctx, hash, validators, weights)

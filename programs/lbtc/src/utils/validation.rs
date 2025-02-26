@@ -91,7 +91,7 @@ pub fn validate_fee<'info>(
 }
 
 pub fn validate_valset(
-    validators: &[[u8; 64]],
+    validators: &[[u8; constants::VALIDATOR_PUBKEY_SIZE]],
     weights: &[u64],
     weight_threshold: u64,
 ) -> Result<()> {

@@ -1,5 +1,5 @@
 //! Defines all events for the Lombard Finance protocol.
-use crate::constants::MINT_PAYLOAD_LEN;
+use crate::constants::{MINT_PAYLOAD_LEN, VALIDATOR_PUBKEY_SIZE};
 use anchor_lang::prelude::*;
 
 #[event]
@@ -100,7 +100,7 @@ pub struct PauseEnabled {
 #[event]
 pub struct ValidatorSetUpdated {
     pub epoch: u64,
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
 }
@@ -132,7 +132,7 @@ pub struct ValsetMetadataCreated {
 #[event]
 pub struct ValsetMetadataPosted {
     pub hash: [u8; 32],
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     pub weights: Vec<u64>,
 }
 

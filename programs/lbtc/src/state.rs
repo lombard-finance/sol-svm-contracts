@@ -1,4 +1,4 @@
-use crate::constants::{MAX_VALIDATOR_SET_SIZE, MINT_PAYLOAD_LEN};
+use crate::constants::{MAX_VALIDATOR_SET_SIZE, MINT_PAYLOAD_LEN, VALIDATOR_PUBKEY_SIZE};
 use anchor_lang::prelude::*;
 
 #[account]
@@ -30,7 +30,7 @@ pub struct Config {
     // Consortium fields
     pub epoch: u64,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
@@ -41,7 +41,7 @@ pub struct Config {
 pub struct MintPayload {
     pub payload: [u8; MINT_PAYLOAD_LEN],
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub signatures: Vec<[u8; 64]>,
+    pub signatures: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     pub weight: u64,
 }
 
@@ -49,7 +49,7 @@ pub struct MintPayload {
 #[derive(InitSpace)]
 pub struct Metadata {
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub validators: Vec<[u8; 64]>,
+    pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub weights: Vec<u64>,
 }
@@ -60,6 +60,6 @@ pub struct ValsetPayload {
     pub epoch: u64,
     pub weight_threshold: u64,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
-    pub signatures: Vec<[u8; 64]>,
+    pub signatures: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     pub weight: u64,
 }
