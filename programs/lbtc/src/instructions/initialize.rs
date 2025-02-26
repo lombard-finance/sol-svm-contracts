@@ -18,7 +18,8 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
+pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, mint: Pubkey) -> Result<()> {
     ctx.accounts.config.admin = admin;
+    ctx.accounts.config.mint = mint;
     Ok(())
 }

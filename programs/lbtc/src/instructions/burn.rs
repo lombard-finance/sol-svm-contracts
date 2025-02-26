@@ -16,7 +16,7 @@ pub struct Burn<'info> {
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, MintInterface>,
 }
 

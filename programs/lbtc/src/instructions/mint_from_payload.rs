@@ -18,7 +18,7 @@ pub struct MintFromPayload<'info> {
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, Mint>,
     /// CHECK: The seeds constraint ensures the correct address is passed.
     #[account(seeds = [crate::constants::TOKEN_AUTHORITY_SEED], bump)]

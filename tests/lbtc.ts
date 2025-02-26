@@ -92,9 +92,9 @@ describe("LBTC", () => {
   });
 
   describe("Setters and getters", () => {
-    it("initializes with the admin", async () => {
+    it("initializes with the admin and mint", async () => {
       const tx = await program.methods
-        .initialize(admin.publicKey)
+        .initialize(admin.publicKey, mint)
         .accounts({
           payer: payer.publicKey,
           config: configPDA,

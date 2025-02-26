@@ -21,7 +21,7 @@ pub struct Redeem<'info> {
     pub holder: InterfaceAccount<'info, TokenAccount>,
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
-    #[account(mut)]
+    #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,

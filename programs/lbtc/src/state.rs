@@ -16,6 +16,7 @@ pub struct Config {
     pub pausers: Vec<Pubkey>,
 
     // Mint/redeem fields
+    pub mint: Pubkey,
     pub burn_commission: u64,
     pub withdrawals_enabled: bool,
     pub dust_fee_rate: u64,
