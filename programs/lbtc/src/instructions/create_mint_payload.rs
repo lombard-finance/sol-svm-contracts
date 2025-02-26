@@ -17,7 +17,7 @@ pub struct CreateMintPayload<'info> {
     #[account(
         init,
         payer = payer,
-        space = MintPayload::INIT_SPACE,
+        space = 8 + MintPayload::INIT_SPACE,
         seeds = [&mint_payload_hash],
         bump,
     )]

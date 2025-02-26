@@ -20,7 +20,7 @@ pub struct CreateValset<'info> {
     #[account(
         init,
         payer = payer,
-        space = ValsetPayload::INIT_SPACE,
+        space = 8 + ValsetPayload::INIT_SPACE,
         seeds = [&hash, &payer.key.to_bytes()],
         bump,
     )]

@@ -13,7 +13,7 @@ pub struct CreateValsetMetadata<'info> {
     #[account(
         init, 
         payer = payer,
-        space = Metadata::INIT_SPACE,
+        space = 8 + Metadata::INIT_SPACE,
         seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], 
         bump,
     )]
