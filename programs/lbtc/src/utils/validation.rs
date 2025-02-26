@@ -34,6 +34,7 @@ pub fn validate_mint<'info>(
     if config.bascule_enabled {
         // TODO
         // This is empty for now, while Bascule is being implemented as a Solana program.
+        todo!();
     }
 
     emit!(MintProofConsumed {
