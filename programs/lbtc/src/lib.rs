@@ -109,12 +109,20 @@ pub mod lbtc {
         instructions::post_valset_signatures(ctx, hash, signatures, indices)
     }
 
-    pub fn toggle_withdrawals(ctx: Context<Admin>) -> Result<()> {
-        instructions::toggle_withdrawals(ctx)
+    pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {
+        instructions::enable_withdrawals(ctx)
     }
 
-    pub fn toggle_bascule(ctx: Context<Admin>) -> Result<()> {
-        instructions::toggle_bascule(ctx)
+    pub fn disable_withdrawals(ctx: Context<Admin>) -> Result<()> {
+        instructions::disable_withdrawals(ctx)
+    }
+
+    pub fn enable_bascule(ctx: Context<Admin>) -> Result<()> {
+        instructions::enable_bascule(ctx)
+    }
+
+    pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
+        instructions::disable_bascule(ctx)
     }
 
     pub fn set_mint_fee(ctx: Context<Operator>, mint_fee: u64) -> Result<()> {

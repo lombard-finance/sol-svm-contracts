@@ -109,19 +109,39 @@ describe("LBTC", () => {
 
     it("allows admin to toggle withdrawals", async () => {
       const tx = await program.methods
-        .toggleWithdrawals()
+        .disableWithdrawals()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
-      assert.equal(cfg.withdrawalsEnabled, true);
+      assert.equal(cfg.withdrawalsEnabled, false);
+
+      const tx2 = await program.methods
+        .enableWithdrawals()
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+      const cfg2 = await program.account.config.fetch(configPDA);
+      assert.equal(cfg2.withdrawalsEnabled, true);
     });
 
-    it("should not allow anyone else to toggle withdrawals", async () => {
+    it("should not allow anyone else to enable withdrawals", async () => {
       try {
         const tx = await program.methods
-          .toggleWithdrawals()
+          .enableWithdrawals()
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc();
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should not allow anyone else to disable withdrawals", async () => {
+      try {
+        const tx = await program.methods
+          .disableWithdrawals()
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
@@ -131,7 +151,7 @@ describe("LBTC", () => {
 
     it("allows admin to toggle bascule", async () => {
       const tx = await program.methods
-        .toggleBascule()
+        .enableBascule()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
@@ -139,19 +159,29 @@ describe("LBTC", () => {
       const cfg = await program.account.config.fetch(configPDA);
       assert.equal(cfg.basculeEnabled, true);
 
-      // Turn back off for posterity
       const tx2 = await program.methods
-        .toggleBascule()
+        .disableBascule()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
     });
 
-    it("should not allow anyone else to toggle bascule", async () => {
+    it("should not allow anyone else to enable bascule", async () => {
       try {
         const tx = await program.methods
-          .toggleBascule()
+          .enableBascule()
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc();
+        assert.fail("should not be allowed");
+      } catch (e) {}
+    });
+
+    it("should not allow anyone else to disable bascule", async () => {
+      try {
+        const tx = await program.methods
+          .disableBascule()
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
           .rpc();
@@ -1379,7 +1409,7 @@ describe("LBTC", () => {
 
     it("should not allow user to redeem when withdrawals are disabled", async () => {
       const tx = await program.methods
-        .toggleWithdrawals()
+        .disableWithdrawals()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
@@ -1403,7 +1433,7 @@ describe("LBTC", () => {
       } catch (e) {}
 
       const tx3 = await program.methods
-        .toggleWithdrawals()
+        .enableWithdrawals()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();

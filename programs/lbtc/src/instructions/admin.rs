@@ -18,19 +18,27 @@ pub struct Admin<'info> {
     pub config: Account<'info, Config>,
 }
 
-pub fn toggle_withdrawals(ctx: Context<Admin>) -> Result<()> {
-    ctx.accounts.config.withdrawals_enabled = !ctx.accounts.config.withdrawals_enabled;
-    emit!(WithdrawalsEnabled {
-        enabled: ctx.accounts.config.withdrawals_enabled
-    });
+pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {
+    ctx.accounts.config.withdrawals_enabled = true;
+    emit!(WithdrawalsEnabled { enabled: true });
     Ok(())
 }
 
-pub fn toggle_bascule(ctx: Context<Admin>) -> Result<()> {
-    ctx.accounts.config.bascule_enabled = !ctx.accounts.config.bascule_enabled;
-    emit!(BasculeEnabled {
-        enabled: ctx.accounts.config.bascule_enabled,
-    });
+pub fn disable_withdrawals(ctx: Context<Admin>) -> Result<()> {
+    ctx.accounts.config.withdrawals_enabled = false;
+    emit!(WithdrawalsEnabled { enabled: false });
+    Ok(())
+}
+
+pub fn enable_bascule(ctx: Context<Admin>) -> Result<()> {
+    ctx.accounts.config.bascule_enabled = true;
+    emit!(BasculeEnabled { enabled: true });
+    Ok(())
+}
+
+pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
+    ctx.accounts.config.bascule_enabled = false;
+    emit!(BasculeEnabled { enabled: false });
     Ok(())
 }
 
