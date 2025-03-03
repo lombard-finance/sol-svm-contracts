@@ -5,12 +5,15 @@ import * as spl from "@solana/spl-token";
 import * as fs from "fs";
 import { sha256 } from "js-sha256";
 import nacl from "tweetnacl";
+import chai, { expect } from "chai";
+import chaiAsPromised from "chai-as-promised";
+import type { PublicKey, Keypair } from "@solana/web3.js";
+
+chai.use(chaiAsPromised);
 
 const web3 = require("@solana/web3.js");
 const assert = require("assert");
-const expect = require("chai").expect;
 
-// TODO proper error checking????
 // probably need to clean this up real good before sending it out
 
 describe("LBTC", () => {
@@ -19,20 +22,18 @@ describe("LBTC", () => {
 
   const program = anchor.workspace.Lbtc as Program<Lbtc>;
 
-  let payer;
-  let user;
-  let admin;
-  let operator;
-  let configPDA;
-  let treasury;
+  let payer: Keypair;
+  let user: Keypair;
+  let admin: Keypair;
+  let operator: Keypair;
+  let pauser: Keypair;
+  let configPDA: Keypair;
+  let treasury: Keypair;
   const mintKeys = web3.Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
-  let mint;
-  let recipient;
-  let recipientTA;
-  const tokenAuth = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("token_authority")],
-    program.programId
-  )[0];
+  let mint: PublicKey;
+  let recipient: Keypair;
+  let recipientTA: Keypair;
+  const tokenAuth = web3.PublicKey.findProgramAddressSync([Buffer.from("token_authority")], program.programId)[0];
   let metadata_seed = new Uint8Array(32);
   for (let i = 0; i < metadata_seed.length; i++) {
     metadata_seed[i] = 1;
@@ -42,16 +43,22 @@ describe("LBTC", () => {
   async function fundWallet(account, amount) {
     const publicKey = account.publicKey ? account.publicKey : account;
 
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(publicKey, amount),
-      "confirmed"
-    );
+    const tx = await provider.connection.requestAirdrop(publicKey, amount);
+    const lastBlockHash = await provider.connection.getLatestBlockhash();
+
+    await provider.connection.confirmTransaction({
+      blockhash: lastBlockHash.blockhash,
+      lastValidBlockHeight: lastBlockHash.lastValidBlockHeight,
+      signature: tx,
+      nonceAccountPubkey: publicKey
+    });
   }
 
   payer = web3.Keypair.generate();
   user = web3.Keypair.generate();
   admin = web3.Keypair.generate();
   operator = web3.Keypair.generate();
+  pauser = web3.Keypair.generate();
   const t = web3.Keypair.generate();
   recipient = web3.Keypair.fromSeed(Uint8Array.from(Array(32).fill(4)));
 
@@ -63,32 +70,12 @@ describe("LBTC", () => {
     await fundWallet(t, 25 * web3.LAMPORTS_PER_SOL);
     await fundWallet(recipient, 25 * web3.LAMPORTS_PER_SOL);
 
-    mint = await spl.createMint(
-      provider.connection,
-      admin,
-      tokenAuth,
-      null,
-      8,
-      mintKeys
-    );
-    [configPDA] = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("lbtc_config")],
-      program.programId
-    );
+    mint = await spl.createMint(provider.connection, admin, tokenAuth, null, 8, mintKeys);
+    [configPDA] = web3.PublicKey.findProgramAddressSync([Buffer.from("lbtc_config")], program.programId);
 
-    treasury = await spl.createAssociatedTokenAccount(
-      provider.connection,
-      t,
-      mint,
-      t.publicKey
-    );
+    treasury = await spl.createAssociatedTokenAccount(provider.connection, t, mint, t.publicKey);
 
-    recipientTA = await spl.createAssociatedTokenAccount(
-      provider.connection,
-      recipient,
-      mint,
-      recipient.publicKey
-    );
+    recipientTA = await spl.createAssociatedTokenAccount(provider.connection, recipient, mint, recipient.publicKey);
   });
 
   describe("Setters and getters", () => {
@@ -98,7 +85,7 @@ describe("LBTC", () => {
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          systemProgram: web3.SystemProgram.programId,
+          systemProgram: web3.SystemProgram.programId
         })
         .signers([payer])
         .rpc();
@@ -128,25 +115,23 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to enable withdrawals", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .enableWithdrawals()
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow anyone else to disable withdrawals", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .disableWithdrawals()
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to toggle bascule", async () => {
@@ -168,25 +153,29 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to enable bascule", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .enableBascule()
-          .accounts({ payer: payer.publicKey, config: configPDA })
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA
+          })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow anyone else to disable bascule", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .disableBascule()
-          .accounts({ payer: payer.publicKey, config: configPDA })
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA
+          })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows operator to set mint fee", async () => {
@@ -196,6 +185,8 @@ describe("LBTC", () => {
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx);
+      let cfg = await program.account.config.fetch(configPDA);
+      assert.equal(cfg.operator.toBase58(), operator.publicKey.toBase58());
 
       const mintFee = new anchor.BN(10);
       const tx2 = await program.methods
@@ -204,27 +195,19 @@ describe("LBTC", () => {
         .signers([operator])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
-      const cfg = await program.account.config.fetch(configPDA);
+      cfg = await program.account.config.fetch(configPDA);
       expect(cfg.mintFee.eq(mintFee));
     });
 
     it("should not allow anyone else to set mint fee", async () => {
-      try {
-        const tx = await program.methods
-          .setOperator(operator.publicKey)
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
-        const mintFee = new anchor.BN(10);
-        const tx2 = await program.methods
+      const mintFee = new anchor.BN(10);
+      await expect(
+        program.methods
           .setMintFee(mintFee)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to set burn commission", async () => {
@@ -240,15 +223,14 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to set burn commission", async () => {
-      try {
-        const burnCommission = new anchor.BN(10);
-        const tx = await program.methods
+      const burnCommission = new anchor.BN(10);
+      await expect(
+        program.methods
           .setBurnCommission(burnCommission)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to set operator", async () => {
@@ -263,14 +245,13 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to set operator", async () => {
-      try {
-        const tx = await program.methods
-          .setOperator(operator.publicKey)
+      await expect(
+        program.methods
+          .setOperator(payer.publicKey)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to set dust fee rate", async () => {
@@ -286,26 +267,24 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to set dust fee rate", async () => {
-      try {
-        const dustFeeRate = new anchor.BN(3000);
-        const tx = await program.methods
+      const dustFeeRate = new anchor.BN(3000);
+      await expect(
+        program.methods
           .setDustFeeRate(dustFeeRate)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow anyone else to set treasury", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .setTreasury(treasury)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to set treasury", async () => {
@@ -333,14 +312,13 @@ describe("LBTC", () => {
 
     it("should not allow anyone else to add minter", async () => {
       const minter = web3.Keypair.generate();
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .addMinter(minter.publicKey)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to add claimer", async () => {
@@ -356,19 +334,17 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to add claimer", async () => {
-      try {
-        const claimer = web3.Keypair.generate();
-        const tx = await program.methods
+      const claimer = web3.Keypair.generate();
+      await expect(
+        program.methods
           .addClaimer(claimer.publicKey)
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to add pauser", async () => {
-      const pauser = web3.Keypair.generate();
       const tx = await program.methods
         .addPauser(pauser.publicKey)
         .accounts({ payer: admin.publicKey, config: configPDA })
@@ -379,38 +355,7 @@ describe("LBTC", () => {
       expect(cfg.pausers[0].toBase58() == pauser.publicKey.toBase58());
     });
 
-    it("should not allow anyone else to add pauser", async () => {
-      try {
-        const pauser = web3.Keypair.generate();
-        const tx = await program.methods
-          .addPauser(pauser.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
-    });
-
-    it("should not allow anyone else to pause", async () => {
-      try {
-        const tx = await program.methods
-          .pause()
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
-    });
-
     it("allows pauser to pause", async () => {
-      const pauser = web3.Keypair.generate();
-      const tx = await program.methods
-        .addPauser(pauser.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
       const tx2 = await program.methods
         .pause()
         .accounts({ payer: pauser.publicKey, config: configPDA })
@@ -422,58 +367,38 @@ describe("LBTC", () => {
     });
 
     it("should not allow anyone else to unpause", async () => {
-      const pauser = web3.Keypair.generate();
-      const tx = await program.methods
-        .addPauser(pauser.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
-      const tx2 = await program.methods
-        .pause()
-        .accounts({ payer: pauser.publicKey, config: configPDA })
-        .signers([pauser])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.paused == true);
-      try {
-        const tx3 = await program.methods
-          .unpause()
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc();
-        assert.fail("should not be allowed");
-      } catch (e) {}
+      await expect(
+        program.methods.unpause().accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("allows admin to unpause", async () => {
-      const pauser = web3.Keypair.generate();
       const tx = await program.methods
-        .addPauser(pauser.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
-      const tx2 = await program.methods
-        .pause()
-        .accounts({ payer: pauser.publicKey, config: configPDA })
-        .signers([pauser])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.paused == true);
-
-      const tx3 = await program.methods
         .unpause()
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
         .rpc();
-      await provider.connection.confirmTransaction(tx3);
-      const cfg2 = await program.account.config.fetch(configPDA);
-      expect(cfg2.paused == false);
+      await provider.connection.confirmTransaction(tx);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.paused == false);
+    });
+
+    it("should not allow anyone else to add pauser", async () => {
+      await expect(
+        program.methods
+          .addPauser(payer.publicKey)
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
+    });
+
+    it("should not allow anyone else to pause", async () => {
+      await expect(
+        program.methods.pause().accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc()
+      ).to.be.rejectedWith("Unauthorized function call");
     });
   });
 
@@ -505,7 +430,7 @@ describe("LBTC", () => {
       Buffer.from(
         "9d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb",
         "hex"
-      ),
+      )
     ];
     const validators2 = [
       Buffer.from(
@@ -519,7 +444,7 @@ describe("LBTC", () => {
       Buffer.from(
         "20b871f3ced029e14472ec4ebc3c0448164942b123aa6af91a3386c1c403e0ebd3b4a5752a2b6c49e574619e6aa0549eb9ccd036b9bbc507e1f7f9712a236092",
         "hex"
-      ),
+      )
     ];
     const weights = [new anchor.BN(1), new anchor.BN(1)];
     const weights2 = [new anchor.BN(1), new anchor.BN(1), new anchor.BN(1)];
@@ -532,7 +457,7 @@ describe("LBTC", () => {
       Buffer.from(
         "7474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
         "hex"
-      ),
+      )
     ];
     const wrongSigs = [
       Buffer.from(
@@ -542,7 +467,7 @@ describe("LBTC", () => {
       Buffer.from(
         "a474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
         "hex"
-      ),
+      )
     ];
 
     const payloadPDA = web3.PublicKey.findProgramAddressSync(
@@ -555,7 +480,7 @@ describe("LBTC", () => {
         .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
         .accounts({
           payer: admin.publicKey,
-          metadata: metadataPDA,
+          metadata: metadataPDA
         })
         .signers([admin])
         .rpc();
@@ -563,34 +488,24 @@ describe("LBTC", () => {
     });
 
     it("should not allow someone else to add metadata other than creator", async () => {
-      try {
-        const tx2 = await program.methods
-          .postMetadataForValsetPayload(
-            Buffer.from(hash, "hex"),
-            validators,
-            weights
-          )
+      await expect(
+        program.methods
+          .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
           .accounts({
             payer: admin.publicKey,
-            metadata: metadataPDA,
+            metadata: metadataPDA
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx2);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith(`unknown signer: ${payer.publicKey.toBase58()}`);
     });
 
     it("should allow the creator to post metadata", async () => {
       const tx2 = await program.methods
-        .postMetadataForValsetPayload(
-          Buffer.from(hash, "hex"),
-          validators,
-          weights
-        )
+        .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
         .accounts({
           payer: admin.publicKey,
-          metadata: metadataPDA,
+          metadata: metadataPDA
         })
         .signers([admin])
         .rpc();
@@ -598,49 +513,32 @@ describe("LBTC", () => {
     });
 
     it("should not allow another person to create validator set payload for someone's metadata", async () => {
-      try {
-        const tx3 = await program.methods
-          .createValsetPayload(
-            Buffer.from(hash, "hex"),
-            new anchor.BN(1),
-            new anchor.BN(1),
-            new anchor.BN(1)
-          )
+      await expect(
+        program.methods
+          .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
           .accounts({
             payer: admin.publicKey,
             config: configPDA,
             metadata: metadataPDA,
-            payload: payloadPDA,
+            payload: payloadPDA
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx3);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith(`unknown signer: ${payer.publicKey.toBase58()}`);
     });
 
     it("should allow metadata creator to create a validator set payload", async () => {
-      try {
-        const tx3 = await program.methods
-          .createValsetPayload(
-            Buffer.from(hash, "hex"),
-            new anchor.BN(1),
-            new anchor.BN(1),
-            new anchor.BN(1)
-          )
-          .accounts({
-            payer: admin.publicKey,
-            config: configPDA,
-            metadata: metadataPDA,
-            payload: payloadPDA,
-          })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx3);
-      } catch (e) {
-        console.log(e);
-        throw e;
-      }
+      let tx = await program.methods
+        .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
+        .accounts({
+          payer: admin.publicKey,
+          config: configPDA,
+          metadata: metadataPDA,
+          payload: payloadPDA
+        })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
     });
 
     it("should not allow non-admin to set initial valset", async () => {
@@ -657,52 +555,41 @@ describe("LBTC", () => {
         .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
         .accounts({
           payer: payer.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
       const tx2 = await program.methods
-        .postMetadataForValsetPayload(
-          Buffer.from(hash, "hex"),
-          validators,
-          weights
-        )
+        .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
         .accounts({
           payer: payer.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
 
       const tx3 = await program.methods
-        .createValsetPayload(
-          Buffer.from(hash, "hex"),
-          new anchor.BN(1),
-          new anchor.BN(1),
-          new anchor.BN(1)
-        )
+        .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
           metadata: metadataPDA2,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx3);
 
-      try {
-        const tx4 = await program.methods
+      await expect(
+        program.methods
           .setInitialValset(Buffer.from(hash, "hex"))
           .accounts({ payer: payer.publicKey, config: configPDA })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx4);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should allow admin to set initial valset", async () => {
@@ -735,52 +622,41 @@ describe("LBTC", () => {
         .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
         .accounts({
           payer: admin.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
       const tx2 = await program.methods
-        .postMetadataForValsetPayload(
-          Buffer.from(hash2, "hex"),
-          validators2,
-          weights2
-        )
+        .postMetadataForValsetPayload(Buffer.from(hash2, "hex"), validators2, weights2)
         .accounts({
           payer: admin.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
 
       const tx3 = await program.methods
-        .createValsetPayload(
-          Buffer.from(hash2, "hex"),
-          new anchor.BN(2),
-          new anchor.BN(2),
-          new anchor.BN(1)
-        )
+        .createValsetPayload(Buffer.from(hash2, "hex"), new anchor.BN(2), new anchor.BN(2), new anchor.BN(1))
         .accounts({
           payer: admin.publicKey,
           config: configPDA,
           metadata: metadataPDA2,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx3);
 
-      try {
-        const tx4 = await program.methods
+      await expect(
+        program.methods
           .setInitialValset(Buffer.from(hash2, "hex"))
           .accounts({ payer: admin.publicKey, config: configPDA })
           .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx4);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("Validator set already set");
     });
 
     it("should not allow setting next valset without proper signatures", async () => {
@@ -797,57 +673,46 @@ describe("LBTC", () => {
         .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
         .accounts({
           payer: payer.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
       const tx2 = await program.methods
-        .postMetadataForValsetPayload(
-          Buffer.from(hash2, "hex"),
-          validators2,
-          weights2
-        )
+        .postMetadataForValsetPayload(Buffer.from(hash2, "hex"), validators2, weights2)
         .accounts({
           payer: payer.publicKey,
-          metadata: metadataPDA2,
+          metadata: metadataPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx2);
 
       const tx3 = await program.methods
-        .createValsetPayload(
-          Buffer.from(hash2, "hex"),
-          new anchor.BN(2),
-          new anchor.BN(2),
-          new anchor.BN(1)
-        )
+        .createValsetPayload(Buffer.from(hash2, "hex"), new anchor.BN(2), new anchor.BN(2), new anchor.BN(1))
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
           metadata: metadataPDA2,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx3);
 
-      try {
-        const tx4 = await program.methods
+      await expect(
+        program.methods
           .setNextValset(Buffer.from(hash2, "hex"))
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
             metadata: metadataPDA2,
-            payload: payloadPDA2,
+            payload: payloadPDA2
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx4);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("Not enough valid signatures");
     });
 
     it("should not allow adding wrong signatures", async () => {
@@ -863,14 +728,11 @@ describe("LBTC", () => {
       assert.equal(payload.weight, 0);
 
       const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [
-          new anchor.BN(0),
-          new anchor.BN(1),
-        ])
+        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [new anchor.BN(0), new anchor.BN(1)])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
@@ -891,15 +753,11 @@ describe("LBTC", () => {
       )[0];
 
       const tx = await program.methods
-        .postValsetSignatures(
-          Buffer.from(hash2, "hex"),
-          [sigs[0]],
-          [new anchor.BN(0)]
-        )
+        .postValsetSignatures(Buffer.from(hash2, "hex"), [sigs[0]], [new anchor.BN(0)])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
@@ -909,15 +767,11 @@ describe("LBTC", () => {
       assert.equal(payload.weight, 1);
 
       const tx2 = await program.methods
-        .postValsetSignatures(
-          Buffer.from(hash2, "hex"),
-          [sigs[0]],
-          [new anchor.BN(0)]
-        )
+        .postValsetSignatures(Buffer.from(hash2, "hex"), [sigs[0]], [new anchor.BN(0)])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
@@ -940,14 +794,11 @@ describe("LBTC", () => {
       assert.equal(payload.weight, 1);
 
       const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [
-          new anchor.BN(0),
-          new anchor.BN(1),
-        ])
+        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [new anchor.BN(0), new anchor.BN(1)])
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
@@ -962,7 +813,7 @@ describe("LBTC", () => {
           payer: payer.publicKey,
           config: configPDA,
           metadata: metadataPDA2,
-          payload: payloadPDA2,
+          payload: payloadPDA2
         })
         .signers([payer])
         .rpc();
@@ -971,19 +822,50 @@ describe("LBTC", () => {
   });
 
   describe("Minting and redeeming", () => {
-    let userTA;
-    let minterTA;
+    let userTA: PublicKey;
+    let minterTA: PublicKey;
     const minter = web3.Keypair.generate();
 
-    const scriptPubkey = [
-      0, 20, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    ];
+    const scriptPubkey = [0, 20, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
 
-    const mintPayload = Buffer.from(
-      "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f8000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "hex"
+    class MintPayload {
+      prefix: string;
+      chainId: string;
+      destinationAddress: string;
+      amount: string;
+      txId: string;
+      vout: string;
+
+      constructor(hex: string) {
+        this.prefix = hex.slice(0, 8);
+        this.chainId = hex.slice(8, 72);
+        this.destinationAddress = hex.slice(72, 136);
+        this.amount = hex.slice(136, 200);
+        this.txId = hex.slice(200, 264);
+        this.vout = hex.slice(264);
+      }
+
+      hex(): string {
+        return this.prefix + this.chainId + this.destinationAddress + this.amount + this.txId + this.vout;
+      }
+
+      bytes(): Buffer {
+        return Buffer.from(this.hex(), "hex");
+      }
+
+      hash(): string {
+        return sha256(this.bytes());
+      }
+
+      hashAsBytes(): Buffer {
+        return Buffer.from(this.hash(), "hex");
+      }
+    }
+
+    const mintPayload = new MintPayload(
+      "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f8000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     );
-    const mintHash = sha256(mintPayload);
+    // const mintHash = sha256(mintPayload);
 
     // Index 0 and 2
     const mintSigs = [
@@ -994,7 +876,7 @@ describe("LBTC", () => {
       Buffer.from(
         "0f2a4435f4ca1773c16c84ad6ed209eb806cd1ea052d42eac6cb47a9fcf699d802a47e8d288e9d0eddb95f83ccd74062871d9f8d7faf4ee23fda80bc839dd5fc",
         "hex"
-      ),
+      )
     ];
 
     const mintPayload2 = Buffer.from(
@@ -1011,7 +893,7 @@ describe("LBTC", () => {
       Buffer.from(
         "cee02758d818b78d192408119e6ae17b60d1a23839bcfd2c993070eb17dacdbd68c58339ba01580b0f6174a2af5ac221095df03566696ede4c6656c93caa0ed3",
         "hex"
-      ),
+      )
     ];
 
     const feePayload = Buffer.from(
@@ -1020,22 +902,15 @@ describe("LBTC", () => {
     );
     const feePayloadSig = nacl.sign.detached(feePayload, recipient.secretKey);
 
-    const mintPayloadPDA = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from(mintHash, "hex")],
-      program.programId
-    )[0];
+    const mintPayloadPDA = web3.PublicKey.findProgramAddressSync([mintPayload.hashAsBytes()], program.programId)[0];
     const mintPayloadPDA2 = web3.PublicKey.findProgramAddressSync(
       [Buffer.from(mintHash2, "hex")],
       program.programId
     )[0];
 
     before(async () => {
-      userTA = await spl.createAssociatedTokenAccount(
-        provider.connection,
-        user,
-        mint,
-        user.publicKey
-      );
+      userTA = await spl.createAssociatedTokenAccount(provider.connection, user, mint, user.publicKey);
+      console.log("userTA: ", userTA.toBase58());
 
       await fundWallet(minter, 25 * web3.LAMPORTS_PER_SOL);
       const tx = await program.methods
@@ -1045,17 +920,13 @@ describe("LBTC", () => {
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
-      minterTA = await spl.createAssociatedTokenAccount(
-        provider.connection,
-        minter,
-        mint,
-        minter.publicKey
-      );
+      minterTA = await spl.createAssociatedTokenAccount(provider.connection, minter, mint, minter.publicKey);
+      console.log("minterTA: ", minterTA.toBase58());
     });
 
-    it("should not allow non-minter to mint", async () => {
-      try {
-        const tx = await program.methods
+    it("mint: rejects when called by not a minter", async () => {
+      await expect(
+        program.methods
           .mint(new anchor.BN(1000))
           .accounts({
             payer: user.publicKey,
@@ -1063,96 +934,169 @@ describe("LBTC", () => {
             recipient: userTA,
             mint: mint,
             tokenAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram: spl.TOKEN_PROGRAM_ID
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("Unauthorized function call");
     });
 
-    it("should allow minter to mint freely", async () => {
+    it("mint: minter can mint to any token account", async () => {
+      const amount = new anchor.BN(1000);
       const tx = await program.methods
-        .mint(new anchor.BN(1000))
+        .mint(amount)
         .accounts({
           payer: minter.publicKey,
           config: configPDA,
           recipient: userTA,
           mint: mint,
           tokenAuthority: tokenAuth,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          tokenProgram: spl.TOKEN_PROGRAM_ID
         })
         .signers([minter])
         .rpc();
       await provider.connection.confirmTransaction(tx);
+
+      const balanceAfter = await spl.getAccount(provider.connection, userTA);
+      console.log("balance after:", balanceAfter.amount);
+      expect(balanceAfter.amount).to.be.eq(BigInt(amount.toString(10)));
     });
 
-    it("should not allow non-minter to burn", async () => {
-      try {
-        const tx = await program.methods
+    it("burn: rejects when called by not a minter", async () => {
+      await expect(
+        program.methods
           .burn(new anchor.BN(1000))
           .accounts({
             payer: user.publicKey,
             config: configPDA,
             recipient: userTA,
             mint: mint,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram: spl.TOKEN_PROGRAM_ID
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not be allowed");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("Unauthorized function call");
     });
 
     // NOTE: minters can only burn from their own wallets.
-    it("should allow minter to burn freely", async () => {
-      const tx = await program.methods
-        .mint(new anchor.BN(1000))
+    it("burn: minter can only burn from their own address", async () => {
+      let tx = await program.methods
+        .mint(new anchor.BN(2000))
         .accounts({
           payer: minter.publicKey,
           config: configPDA,
           recipient: minterTA,
           mint: mint,
           tokenAuthority: tokenAuth,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          tokenProgram: spl.TOKEN_PROGRAM_ID
         })
         .signers([minter])
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
-      const tx2 = await program.methods
-        .burn(new anchor.BN(1000))
+      const balanceBefore = await spl.getAccount(provider.connection, minterTA);
+      console.log("balance before:", balanceBefore.amount);
+
+      const burnAmount = new anchor.BN(1234);
+      tx = await program.methods
+        .burn(burnAmount)
         .accounts({
           payer: minter.publicKey,
           config: configPDA,
           recipient: minterTA,
           mint: mint,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          tokenProgram: spl.TOKEN_PROGRAM_ID
         })
         .signers([minter])
         .rpc();
-      await provider.connection.confirmTransaction(tx2);
+      await provider.connection.confirmTransaction(tx);
+
+      const balanceAfter = await spl.getAccount(provider.connection, minterTA);
+      console.log("balance after:", balanceAfter.amount);
+      expect(balanceBefore.amount - balanceAfter.amount).to.be.eq(BigInt(burnAmount.toString(10)));
     });
 
-    it("should allow anyone to create mint payload", async () => {
+    const invalid_payloads = [
+      {
+        name: "Invalid prefix",
+        modifier: (payload: MintPayload): [Buffer, Buffer] => {
+          payload.prefix = "f2e73f7d";
+          return [payload.bytes(), payload.hashAsBytes()];
+        },
+        error: "Invalid action bytes"
+      },
+      {
+        name: "Invalid chain id",
+        modifier: (payload: MintPayload): [Buffer, Buffer] => {
+          payload.chainId = "d55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f9";
+          return [payload.bytes(), payload.hashAsBytes()];
+        },
+        error: "Invalid chain ID"
+      },
+      {
+        name: "Hash does not match payload",
+        modifier: (payload: MintPayload): [Buffer, Buffer] => {
+          payload.vout = "0000000000000000000000000000000000000000000000000000000000000001";
+          return [payload.bytes(), mintPayload.hashAsBytes()];
+        },
+        error: "Passed mint payload hash does not match computed hash"
+      }
+    ];
+
+    invalid_payloads.forEach(function (arg) {
+      it(`createMintPayload: rejects when ${arg.name}`, async () => {
+        const [payload, hash] = arg.modifier(
+          new MintPayload(
+            "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f8000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+          )
+        );
+        console.log(payload.toString("hex"));
+        const pda = web3.PublicKey.findProgramAddressSync([hash], program.programId)[0];
+        await expect(
+          program.methods
+            .createMintPayload(hash, payload)
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              payload: pda
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith(arg.error);
+      });
+    });
+
+    it("createMintPayload: anyone can call", async () => {
       const tx = await program.methods
-        .createMintPayload(Buffer.from(mintHash, "hex"), mintPayload)
+        .createMintPayload(mintPayload.hashAsBytes(), mintPayload.bytes())
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: mintPayloadPDA,
+          payload: mintPayloadPDA
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx);
     });
 
+    it("createMintPayload: rejects when payload already created", async () => {
+      await expect(
+        program.methods
+          .createMintPayload(mintPayload.hashAsBytes(), mintPayload.bytes())
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            payload: mintPayloadPDA
+          })
+          .signers([payer])
+          .rpc()
+      ).to.be.rejectedWith("Transaction simulation failed: Error processing Instruction 0: custom program error: 0x0");
+    });
+
     it("should not allow to mint without proper signatures", async () => {
-      try {
-        const tx = await program.methods
-          .mintFromPayload(Buffer.from(mintHash, "hex"))
+      await expect(
+        program.methods
+          .mintFromPayload(mintPayload.hashAsBytes())
           .accounts({
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -1160,22 +1104,16 @@ describe("LBTC", () => {
             mint: mint,
             tokenAuthority: tokenAuth,
             payload: mintPayloadPDA,
-            bascule: payer.publicKey,
+            bascule: payer.publicKey
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow for double-adding signatures", async () => {
       const tx = await program.methods
-        .postMintSignatures(
-          Buffer.from(mintHash, "hex"),
-          [mintSigs[0]],
-          [new anchor.BN(0)]
-        )
+        .postMintSignatures(mintPayload.hashAsBytes(), [mintSigs[0]], [new anchor.BN(0)])
         .accounts({ config: configPDA, payload: mintPayloadPDA })
         .rpc();
       await provider.connection.confirmTransaction(tx);
@@ -1184,11 +1122,7 @@ describe("LBTC", () => {
       assert.equal(payload.weight, 1);
 
       const tx2 = await program.methods
-        .postMintSignatures(
-          Buffer.from(mintHash, "hex"),
-          [mintSigs[0]],
-          [new anchor.BN(0)]
-        )
+        .postMintSignatures(mintPayload.hashAsBytes(), [mintSigs[0]], [new anchor.BN(0)])
         .accounts({ config: configPDA, payload: mintPayloadPDA })
         .rpc();
       await provider.connection.confirmTransaction(tx2);
@@ -1199,10 +1133,7 @@ describe("LBTC", () => {
 
     it("should allow anyone to post signatures for mint payload", async () => {
       const tx = await program.methods
-        .postMintSignatures(Buffer.from(mintHash, "hex"), mintSigs, [
-          new anchor.BN(0),
-          new anchor.BN(2),
-        ])
+        .postMintSignatures(mintPayload.hashAsBytes(), mintSigs, [new anchor.BN(0), new anchor.BN(2)])
         .accounts({ config: configPDA, payload: mintPayloadPDA })
         .rpc();
       await provider.connection.confirmTransaction(tx);
@@ -1210,7 +1141,7 @@ describe("LBTC", () => {
 
     it("should allow to mint with proper signatures", async () => {
       const tx = await program.methods
-        .mintFromPayload(Buffer.from(mintHash, "hex"))
+        .mintFromPayload(mintPayload.hashAsBytes())
         .accounts({
           config: configPDA,
           tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -1218,7 +1149,7 @@ describe("LBTC", () => {
           mint: mint,
           tokenAuthority: tokenAuth,
           payload: mintPayloadPDA,
-          bascule: payer.publicKey,
+          bascule: payer.publicKey
         })
         .rpc();
       await provider.connection.confirmTransaction(tx);
@@ -1230,28 +1161,21 @@ describe("LBTC", () => {
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          payload: mintPayloadPDA2,
+          payload: mintPayloadPDA2
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
       const tx2 = await program.methods
-        .postMintSignatures(Buffer.from(mintHash2, "hex"), mintSigs2, [
-          new anchor.BN(0),
-          new anchor.BN(2),
-        ])
+        .postMintSignatures(Buffer.from(mintHash2, "hex"), mintSigs2, [new anchor.BN(0), new anchor.BN(2)])
         .accounts({ config: configPDA, payload: mintPayloadPDA2 })
         .rpc();
       await provider.connection.confirmTransaction(tx2);
 
-      try {
-        const tx3 = await program.methods
-          .mintWithFee(
-            Buffer.from(mintHash2, "hex"),
-            feePayload,
-            Buffer.from(feePayloadSig)
-          )
+      await expect(
+        program.methods
+          .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1262,40 +1186,31 @@ describe("LBTC", () => {
             tokenAuthority: tokenAuth,
             treasury: treasury,
             payload: mintPayloadPDA2,
-            bascule: payer.publicKey,
+            bascule: payer.publicKey
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx3);
-        assert.fail("shouldnt work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("should allow claimer to mint with fee to wrong treasury", async () => {
-      try {
-        const tx = await program.methods
-          .mintWithFee(
-            Buffer.from(mintHash2, "hex"),
-            feePayload,
-            Buffer.from(feePayloadSig)
-          )
-          .accounts({
-            payer: minter.publicKey,
-            config: configPDA,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            recipientAuth: recipient.publicKey,
-            recipient: recipientTA,
-            mint: mint,
-            tokenAuthority: tokenAuth,
-            treasury: recipientTA,
-            payload: mintPayloadPDA2,
-            bascule: payer.publicKey,
-          })
-          .signers([minter])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("shouldnt work");
-      } catch (e) {}
+      let tx = await program.methods
+        .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
+        .accounts({
+          payer: minter.publicKey,
+          config: configPDA,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          recipientAuth: recipient.publicKey,
+          recipient: recipientTA,
+          mint: mint,
+          tokenAuthority: tokenAuth,
+          treasury: recipientTA,
+          payload: mintPayloadPDA2,
+          bascule: payer.publicKey
+        })
+        .signers([minter])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
     });
 
     it("should allow claimer to mint with fee", async () => {
@@ -1307,11 +1222,7 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
 
       const tx2 = await program.methods
-        .mintWithFee(
-          Buffer.from(mintHash2, "hex"),
-          feePayload,
-          Buffer.from(feePayloadSig)
-        )
+        .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
         .accounts({
           payer: minter.publicKey,
           config: configPDA,
@@ -1322,7 +1233,7 @@ describe("LBTC", () => {
           tokenAuthority: tokenAuth,
           treasury: treasury,
           payload: mintPayloadPDA2,
-          bascule: payer.publicKey,
+          bascule: payer.publicKey
         })
         .signers([minter])
         .rpc();
@@ -1330,8 +1241,8 @@ describe("LBTC", () => {
     });
 
     it("should not allow user to redeem if they don't have enough LBTC", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from(scriptPubkey), new anchor.BN(2000))
           .accounts({
             payer: user.publicKey,
@@ -1339,19 +1250,16 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: treasury,
+            treasury: treasury
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow user to redeem below burn commission", async () => {
-      try {
-        // 10 burn commission
-        const tx = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from(scriptPubkey), new anchor.BN(10))
           .accounts({
             payer: user.publicKey,
@@ -1359,19 +1267,16 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: treasury,
+            treasury: treasury
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow user to redeem below dust limit", async () => {
-      try {
-        // 10 burn commission + 294 dust limit
-        const tx = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from(scriptPubkey), new anchor.BN(304))
           .accounts({
             payer: user.publicKey,
@@ -1379,18 +1284,16 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: treasury,
+            treasury: treasury
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow user to redeem to invalid script pubkey", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from([0, 1, 2]), new anchor.BN(1000))
           .accounts({
             payer: user.publicKey,
@@ -1398,13 +1301,11 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: treasury,
+            treasury: treasury
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should not allow user to redeem when withdrawals are disabled", async () => {
@@ -1415,8 +1316,8 @@ describe("LBTC", () => {
         .rpc();
       await provider.connection.confirmTransaction(tx);
 
-      try {
-        const tx2 = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
           .accounts({
             payer: user.publicKey,
@@ -1424,13 +1325,11 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: treasury,
+            treasury: treasury
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx2);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
 
       const tx3 = await program.methods
         .enableWithdrawals()
@@ -1441,8 +1340,8 @@ describe("LBTC", () => {
     });
 
     it("should not allow user to redeem with improper treasury", async () => {
-      try {
-        const tx = await program.methods
+      await expect(
+        program.methods
           .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
           .accounts({
             payer: user.publicKey,
@@ -1450,13 +1349,11 @@ describe("LBTC", () => {
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
-            treasury: userTA,
+            treasury: userTA
           })
           .signers([user])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        assert.fail("should not work");
-      } catch (e) {}
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should allow user to redeem", async () => {
@@ -1468,7 +1365,7 @@ describe("LBTC", () => {
           config: configPDA,
           tokenProgram: spl.TOKEN_PROGRAM_ID,
           mint: mint,
-          treasury: treasury,
+          treasury: treasury
         })
         .signers([user])
         .rpc();
