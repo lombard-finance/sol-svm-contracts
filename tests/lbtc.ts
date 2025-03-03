@@ -1193,23 +1193,24 @@ describe("LBTC", () => {
     });
 
     it("should not allow claimer to mint with fee to wrong treasury", async () => {
-      await expect(program.methods
-        .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
-        .accounts({
-          payer: minter.publicKey,
-          config: configPDA,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          recipientAuth: recipient.publicKey,
-          recipient: recipientTA,
-          mint: mint,
-          tokenAuthority: tokenAuth,
-          treasury: recipientTA,
-          payload: mintPayloadPDA2,
-          bascule: payer.publicKey
-        })
-        .signers([minter])
-        .rpc()
-                  ).to.be.rejectedWith("An address constraint was violated");
+      await expect(
+        program.methods
+          .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
+          .accounts({
+            payer: minter.publicKey,
+            config: configPDA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            recipientAuth: recipient.publicKey,
+            recipient: recipientTA,
+            mint: mint,
+            tokenAuthority: tokenAuth,
+            treasury: recipientTA,
+            payload: mintPayloadPDA2,
+            bascule: payer.publicKey
+          })
+          .signers([minter])
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should allow claimer to mint with fee", async () => {
