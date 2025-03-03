@@ -1106,9 +1106,8 @@ describe("LBTC", () => {
             payload: mintPayloadPDA,
             bascule: payer.publicKey
           })
-          .signers([payer])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("NotEnoughSignatures");
     });
 
     it("should not allow for double-adding signatures", async () => {
@@ -1193,8 +1192,8 @@ describe("LBTC", () => {
       ).to.be.rejectedWith("Unauthorized function call");
     });
 
-    it("should allow claimer to mint with fee to wrong treasury", async () => {
-      let tx = await program.methods
+    it("should not allow claimer to mint with fee to wrong treasury", async () => {
+      await expect(program.methods
         .mintWithFee(Buffer.from(mintHash2, "hex"), feePayload, Buffer.from(feePayloadSig))
         .accounts({
           payer: minter.publicKey,
@@ -1209,8 +1208,8 @@ describe("LBTC", () => {
           bascule: payer.publicKey
         })
         .signers([minter])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        .rpc()
+                  ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should allow claimer to mint with fee", async () => {
@@ -1254,7 +1253,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("insufficient funds");
     });
 
     it("should not allow user to redeem below burn commission", async () => {
@@ -1353,7 +1352,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("Withdrawals are disabled");
+      ).to.be.rejectedWith("An address constraint was violated");
     });
 
     it("should allow user to redeem", async () => {
