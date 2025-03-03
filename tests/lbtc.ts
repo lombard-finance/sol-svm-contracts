@@ -1271,7 +1271,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("Fee is greater than or equal to amount");
     });
 
     it("should not allow user to redeem below dust limit", async () => {
@@ -1288,7 +1288,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("Redeemed amount is below the BTC dust limit");
     });
 
     it("should not allow user to redeem to invalid script pubkey", async () => {
@@ -1305,7 +1305,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("Script pubkey is unsupported");
     });
 
     it("should not allow user to redeem when withdrawals are disabled", async () => {
@@ -1329,7 +1329,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("Withdrawals are disabled");
 
       const tx3 = await program.methods
         .enableWithdrawals()
@@ -1353,7 +1353,7 @@ describe("LBTC", () => {
           })
           .signers([user])
           .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+      ).to.be.rejectedWith("Withdrawals are disabled");
     });
 
     it("should allow user to redeem", async () => {
