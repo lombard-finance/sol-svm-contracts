@@ -5,7 +5,7 @@ use crate::{
     errors::LBTCError,
     events::ValsetPayloadCreated,
     state::{Config, Metadata, ValsetPayload},
-    utils::actions::ValsetAction,
+    utils::{actions::ValsetAction, validation},
 };
 use anchor_lang::prelude::*;
 use solana_program::hash::hash as sha256;
@@ -36,6 +36,12 @@ pub fn create_valset_payload(
     weight_threshold: u64,
     height: u64,
 ) -> Result<()> {
+    validation::validate_valset(
+        &ctx.accounts.metadata.validators,
+        &ctx.accounts.metadata.weights,
+        weight_threshold,
+    )?;
+
     // We construct the validator set payload and confirm that the posted hash matches.
     let payload = ValsetAction {
         action: constants::NEW_VALSET_ACTION,

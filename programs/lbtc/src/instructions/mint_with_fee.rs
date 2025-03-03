@@ -3,6 +3,7 @@
 use crate::{
     constants::FEE_PAYLOAD_LEN,
     errors::LBTCError,
+    events::MintProofConsumed,
     state::{Config, MintPayload},
     utils::{self, validation},
 };
@@ -53,13 +54,13 @@ pub fn mint_with_fee(
             .any(|&claimer| claimer == ctx.accounts.payer.key()),
         LBTCError::Unauthorized
     );
+    require!(!ctx.accounts.payload.minted, LBTCError::MintPayloadUsed);
 
-    let amount = validation::validate_mint(
+    let amount = validation::post_validate_mint(
         &ctx.accounts.config,
         &ctx.accounts.recipient,
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
-        mint_payload_hash,
         &ctx.accounts.bascule,
     )?;
 
@@ -72,6 +73,11 @@ pub fn mint_with_fee(
     )?;
     require!(fee < amount, LBTCError::FeeGTEAmount);
 
+    ctx.accounts.payload.minted = true;
+    emit!(MintProofConsumed {
+        recipient: ctx.accounts.recipient.key(),
+        payload_hash: mint_payload_hash,
+    });
     utils::execute_mint(
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.treasury.to_account_info(),

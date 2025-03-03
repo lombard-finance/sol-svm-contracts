@@ -1,6 +1,7 @@
 //! Minting functionality from a notarized payload.
 use crate::{
     errors::LBTCError,
+    events::MintProofConsumed,
     state::{Config, MintPayload},
     utils::{self, validation},
 };
@@ -33,16 +34,19 @@ pub struct MintFromPayload<'info> {
 pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 32]) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
     require!(!ctx.accounts.payload.minted, LBTCError::MintPayloadUsed);
-    let amount = validation::validate_mint(
+    let amount = validation::post_validate_mint(
         &ctx.accounts.config,
         &ctx.accounts.recipient,
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
-        mint_payload_hash,
         &ctx.accounts.bascule,
     )?;
 
     ctx.accounts.payload.minted = true;
+    emit!(MintProofConsumed {
+        recipient: ctx.accounts.recipient.key(),
+        payload_hash: mint_payload_hash,
+    });
     utils::execute_mint(
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.recipient.to_account_info(),

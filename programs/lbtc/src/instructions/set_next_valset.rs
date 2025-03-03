@@ -3,7 +3,6 @@ use crate::{
     errors::LBTCError,
     events::ValidatorSetUpdated,
     state::{Config, Metadata, ValsetPayload},
-    utils::validation,
 };
 use anchor_lang::prelude::*;
 
@@ -30,11 +29,6 @@ pub fn set_next_valset(ctx: Context<SetNextValset>, _hash: [u8; 32]) -> Result<(
         ctx.accounts.payload.weight >= ctx.accounts.config.weight_threshold,
         LBTCError::NotEnoughSignatures
     );
-    validation::validate_valset(
-        &ctx.accounts.metadata.validators,
-        &ctx.accounts.metadata.weights,
-        ctx.accounts.payload.weight_threshold,
-    )?;
 
     ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
     ctx.accounts.config.validators = ctx.accounts.metadata.validators.clone();

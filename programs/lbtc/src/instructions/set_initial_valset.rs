@@ -3,7 +3,6 @@ use crate::{
     errors::LBTCError,
     events::ValidatorSetUpdated,
     state::{Config, Metadata, ValsetPayload},
-    utils::validation,
 };
 use anchor_lang::prelude::*;
 
@@ -26,11 +25,6 @@ pub fn set_initial_valset(ctx: Context<SetInitialValset>, _hash: [u8; 32]) -> Re
         LBTCError::ValidatorSetAlreadySet
     );
     require!(ctx.accounts.payload.epoch != 0, LBTCError::InvalidEpoch);
-    validation::validate_valset(
-        &ctx.accounts.metadata.validators,
-        &ctx.accounts.metadata.weights,
-        ctx.accounts.payload.weight_threshold,
-    )?;
 
     ctx.accounts.config.epoch = ctx.accounts.payload.epoch;
     ctx.accounts.config.validators = ctx.accounts.metadata.validators.clone();

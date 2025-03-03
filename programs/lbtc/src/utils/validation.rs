@@ -1,22 +1,11 @@
 use super::decoder;
-use crate::{constants, errors::LBTCError, events::MintProofConsumed, state::Config};
+use crate::{constants, errors::LBTCError, state::Config};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use solana_ed25519_verify::verify_signature;
 
-pub fn validate_mint<'info>(
-    config: &Account<'_, Config>,
-    recipient: &InterfaceAccount<'_, TokenAccount>,
-    mint_payload: &[u8],
-    weight: u64,
-    mint_payload_hash: [u8; 32],
-    _bascule: &UncheckedAccount<'info>,
-) -> Result<u64> {
+pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
-    require!(
-        mint_action.recipient == recipient.key(),
-        LBTCError::RecipientMismatch
-    );
     require!(
         mint_action.action == constants::DEPOSIT_BTC_ACTION,
         LBTCError::InvalidActionBytes
@@ -25,6 +14,22 @@ pub fn validate_mint<'info>(
         mint_action.to_chain == constants::CHAIN_ID,
         LBTCError::InvalidChainID
     );
+    Ok(())
+}
+
+pub fn post_validate_mint<'info>(
+    config: &Account<'_, Config>,
+    recipient: &InterfaceAccount<'_, TokenAccount>,
+    mint_payload: &[u8],
+    weight: u64,
+    _bascule: &UncheckedAccount<'info>,
+) -> Result<u64> {
+    let mint_action = decoder::decode_mint_action(&mint_payload)?;
+    require!(
+        mint_action.recipient == recipient.key(),
+        LBTCError::RecipientMismatch
+    );
+
     require!(
         weight >= config.weight_threshold,
         LBTCError::NotEnoughSignatures
@@ -37,10 +42,6 @@ pub fn validate_mint<'info>(
         todo!();
     }
 
-    emit!(MintProofConsumed {
-        recipient: mint_action.recipient,
-        payload_hash: mint_payload_hash,
-    });
     Ok(mint_action.amount)
 }
 

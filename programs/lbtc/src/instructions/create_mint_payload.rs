@@ -4,6 +4,7 @@ use crate::{
     errors::LBTCError,
     events::MintPayloadPosted,
     state::{Config, MintPayload},
+    utils::validation,
 };
 use anchor_lang::prelude::*;
 use solana_program::hash::hash as sha256;
@@ -31,6 +32,7 @@ pub fn create_mint_payload(
     mint_payload: [u8; MINT_PAYLOAD_LEN],
 ) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
+    validation::pre_validate_mint(&mint_payload)?;
 
     let payload_hash = sha256(&mint_payload).to_bytes();
     if payload_hash != mint_payload_hash {
