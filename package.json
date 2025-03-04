@@ -2,7 +2,8 @@
   "license": "ISC",
   "scripts": {
     "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "initialize": "ts-node scripts/initialize.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

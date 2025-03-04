@@ -14,8 +14,6 @@ chai.use(chaiAsPromised);
 const web3 = require("@solana/web3.js");
 const assert = require("assert");
 
-// probably need to clean this up real good before sending it out
-
 describe("LBTC", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
