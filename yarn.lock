@@ -195,6 +195,20 @@
   dependencies:
     "@types/node" "*"
 
+"@types/chai-as-promised@^8.0.2":
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/@types/chai-as-promised/-/chai-as-promised-8.0.2.tgz#5ac957d346fec5b686b62606baa5704787669704"
+  integrity sha512-meQ1wDr1K5KRCSvG2lX7n7/5wf70BeptTKst0axGvnN6zqaVpRqegoIbugiAPSqOW9K9aL8gDVrm7a2LXOtn2Q==
+  dependencies:
+    "@types/chai" "*"
+
+"@types/chai@*":
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/@types/chai/-/chai-5.2.0.tgz#fe62a18d33001800d3590792ceb6126142f814a4"
+  integrity sha512-FWnQYdrG9FAC8KgPVhDFfrPL1FBsL3NtIt2WsxKvwu/61K6HiuDF3xAb7c7w/k9ML2QOUHcwTgU7dKLFPK6sBg==
+  dependencies:
+    "@types/deep-eql" "*"
+
 "@types/chai@^4.3.0":
   version "4.3.20"
   resolved "https://registry.yarnpkg.com/@types/chai/-/chai-4.3.20.tgz#cb291577ed342ca92600430841a00329ba05cecc"
@@ -206,6 +220,11 @@
   integrity sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==
   dependencies:
     "@types/node" "*"
+
+"@types/deep-eql@*":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@types/deep-eql/-/deep-eql-4.0.2.tgz#334311971d3a07121e7eb91b684a605e7eea9cbd"
+  integrity sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==
 
 "@types/json5@^0.0.29":
   version "0.0.29"

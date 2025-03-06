@@ -1,24 +1,20 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
-import { Lbtc } from "../target/types/lbtc";
+import { PublicKey, Keypair, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
-import * as fs from "fs";
+import { Lbtc } from "../target/types/lbtc";
 import { sha256 } from "js-sha256";
-import nacl from "tweetnacl";
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-import type { PublicKey, Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
+import nacl from "tweetnacl";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
 
 chai.use(chaiAsPromised);
+const expect = chai.expect;
 
-const web3 = require("@solana/web3.js");
-const assert = require("assert");
 BN.prototype.bigInt = function (): bigint {
   return BigInt(this.toString(10));
 };
-
-// probably need to clean this up real good before sending it out
 
 class MintPayload {
   prefix: string;
@@ -54,8 +50,8 @@ class MintPayload {
   }
 
   recipientPubKey(): PublicKey {
-    let address = bs58.encode(new Buffer.from(this.destinationAddress, "hex"));
-    return new web3.PublicKey(address);
+    let address = bs58.encode(Buffer.from(this.destinationAddress, "hex"));
+    return new PublicKey(address);
   }
 
   amountBigInt(): bigint {
@@ -93,10 +89,6 @@ class FeePermit {
   maxFeesBigInt(): bigint {
     return BigInt("0x" + this.maxFees);
   }
-
-  expireTimestamp(): number {
-    return Number(BigInt("0x" + this.expire));
-  }
 }
 
 describe("LBTC", () => {
@@ -114,11 +106,11 @@ describe("LBTC", () => {
   let claimer: Keypair;
   let configPDA: PublicKey;
   let treasury: PublicKey;
-  const mintKeys = web3.Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
+  const mintKeys = Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
   let mint: PublicKey;
   let recipient: Keypair;
   let recipientTA: PublicKey;
-  const tokenAuth = web3.PublicKey.findProgramAddressSync(
+  const tokenAuth = PublicKey.findProgramAddressSync(
     [Buffer.from("token_authority")],
     program.programId
   )[0] as PublicKey;
@@ -142,31 +134,31 @@ describe("LBTC", () => {
     });
   }
 
-  payer = web3.Keypair.generate();
-  user = web3.Keypair.generate();
-  admin = web3.Keypair.generate();
-  operator = web3.Keypair.generate();
-  pauser = web3.Keypair.generate();
-  minter = web3.Keypair.generate();
-  claimer = web3.Keypair.generate();
-  const t = web3.Keypair.generate();
-  recipient = web3.Keypair.fromSeed(Uint8Array.from(Array(32).fill(4)));
+  payer = Keypair.generate();
+  user = Keypair.generate();
+  admin = Keypair.generate();
+  operator = Keypair.generate();
+  pauser = Keypair.generate();
+  minter = Keypair.generate();
+  claimer = Keypair.generate();
+  const t = Keypair.generate();
+  recipient = Keypair.fromSeed(Uint8Array.from(Array(32).fill(4)));
 
   before(async () => {
-    await fundWallet(payer, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(user, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(admin, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(operator, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(pauser, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(minter, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(claimer, 25 * web3.LAMPORTS_PER_SOL);
+    await fundWallet(payer, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(user, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(admin, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(operator, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(pauser, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(minter, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(claimer, 25 * LAMPORTS_PER_SOL);
 
-    await fundWallet(t, 25 * web3.LAMPORTS_PER_SOL);
-    await fundWallet(recipient, 25 * web3.LAMPORTS_PER_SOL);
+    await fundWallet(t, 25 * LAMPORTS_PER_SOL);
+    await fundWallet(recipient, 25 * LAMPORTS_PER_SOL);
 
     mint = await spl.createMint(provider.connection, admin, tokenAuth, null, 8, mintKeys);
 
-    [configPDA] = web3.PublicKey.findProgramAddressSync([Buffer.from("lbtc_config")], program.programId);
+    [configPDA] = PublicKey.findProgramAddressSync([Buffer.from("lbtc_config")], program.programId);
 
     treasury = await spl.createAssociatedTokenAccount(provider.connection, t, mint, t.publicKey);
 
@@ -180,15 +172,16 @@ describe("LBTC", () => {
         .accounts({
           payer: payer.publicKey,
           config: configPDA,
-          systemProgram: web3.SystemProgram.programId
+          systemProgram: SystemProgram.programId
         })
         .signers([payer])
         .rpc();
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
-      assert.equal(cfg.admin.toBase58(), admin.publicKey.toBase58());
+      expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
     });
 
+    //Operator is a role which can set mint fee for autoclaim
     it("setOperator: successful by admin", async () => {
       const tx = await program.methods
         .setOperator(operator.publicKey)
@@ -200,6 +193,7 @@ describe("LBTC", () => {
       expect(cfg.operator.toBase58() == operator.publicKey.toBase58());
     });
 
+    //Treasury is an account that collects fees for autoclaim and redeem
     it("setTreasury: successful by admin", async () => {
       const tx = await program.methods
         .setTreasury(treasury)
@@ -212,7 +206,7 @@ describe("LBTC", () => {
     });
 
     it("addMinter: successful by admin", async () => {
-      const tx = await program.methods
+      let tx = await program.methods
         .addMinter(minter.publicKey)
         .accounts({ payer: admin.publicKey, config: configPDA })
         .signers([admin])
@@ -222,6 +216,7 @@ describe("LBTC", () => {
       expect(cfg.minters[0].toBase58() == minter.publicKey.toBase58());
     });
 
+    //Claimer is a role which can perform autoclaim
     it("addClaimer: successful by admin", async () => {
       const tx = await program.methods
         .addClaimer(claimer.publicKey)
@@ -233,6 +228,7 @@ describe("LBTC", () => {
       expect(cfg.claimers[0].toBase58() == claimer.publicKey.toBase58());
     });
 
+    //Pauser is a role that can only set contracts on pause
     it("addPauser: successful by admin", async () => {
       const tx = await program.methods
         .addPauser(pauser.publicKey)
@@ -243,110 +239,9 @@ describe("LBTC", () => {
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.pausers[0].toBase58() == pauser.publicKey.toBase58());
     });
-  });
 
-  describe("Setters and getters", () => {
-    it("disableWithdrawals: successful by admin", async () => {
-      const tx = await program.methods
-        .disableWithdrawals()
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      assert.equal(cfg.withdrawalsEnabled, false);
-    });
-
-    it("enableWithdrawals: successful by admin", async () => {
-      const tx = await program.methods
-        .enableWithdrawals()
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg2 = await program.account.config.fetch(configPDA);
-      assert.equal(cfg2.withdrawalsEnabled, true);
-    });
-
-    it("enableWithdrawals: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .enableWithdrawals()
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("disableWithdrawals: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .disableWithdrawals()
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("enableBascule: successful by admin", async () => {
-      const tx = await program.methods
-        .enableBascule()
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      assert.equal(cfg.basculeEnabled, true);
-    });
-
-    it("disableBascule: successful by admin", async () => {
-      const tx = await program.methods
-        .disableBascule()
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      assert.equal(cfg.basculeEnabled, false);
-    });
-
-    it("enableBascule: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .enableBascule()
-          .accounts({
-            payer: payer.publicKey,
-            config: configPDA
-          })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("disableBascule: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .disableBascule()
-          .accounts({
-            payer: payer.publicKey,
-            config: configPDA
-          })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("setOperator: rejects when called by not an admin", async () => {
-      await expect(
-        program.methods
-          .setOperator(payer.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("setMintFee: successful", async () => {
+    //MintFee is a fee that charged for autoclaim and transfered to treasury
+    it("setMintFee: successful by operator", async () => {
       const mintFee = new BN(10);
       const tx2 = await program.methods
         .setMintFee(mintFee)
@@ -358,19 +253,9 @@ describe("LBTC", () => {
       expect(cfg.mintFee.bigInt()).to.be.eq(mintFee.bigInt());
     });
 
-    it("setMintFee: rejects when called by not an operator", async () => {
-      const mintFee = new anchor.BN(10);
-      await expect(
-        program.methods
-          .setMintFee(mintFee)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
+    //BurnCommission is a fee that charged at redeem
     it("setBurnCommission: successful by admin", async () => {
-      const burnCommission = new anchor.BN(10);
+      const burnCommission = new BN(10);
       const tx = await program.methods
         .setBurnCommission(burnCommission)
         .accounts({ payer: admin.publicKey, config: configPDA })
@@ -381,19 +266,8 @@ describe("LBTC", () => {
       expect(cfg.burnCommission.eq(burnCommission));
     });
 
-    it("setBurnCommission: rejects when called by not admin", async () => {
-      const burnCommission = new anchor.BN(10);
-      await expect(
-        program.methods
-          .setBurnCommission(burnCommission)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
     it("setDustFeeRate: successful by admin", async () => {
-      const dustFeeRate = new anchor.BN(3000);
+      const dustFeeRate = new BN(3000);
       const tx = await program.methods
         .setDustFeeRate(dustFeeRate)
         .accounts({ payer: admin.publicKey, config: configPDA })
@@ -403,115 +277,352 @@ describe("LBTC", () => {
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.dustFeeRate.eq(dustFeeRate));
     });
+  });
 
-    it("setDustFeeRate: rejects when called by not admin", async () => {
-      const dustFeeRate = new anchor.BN(3000);
-      await expect(
-        program.methods
-          .setDustFeeRate(dustFeeRate)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+  describe("Setters and getters", () => {
+    describe("Pause", function () {
+      it("pause: rejects when called by not a pauser", async () => {
+        await expect(
+          program.methods.pause().accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc()
+        ).to.be.rejectedWith("Unauthorized function call");
+      });
+
+      it("pause: successful by pauser", async () => {
+        const tx2 = await program.methods
+          .pause()
+          .accounts({ payer: pauser.publicKey, config: configPDA })
+          .signers([pauser])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.paused == true);
+      });
+
+      it("createMintPayload: rejects when paused", async () => {
+        const mintPayload = new MintPayload(
+          "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f80000000000000000000000000000000000000000000000000000000000004e2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        );
+
+        const mintPayloadPDA = PublicKey.findProgramAddressSync(
+          [mintPayload.hashAsBytes()],
+          program.programId
+        )[0] as PublicKey;
+
+        await expect(
+          program.methods
+            .createMintPayload(mintPayload.hashAsBytes(), mintPayload.bytes())
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              payload: mintPayloadPDA
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("LBTC contract is paused");
+      });
+
+      it("unpause: rejects when called by pauser", async () => {
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.paused == true);
+        await expect(
+          program.methods.unpause().accounts({ payer: pauser.publicKey, config: configPDA }).signers([pauser]).rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("unpause: successful by admin", async () => {
+        const tx = await program.methods
+          .unpause()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.paused == false);
+      });
+
+      it("unpause: rejects when not paused", async () => {
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.paused == true);
+        await expect(
+          program.methods.unpause().accounts({ payer: admin.publicKey, config: configPDA }).signers([admin]).rpc()
+        ).to.be.rejectedWith("LBTC contract is not paused");
+      });
+
+      it("disableWithdrawals: successful by admin", async () => {
+        const tx = await program.methods
+          .disableWithdrawals()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.withdrawalsEnabled).to.be.false;
+      });
+
+      it("enableWithdrawals: successful by admin", async () => {
+        const tx = await program.methods
+          .enableWithdrawals()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg2 = await program.account.config.fetch(configPDA);
+        expect(cfg2.withdrawalsEnabled).to.be.true;
+      });
+
+      it("enableWithdrawals: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .enableWithdrawals()
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("disableWithdrawals: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .disableWithdrawals()
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
     });
 
-    it("setTreasury: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .setTreasury(treasury)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+    //Not implemented yet
+    describe("Bascule", function () {
+      it("enableBascule: successful by admin", async () => {
+        const tx = await program.methods
+          .enableBascule()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.basculeEnabled).to.be.true;
+      });
+
+      it("disableBascule: successful by admin", async () => {
+        const tx = await program.methods
+          .disableBascule()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.basculeEnabled).to.be.false;
+      });
+
+      it("enableBascule: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .enableBascule()
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("disableBascule: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .disableBascule()
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
     });
 
-    it("addMinter: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .addMinter(payer.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
+    describe("Setters negative cases", function () {
+      it("setOperator: rejects when called by not an admin", async () => {
+        await expect(
+          program.methods
+            .setOperator(payer.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("setMintFee: rejects when called by not an operator", async () => {
+        await expect(
+          program.methods
+            .setMintFee(new BN(10))
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("setBurnCommission: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .setBurnCommission(new BN(10))
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("setDustFeeRate: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .setDustFeeRate(new BN(3000))
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("setTreasury: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .setTreasury(treasury)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("addMinter: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .addMinter(payer.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("addClaimer: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .addClaimer(payer.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("addPauser: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .addPauser(payer.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
     });
 
-    it("addClaimer: rejects when called by not admin", async () => {
-      await expect(
-        program.methods
-          .addClaimer(payer.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
+    describe("Remove roles", function () {
+      let newMinter, newClaimer, newPauser;
 
-    it("should not allow anyone else to add pauser", async () => {
-      await expect(
-        program.methods
-          .addPauser(payer.publicKey)
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
+      before(async function () {
+        newMinter = Keypair.generate();
+        let tx = await program.methods
+          .addMinter(newMinter.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("pause: rejects when called by not a pauser", async () => {
-      await expect(
-        program.methods.pause().accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc()
-      ).to.be.rejectedWith("Unauthorized function call");
-    });
+        newClaimer = Keypair.generate();
+        tx = await program.methods
+          .addClaimer(newClaimer.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("pause: successful by pauser", async () => {
-      const tx2 = await program.methods
-        .pause()
-        .accounts({ payer: pauser.publicKey, config: configPDA })
-        .signers([pauser])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.paused == true);
-    });
+        newPauser = Keypair.generate();
+        tx = await program.methods
+          .addPauser(newPauser.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("unpause: rejects when called by not an admin", async () => {
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.paused == true);
-      await expect(
-        program.methods.unpause().accounts({ payer: payer.publicKey, config: configPDA }).signers([payer]).rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.minters[1].toBase58() == newMinter.publicKey.toBase58());
+        expect(cfg.claimers[1].toBase58() == newClaimer.publicKey.toBase58());
+        expect(cfg.pausers[1].toBase58() == newPauser.publicKey.toBase58());
+      });
 
-    it("createMintPayload: rejects when paused", async () => {
-      const mintPayload = new MintPayload(
-        "f2e73f7c0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03abd55cad4b145c9fa6f0c634827d2d3a889bcd4e6e6a9527a89b2f8259bfcbc8f80000000000000000000000000000000000000000000000000000000000004e2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-      );
+      it("removeMinter: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .removeMinter(newMinter.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
 
-      const mintPayloadPDA = web3.PublicKey.findProgramAddressSync(
-        [mintPayload.hashAsBytes()],
-        program.programId
-      )[0] as PublicKey;
+      it("removeMinter: successfully by admin", async () => {
+        let tx = await program.methods
+          .removeMinter(newMinter.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-      await expect(
-        program.methods
-          .createMintPayload(mintPayload.hashAsBytes(), mintPayload.bytes())
-          .accounts({
-            payer: payer.publicKey,
-            config: configPDA,
-            payload: mintPayloadPDA
-          })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("LBTC contract is paused");
-    });
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.minters).to.has.length(1);
+      });
 
-    it("unpause: successful by admin", async () => {
-      const tx = await program.methods
-        .unpause()
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.paused == false);
+      it("removeClaimer: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .removeClaimer(newClaimer.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("removeClaimer: successfully by admin", async () => {
+        let tx = await program.methods
+          .removeClaimer(newClaimer.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.claimers).to.has.length(1);
+      });
+
+      it("removePauser: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .removePauser(newPauser.publicKey)
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("removePauser: successfully by admin", async () => {
+        let tx = await program.methods
+          .removePauser(newPauser.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.pausers).to.has.length(1);
+      });
     });
   });
 
@@ -529,13 +640,10 @@ describe("LBTC", () => {
       "hex"
     );
 
-    const hash = sha256(initialValset);
-    const hash2 = sha256(nextValset);
-    const metadataPDA = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from(hash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
-      program.programId
-    )[0];
-    const validators = [
+    const initialValsetHash = sha256(initialValset);
+    const nextValsetHash = sha256(nextValset);
+
+    const initialValidators = [
       Buffer.from(
         "ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
         "hex"
@@ -545,7 +653,7 @@ describe("LBTC", () => {
         "hex"
       )
     ];
-    const validators2 = [
+    const nextValidators = [
       Buffer.from(
         "ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
         "hex"
@@ -559,8 +667,8 @@ describe("LBTC", () => {
         "hex"
       )
     ];
-    const weights = [new anchor.BN(1), new anchor.BN(1)];
-    const weights2 = [new anchor.BN(1), new anchor.BN(1), new anchor.BN(1)];
+    const initialWeights = [new BN(1), new BN(1)];
+    const nextWeights = [new BN(1), new BN(1), new BN(1)];
 
     const sigs = [
       Buffer.from(
@@ -583,240 +691,237 @@ describe("LBTC", () => {
       )
     ];
 
-    const payloadPDA = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from(hash, "hex"), admin.publicKey.toBuffer()],
-      program.programId
-    )[0];
+    //Only admin can set initial valset
+    describe("Initial valset by admin", function () {
+      const metadataPDAPayer = PublicKey.findProgramAddressSync(
+        [Buffer.from(initialValsetHash, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDAPayer = PublicKey.findProgramAddressSync(
+        [Buffer.from(initialValsetHash, "hex"), payer.publicKey.toBuffer()],
+        program.programId
+      )[0];
 
-    it("should allow anyone to construct metadata", async () => {
-      const tx = await program.methods
-        .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
-        .accounts({
-          payer: admin.publicKey,
-          metadata: metadataPDA
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-    });
+      it("createMetadataForValsetPayload: anyone can create", async () => {
+        let tx = await program.methods
+          .createMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"))
+          .accounts({
+            payer: payer.publicKey,
+            metadata: metadataPDAPayer
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+      });
 
-    it("should not allow someone else to add metadata other than creator", async () => {
-      await expect(
-        program.methods
-          .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
+      it("postMetadataForValsetPayload: rejects when posted by not the creator", async () => {
+        await expect(
+          program.methods
+            .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+            .accounts({
+              payer: admin.publicKey,
+              metadata: metadataPDAPayer
+            })
+            .signers([admin])
+            .rpc()
+        ).to.be.rejectedWith("A seeds constraint was violated");
+      });
+
+      it("postMetadataForValsetPayload: successful by creator", async () => {
+        const tx = await program.methods
+          .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+          .accounts({
+            payer: payer.publicKey,
+            metadata: metadataPDAPayer
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+      });
+
+      it("createValsetPayload: rejects when called by not the creator", async () => {
+        await expect(
+          program.methods
+            .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
+            .accounts({
+              payer: admin.publicKey,
+              config: configPDA,
+              metadata: metadataPDAPayer,
+              payload: payloadPDAPayer
+            })
+            .signers([admin])
+            .rpc()
+        ).to.be.rejectedWith("A seeds constraint was violated");
+      });
+
+      it("createValsetPayload: successful by the creator", async () => {
+        let tx = await program.methods
+          .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            metadata: metadataPDAPayer,
+            payload: payloadPDAPayer
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+      });
+
+      it("setInitialValset: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .setInitialValset(Buffer.from(initialValsetHash, "hex"))
+            .accounts({ payer: payer.publicKey, config: configPDA })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("setInitialValset: successful by admin", async () => {
+        const metadataPDA = PublicKey.findProgramAddressSync(
+          [Buffer.from(initialValsetHash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
+          program.programId
+        )[0];
+        const payloadPDA = PublicKey.findProgramAddressSync(
+          [Buffer.from(initialValsetHash, "hex"), admin.publicKey.toBuffer()],
+          program.programId
+        )[0];
+
+        let tx = await program.methods
+          .createMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"))
           .accounts({
             payer: admin.publicKey,
             metadata: metadataPDA
           })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith(`unknown signer: ${payer.publicKey.toBase58()}`);
-    });
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("should allow the creator to post metadata", async () => {
-      const tx2 = await program.methods
-        .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
-        .accounts({
-          payer: admin.publicKey,
-          metadata: metadataPDA
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-    });
+        tx = await program.methods
+          .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA
+          })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("should not allow another person to create validator set payload for someone's metadata", async () => {
-      await expect(
-        program.methods
-          .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
+        tx = await program.methods
+          .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
           .accounts({
             payer: admin.publicKey,
             config: configPDA,
             metadata: metadataPDA,
             payload: payloadPDA
           })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith(`unknown signer: ${payer.publicKey.toBase58()}`);
-    });
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-    it("should allow metadata creator to create a validator set payload", async () => {
-      let tx = await program.methods
-        .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
-        .accounts({
-          payer: admin.publicKey,
-          config: configPDA,
-          metadata: metadataPDA,
-          payload: payloadPDA
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-    });
-
-    it("should not allow non-admin to set initial valset", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, "hex"), metadata_seed, payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash, "hex"), payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-
-      const tx = await program.methods
-        .createMetadataForValsetPayload(Buffer.from(hash, "hex"))
-        .accounts({
-          payer: payer.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
-      const tx2 = await program.methods
-        .postMetadataForValsetPayload(Buffer.from(hash, "hex"), validators, weights)
-        .accounts({
-          payer: payer.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-
-      const tx3 = await program.methods
-        .createValsetPayload(Buffer.from(hash, "hex"), new anchor.BN(1), new anchor.BN(1), new anchor.BN(1))
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          metadata: metadataPDA2,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx3);
-
-      await expect(
-        program.methods
-          .setInitialValset(Buffer.from(hash, "hex"))
-          .accounts({ payer: payer.publicKey, config: configPDA })
-          .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("An address constraint was violated");
-    });
-
-    it("should allow admin to set initial valset", async () => {
-      const tx4 = await program.methods
-        .setInitialValset(Buffer.from(hash, "hex"))
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx4);
-
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.epoch == 1);
-      expect(cfg.validators[0] == validators[0]);
-      expect(cfg.validators[1] == validators[1]);
-      expect(cfg.weights == [1, 1]);
-      expect(cfg.weight_threshold == 1);
-    });
-
-    it("should not allow setting initial valset twice", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), metadata_seed, admin.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), admin.publicKey.toBuffer()],
-        program.programId
-      )[0];
-
-      const tx = await program.methods
-        .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
-        .accounts({
-          payer: admin.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-
-      const tx2 = await program.methods
-        .postMetadataForValsetPayload(Buffer.from(hash2, "hex"), validators2, weights2)
-        .accounts({
-          payer: admin.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
-
-      const tx3 = await program.methods
-        .createValsetPayload(Buffer.from(hash2, "hex"), new anchor.BN(2), new anchor.BN(2), new anchor.BN(1))
-        .accounts({
-          payer: admin.publicKey,
-          config: configPDA,
-          metadata: metadataPDA2,
-          payload: payloadPDA2
-        })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx3);
-
-      await expect(
-        program.methods
-          .setInitialValset(Buffer.from(hash2, "hex"))
+        tx = await program.methods
+          .setInitialValset(Buffer.from(initialValsetHash, "hex"))
           .accounts({ payer: admin.publicKey, config: configPDA })
           .signers([admin])
-          .rpc()
-      ).to.be.rejectedWith("Validator set already set");
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.epoch.bigInt()).to.be.eq(1n);
+        expect(cfg.weights.map(n => n.bigInt())).to.have.deep.members([1n, 1n]);
+        expect(cfg.weightThreshold.bigInt()).to.be.eq(1n);
+        expect(cfg.validators.map(v => Buffer.from(v))).to.have.deep.members(initialValidators);
+      });
+
+      it("setInitialValset: rejects when already set", async () => {
+        const metadataPDA2 = PublicKey.findProgramAddressSync(
+          [Buffer.from(nextValsetHash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
+          program.programId
+        )[0];
+        const payloadPDA2 = PublicKey.findProgramAddressSync(
+          [Buffer.from(nextValsetHash, "hex"), admin.publicKey.toBuffer()],
+          program.programId
+        )[0];
+
+        const tx = await program.methods
+          .createMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"))
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA2
+          })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
+        const tx2 = await program.methods
+          .postMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"), nextValidators, nextWeights)
+          .accounts({
+            payer: admin.publicKey,
+            metadata: metadataPDA2
+          })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
+
+        const tx3 = await program.methods
+          .createValsetPayload(Buffer.from(nextValsetHash, "hex"), new BN(2), new BN(2), new BN(1))
+          .accounts({
+            payer: admin.publicKey,
+            config: configPDA,
+            metadata: metadataPDA2,
+            payload: payloadPDA2
+          })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx3);
+
+        await expect(
+          program.methods
+            .setInitialValset(Buffer.from(nextValsetHash, "hex"))
+            .accounts({ payer: admin.publicKey, config: configPDA })
+            .signers([admin])
+            .rpc()
+        ).to.be.rejectedWith("Validator set already set");
+      });
     });
 
-    it("should not allow setting next valset without proper signatures", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
+    //Any other account can set next valset with valid signatures
+    describe("Next valset by anyone with valid signatures", function () {
+      const metadataPDA2 = PublicKey.findProgramAddressSync(
+        [Buffer.from(nextValsetHash, "hex"), metadata_seed, payer.publicKey.toBuffer()],
         program.programId
       )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
+      const payloadPDA2 = PublicKey.findProgramAddressSync(
+        [Buffer.from(nextValsetHash, "hex"), payer.publicKey.toBuffer()],
         program.programId
       )[0];
 
-      const tx = await program.methods
-        .createMetadataForValsetPayload(Buffer.from(hash2, "hex"))
-        .accounts({
-          payer: payer.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+      before(async () => {
+        const tx = await program.methods
+          .createMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"))
+          .accounts({
+            payer: payer.publicKey,
+            metadata: metadataPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+      });
 
-      const tx2 = await program.methods
-        .postMetadataForValsetPayload(Buffer.from(hash2, "hex"), validators2, weights2)
-        .accounts({
-          payer: payer.publicKey,
-          metadata: metadataPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
+      it("setNextValset: when signatures are invalid", async () => {
+        const tx2 = await program.methods
+          .postMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"), nextValidators, nextWeights)
+          .accounts({
+            payer: payer.publicKey,
+            metadata: metadataPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
 
-      const tx3 = await program.methods
-        .createValsetPayload(Buffer.from(hash2, "hex"), new anchor.BN(2), new anchor.BN(2), new anchor.BN(1))
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          metadata: metadataPDA2,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx3);
-
-      await expect(
-        program.methods
-          .setNextValset(Buffer.from(hash2, "hex"))
+        const tx3 = await program.methods
+          .createValsetPayload(Buffer.from(nextValsetHash, "hex"), new BN(2), new BN(2), new BN(1))
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -824,113 +929,105 @@ describe("LBTC", () => {
             payload: payloadPDA2
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Not enough valid signatures");
-    });
+          .rpc();
+        await provider.connection.confirmTransaction(tx3);
 
-    it("should not allow adding wrong signatures", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload.weight, 0);
+        await expect(
+          program.methods
+            .setNextValset(Buffer.from(nextValsetHash, "hex"))
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              metadata: metadataPDA2,
+              payload: payloadPDA2
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("Not enough valid signatures");
+      });
 
-      const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), wrongSigs, [new anchor.BN(0), new anchor.BN(1)])
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+      it("postValsetSignatures: ignores invalid signatures", async () => {
+        const tx = await program.methods
+          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), wrongSigs, [new BN(0), new BN(1)])
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            payload: payloadPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload2.weight, 0);
-    });
+        const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+        expect(payload2.weight.bigInt()).to.be.eq(0n);
+      });
 
-    it("should not allow for double-adding signatures", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
+      it("postValsetSignatures: ignores duplicates", async () => {
+        const tx = await program.methods
+          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), [sigs[0], sigs[0]], [new BN(0), new BN(0)])
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            payload: payloadPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-      const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), [sigs[0]], [new anchor.BN(0)])
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        const payload = await program.account.valsetPayload.fetch(payloadPDA2);
+        expect(payload.weight.bigInt()).to.be.eq(1n);
 
-      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload.weight, 1);
+        const tx2 = await program.methods
+          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), [sigs[0]], [new BN(0)])
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            payload: payloadPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx2);
 
-      const tx2 = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), [sigs[0]], [new anchor.BN(0)])
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx2);
+        const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+        expect(payload2.weight.bigInt()).to.be.eq(1n);
+      });
 
-      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload2.weight, 1);
-    });
+      it("setNextValset: successful", async () => {
+        const payload = await program.account.valsetPayload.fetch(payloadPDA2);
+        expect(payload.weight.bigInt()).to.be.eq(1n);
 
-    it("should allow to set next valset with proper signatures", async () => {
-      const metadataPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), metadata_seed, payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payloadPDA2 = web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(hash2, "hex"), payer.publicKey.toBuffer()],
-        program.programId
-      )[0];
-      const payload = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload.weight, 1);
+        let tx = await program.methods
+          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), sigs, [new BN(0), new BN(1)])
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            payload: payloadPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-      const tx = await program.methods
-        .postValsetSignatures(Buffer.from(hash2, "hex"), sigs, [new anchor.BN(0), new anchor.BN(1)])
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
+        expect(payload2.weight.bigInt()).to.be.eq(2n);
 
-      const payload2 = await program.account.valsetPayload.fetch(payloadPDA2);
-      assert.equal(payload2.weight, 2);
+        tx = await program.methods
+          .setNextValset(Buffer.from(nextValsetHash, "hex"))
+          .accounts({
+            payer: payer.publicKey,
+            config: configPDA,
+            metadata: metadataPDA2,
+            payload: payloadPDA2
+          })
+          .signers([payer])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
 
-      const tx4 = await program.methods
-        .setNextValset(Buffer.from(hash2, "hex"))
-        .accounts({
-          payer: payer.publicKey,
-          config: configPDA,
-          metadata: metadataPDA2,
-          payload: payloadPDA2
-        })
-        .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx4);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.epoch.bigInt()).to.be.eq(2n);
+        expect(cfg.weights.map(n => n.bigInt())).to.have.deep.members([1n, 1n, 1n]);
+        expect(cfg.weightThreshold.bigInt()).to.be.eq(2n);
+        expect(cfg.validators.map(v => Buffer.from(v))).to.have.deep.members(nextValidators);
+      });
     });
   });
 
@@ -969,11 +1066,11 @@ describe("LBTC", () => {
       )
     ];
 
-    const mintPayloadPDA = web3.PublicKey.findProgramAddressSync(
+    const mintPayloadPDA = PublicKey.findProgramAddressSync(
       [mintPayload.hashAsBytes()],
       program.programId
     )[0] as PublicKey;
-    const mintPayloadPDA2 = web3.PublicKey.findProgramAddressSync(
+    const mintPayloadPDA2 = PublicKey.findProgramAddressSync(
       [mintPayload2.hashAsBytes()],
       program.programId
     )[0] as PublicKey;
@@ -982,18 +1079,30 @@ describe("LBTC", () => {
       "04acbbb20259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab42ed4c495cbedc8a5d4b213fe18ba748ebe91264b9a64bea611054af21ad0a8d000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000ffffffff"
     );
 
+    const events = [];
+
     before(async () => {
       userTA = await spl.createAssociatedTokenAccount(provider.connection, user, mint, user.publicKey);
       console.log("userTA: ", userTA.toBase58());
       minterTA = await spl.createAssociatedTokenAccount(provider.connection, minter, mint, minter.publicKey);
       console.log("minterTA: ", minterTA.toBase58());
+
+      //Subscribe for events
+      program.addEventListener("mintProofConsumed", (event, slot, signature) => {
+        events.push(event);
+      });
     });
 
+    beforeEach(async () => {
+      events.length = 0;
+    });
+
+    //Only minter role can use mint
     describe("Mint and burn by minter", function () {
       it("mint: rejects when called by not a minter", async () => {
         await expect(
           program.methods
-            .mint(new anchor.BN(1000))
+            .mint(new BN(1000))
             .accounts({
               payer: user.publicKey,
               config: configPDA,
@@ -1030,7 +1139,7 @@ describe("LBTC", () => {
       it("burn: rejects when called by not a minter", async () => {
         await expect(
           program.methods
-            .burn(new anchor.BN(1000))
+            .burn(new BN(1000))
             .accounts({
               payer: user.publicKey,
               config: configPDA,
@@ -1043,10 +1152,9 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("Unauthorized function call");
       });
 
-      // NOTE: minters can only burn from their own wallets.
       it("burn: minter can only burn from their own address", async () => {
         let tx = await program.methods
-          .mint(new anchor.BN(2000))
+          .mint(new BN(2000))
           .accounts({
             payer: minter.publicKey,
             config: configPDA,
@@ -1062,7 +1170,7 @@ describe("LBTC", () => {
         const balanceBefore = await spl.getAccount(provider.connection, minterTA);
         console.log("balance before:", balanceBefore.amount);
 
-        const burnAmount = new anchor.BN(1234);
+        const burnAmount = new BN(1234);
         tx = await program.methods
           .burn(burnAmount)
           .accounts({
@@ -1082,6 +1190,7 @@ describe("LBTC", () => {
       });
     });
 
+    //Any account can create mint payload
     describe("Create mint payload", function () {
       const invalid_payloads = [
         {
@@ -1134,7 +1243,7 @@ describe("LBTC", () => {
             )
           );
           console.log(payload.toString("hex"));
-          const pda = web3.PublicKey.findProgramAddressSync([hash], program.programId)[0];
+          const pda = PublicKey.findProgramAddressSync([hash], program.programId)[0];
           await expect(
             program.methods
               .createMintPayload(hash, payload)
@@ -1185,6 +1294,12 @@ describe("LBTC", () => {
       });
     });
 
+    /*
+    To mint with payload account have to:
+    1. Create mint payload
+    2. Post sufficient number of signatures
+    3. Mint
+     */
     describe("Add signatures and mint with payload", function () {
       it("mintFromPayload: rejects when there are no signatures", async () => {
         await expect(
@@ -1305,13 +1420,13 @@ describe("LBTC", () => {
           await provider.connection.confirmTransaction(tx);
 
           const payload = await program.account.mintPayload.fetch(arg.payloadPDA);
-          assert.equal(payload.weight, 1);
+          expect(payload.weight.bigInt()).to.be.eq(1n);
         });
       });
 
       it("postMintSignatures: can add missing signatures to payload", async () => {
         const tx = await program.methods
-          .postMintSignatures(mintPayload.hashAsBytes(), mintSigs, [new anchor.BN(0), new anchor.BN(2)])
+          .postMintSignatures(mintPayload.hashAsBytes(), mintSigs, [new BN(0), new BN(2)])
           .accounts({ config: configPDA, payload: mintPayloadPDA, payer: payer.publicKey })
           .rpc();
         await provider.connection.confirmTransaction(tx);
@@ -1368,6 +1483,12 @@ describe("LBTC", () => {
         console.log("dest address balance after:", balanceAfter.amount);
 
         expect(balanceAfter.amount - balanceBefore.amount).to.be.eq(mintPayload.amountBigInt());
+
+        //Event
+        expect(events).to.be.not.empty;
+        console.log(JSON.stringify(events[0]));
+        expect(events[0].recipient).to.be.deep.eq(mintPayload.recipientPubKey());
+        expect(Buffer.from(events[0].payloadHash)).to.be.deep.eq(mintPayload.hashAsBytes());
       });
 
       it("mintFromPayload: rejects when already minted", async () => {
@@ -1386,8 +1507,23 @@ describe("LBTC", () => {
             .rpc()
         ).to.be.rejectedWith("Mint payload already used");
       });
+
+      it("postMintSignatures: after mint does not change the status", async () => {
+        const tx = await program.methods
+          .postMintSignatures(mintPayload.hashAsBytes(), mintSigs, [new BN(0), new BN(2)])
+          .accounts({ config: configPDA, payload: mintPayloadPDA, payer: payer.publicKey })
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
+        const payload = await program.account.mintPayload.fetch(mintPayloadPDA);
+        expect(payload.payload.map(num => num.toString(16).padStart(2, "0")).join("")).to.be.eq(mintPayload.hex());
+        expect(payload.signed).to.have.members([true, false, true]);
+        expect(payload.weight.bigInt()).to.be.eq(2n);
+        expect(payload.minted).to.be.true;
+      });
     });
 
+    //Only claimer role can mint with fee
     describe("Mint with fee by claimer", async () => {
       before(async () => {
         let tx = await program.methods
@@ -1653,6 +1789,12 @@ describe("LBTC", () => {
         );
         // Treasury received fees
         expect(treasuryBalanceAfter.amount - treasuryBalanceBefore.amount).to.be.eq(finalFees);
+
+        //Event
+        expect(events).to.be.not.empty;
+        console.log(JSON.stringify(events[0]));
+        expect(events[0].recipient).to.be.deep.eq(mintPayload2.recipientPubKey());
+        expect(Buffer.from(events[0].payloadHash)).to.be.deep.eq(mintPayload2.hashAsBytes());
       });
 
       it("mintWithFee: rejects when already minted", async () => {
@@ -1677,8 +1819,9 @@ describe("LBTC", () => {
       });
     });
 
+    //Mint and redeem do not work when pause is enabled
     describe("Pause", () => {
-      it("pause: successful by pauser", async () => {
+      before(async () => {
         const tx2 = await program.methods
           .pause()
           .accounts({ payer: pauser.publicKey, config: configPDA })
@@ -1687,6 +1830,17 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx2);
         const cfg = await program.account.config.fetch(configPDA);
         expect(cfg.paused == true);
+      });
+
+      after(async () => {
+        const tx = await program.methods
+          .unpause()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.paused == false);
       });
 
       it("mint: rejects when paused", async () => {
@@ -1768,25 +1922,60 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("LBTC contract is paused");
       });
 
-      //TODO: redeem
-
-      it("unpause: successful by admin", async () => {
-        const tx = await program.methods
-          .unpause()
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        const cfg = await program.account.config.fetch(configPDA);
-        expect(cfg.paused == false);
+      it("redeem: rejects when paused", async () => {
+        await expect(
+          program.methods
+            .redeem(Buffer.from(scriptPubkey), new BN(1000))
+            .accounts({
+              payer: user.publicKey,
+              holder: userTA,
+              config: configPDA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              mint: mint,
+              treasury: treasury
+            })
+            .signers([user])
+            .rpc()
+        ).to.be.rejectedWith("LBTC contract is paused");
       });
     });
 
     describe("Redeem", function () {
-      it("should not allow user to redeem if they don't have enough LBTC", async () => {
+      it("redeem: rejects when withdrawals are disabled", async () => {
+        let tx = await program.methods
+          .disableWithdrawals()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+
         await expect(
           program.methods
-            .redeem(Buffer.from(scriptPubkey), new anchor.BN(2000))
+            .redeem(Buffer.from(scriptPubkey), new BN(1000))
+            .accounts({
+              payer: user.publicKey,
+              holder: userTA,
+              config: configPDA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              mint: mint,
+              treasury: treasury
+            })
+            .signers([user])
+            .rpc()
+        ).to.be.rejectedWith("Withdrawals are disabled");
+
+        tx = await program.methods
+          .enableWithdrawals()
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc();
+        await provider.connection.confirmTransaction(tx);
+      });
+
+      it("redeem: rejects when insufficient funds", async () => {
+        await expect(
+          program.methods
+            .redeem(Buffer.from(scriptPubkey), new BN(2000))
             .accounts({
               payer: user.publicKey,
               holder: userTA,
@@ -1800,10 +1989,10 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("insufficient funds");
       });
 
-      it("should not allow user to redeem below burn commission", async () => {
+      it("redeem: rejects when amount < burn fee", async () => {
         await expect(
           program.methods
-            .redeem(Buffer.from(scriptPubkey), new anchor.BN(10))
+            .redeem(Buffer.from(scriptPubkey), new BN(10))
             .accounts({
               payer: user.publicKey,
               holder: userTA,
@@ -1817,10 +2006,10 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("Fee is greater than or equal to amount");
       });
 
-      it("should not allow user to redeem below dust limit", async () => {
+      it("redeem: rejects when amount < dust limit", async () => {
         await expect(
           program.methods
-            .redeem(Buffer.from(scriptPubkey), new anchor.BN(304))
+            .redeem(Buffer.from(scriptPubkey), new BN(304))
             .accounts({
               payer: user.publicKey,
               holder: userTA,
@@ -1834,10 +2023,10 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("Redeemed amount is below the BTC dust limit");
       });
 
-      it("should not allow user to redeem to invalid script pubkey", async () => {
+      it("redeem: rejects when script pubkey is invalid", async () => {
         await expect(
           program.methods
-            .redeem(Buffer.from([0, 1, 2]), new anchor.BN(1000))
+            .redeem(Buffer.from([0, 1, 2]), new BN(1000))
             .accounts({
               payer: user.publicKey,
               holder: userTA,
@@ -1851,41 +2040,10 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("Script pubkey is unsupported");
       });
 
-      it("should not allow user to redeem when withdrawals are disabled", async () => {
-        const tx = await program.methods
-          .disableWithdrawals()
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
+      it("redeem: rejects when treasury is invalid", async () => {
         await expect(
           program.methods
-            .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
-            .accounts({
-              payer: user.publicKey,
-              holder: userTA,
-              config: configPDA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              mint: mint,
-              treasury: treasury
-            })
-            .signers([user])
-            .rpc()
-        ).to.be.rejectedWith("Withdrawals are disabled");
-
-        const tx3 = await program.methods
-          .enableWithdrawals()
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx3);
-      });
-
-      it("should not allow user to redeem with improper treasury", async () => {
-        await expect(
-          program.methods
-            .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
+            .redeem(Buffer.from(scriptPubkey), new BN(1000))
             .accounts({
               payer: user.publicKey,
               holder: userTA,
@@ -1899,9 +2057,15 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("An address constraint was violated");
       });
 
-      it("should allow user to redeem", async () => {
+      it("redeem: successful", async () => {
+        const userBalanceBefore = await spl.getAccount(provider.connection, userTA);
+        const treasuryBalanceBefore = await spl.getAccount(provider.connection, treasury);
+        console.log("users balance before:", userBalanceBefore.amount);
+        console.log("treasury balance before:", treasuryBalanceBefore.amount);
+
+        const amount = new BN(1000);
         const tx = await program.methods
-          .redeem(Buffer.from(scriptPubkey), new anchor.BN(1000))
+          .redeem(Buffer.from(scriptPubkey), amount)
           .accounts({
             payer: user.publicKey,
             holder: userTA,
@@ -1913,6 +2077,16 @@ describe("LBTC", () => {
           .signers([user])
           .rpc();
         await provider.connection.confirmTransaction(tx);
+
+        const userBalanceAfter = await spl.getAccount(provider.connection, userTA);
+        const treasuryBalanceAfter = await spl.getAccount(provider.connection, treasury);
+        const cfg = await program.account.config.fetch(configPDA);
+        console.log("users balance after:", userBalanceAfter.amount);
+        console.log("treasury balance after:", treasuryBalanceAfter.amount);
+        console.log("redeem fee:", cfg.burnCommission.bigInt());
+
+        expect(userBalanceBefore.amount - userBalanceAfter.amount).to.be.eq(amount.bigInt());
+        expect(treasuryBalanceAfter.amount - treasuryBalanceBefore.amount).to.be.eq(cfg.burnCommission.bigInt());
       });
     });
   });
