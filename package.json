@@ -3,17 +3,17 @@
   "scripts": {
     "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "initialize": "ts-node scripts/initialize.ts",
-    "createMetadata": "ts-node scripts/createMetadata.ts",
-    "createMintPayload": "ts-node scripts/createMintPayload.ts",
-    "createValsetPayload": "ts-node scripts/createValsetPayload.ts",
-    "mintFromPayload": "ts-node scripts/mintFromPayload.ts",
-    "mintWithFee": "ts-node scripts/mintWithFee.ts",
-    "postMetadata": "ts-node scripts/postMetadata.ts",
-    "postMintSignatures": "ts-node scripts/postMintSignatures.ts",
-    "postValsetSignatures": "ts-node scripts/postValsetSignatures.ts",
-    "setInitialValidatorSet": "ts-node scripts/setInitialValidatorSet.ts",
-    "setNextValidatorSet": "ts-node scripts/setNextValidatorSet.ts"
+    "initialize": "ts-node -T scripts/initialize.ts",
+    "createMetadata": "ts-node -T scripts/createMetadata.ts",
+    "postMetadata": "ts-node -T scripts/postMetadata.ts",
+    "createValsetPayload": "ts-node -T scripts/createValsetPayload.ts",
+    "setInitialValidatorSet": "ts-node -T scripts/setInitialValidatorSet.ts",
+    "postValsetSignatures": "ts-node -T scripts/postValsetSignatures.ts",
+    "setNextValidatorSet": "ts-node -T scripts/setNextValidatorSet.ts",
+    "createMintPayload": "ts-node -T scripts/createMintPayload.ts",
+    "mintFromPayload": "ts-node -T scripts/mintFromPayload.ts",
+    "postMintSignatures": "ts-node -T scripts/postMintSignatures.ts",
+    "mintWithFee": "ts-node -T scripts/mintWithFee.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

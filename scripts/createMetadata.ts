@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
 import { sha256 } from "js-sha256";
 
@@ -20,13 +20,10 @@ const valsetPayload = Buffer.from(process.argv[2], "hex");
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
 
-    const payloadHash = sha256(valsetPayload);
+    const payloadHash = Buffer.from(sha256(valsetPayload), "hex");
 
     // Derive PDA for metadata
-    const [metadataPDA] = PublicKey.findProgramAddressSync(
-      [payloadHash, METADATA_SEED, payer.publicKey.toBuffer()],
-      programId
-    );
+    const [metadataPDA] = PublicKey.findProgramAddressSync([payloadHash, METADATA_SEED, payer.toBuffer()], programId);
 
     console.log("Creating metadata PDA for valset payload:", metadataPDA.toBase58());
 
