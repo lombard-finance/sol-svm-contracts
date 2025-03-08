@@ -32,6 +32,12 @@ pub fn create_mint_payload(
     mint_payload: [u8; MINT_PAYLOAD_LEN],
 ) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
+    // We should only allow creating mint payloads if a consortium exists.
+    require!(
+        ctx.accounts.config.weight_threshold != 0,
+        LBTCError::NoValidatorSet
+    );
+
     validation::pre_validate_mint(&mint_payload)?;
 
     let payload_hash = sha256(&mint_payload).to_bytes();
