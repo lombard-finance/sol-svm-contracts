@@ -24,7 +24,7 @@ const treasury = new PublicKey(process.argv[4]); // this could be retrieved from
 
     const unstakerTA = await spl.getAssociatedTokenAddress(mint, payer, false, spl.TOKEN_2022_PROGRAM_ID);
 
-    console.log(`Unstaker Token Account: ${unstakerTA.toBase58()}`)
+    console.log(`Unstaker Token Account: ${unstakerTA.toBase58()}`);
 
     // Derive PDA for config
     const [configPDA] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);

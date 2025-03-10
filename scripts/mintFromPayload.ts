@@ -26,7 +26,7 @@ const recipient = new PublicKey(process.argv[3]);
 
     const recipientTA = await spl.getAssociatedTokenAddress(mint, recipient, false, spl.TOKEN_2022_PROGRAM_ID);
 
-    console.log(`Recipient Token Address: ${recipientTA.toBase58()}`)
+    console.log(`Recipient Token Address: ${recipientTA.toBase58()}`);
 
     const payloadHash = Buffer.from(sha256(mintPayload), "hex");
 
