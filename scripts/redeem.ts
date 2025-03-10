@@ -14,43 +14,32 @@ const program = new anchor.Program(require("../target/idl/lbtc.json"), provider)
 
 const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
 
-const mintPayload = Buffer.from(process.argv[2], "hex");
-const recipient = new PublicKey(process.argv[3]);
+const scriptPubkey = Buffer.from(process.argv[2], "hex");
+const amount = new anchor.BN(process.argv[3]);
+const treasury = new PublicKey(process.argv[4]); // this could be retrieved from config account
 
 (async () => {
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
-    const tokenAuth = PublicKey.findProgramAddressSync([Buffer.from("token_authority")], program.programId)[0];
 
-    console.log("Token authority from program", tokenAuth.toBase58());
+    const unstakerTA = await spl.getAssociatedTokenAddress(mint, payer, false, spl.TOKEN_2022_PROGRAM_ID);
 
-    const recipientTA = await spl.getAssociatedTokenAddress(mint, recipient, false, spl.TOKEN_2022_PROGRAM_ID);
-
-    console.log(`Recipient Token Address: ${recipientTA.toBase58()}`)
-
-    const payloadHash = Buffer.from(sha256(mintPayload), "hex");
+    console.log(`Unstaker Token Account: ${unstakerTA.toBase58()}`)
 
     // Derive PDA for config
     const [configPDA] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);
 
-    console.log("Initializing program with config PDA:", configPDA.toBase58());
-
-    // Derive PDA for payload
-    const [payloadPDA] = PublicKey.findProgramAddressSync([payloadHash], programId);
-
-    console.log("Creating payload PDA for mint payload:", payloadPDA.toBase58());
+    console.log("Using program with config PDA:", configPDA.toBase58());
 
     const tx = await program.methods
-      .mintFromPayload(payloadHash)
+      .redeem(scriptPubkey, amount)
       .accounts({
-        payer,
+        payer: payer,
+        holder: unstakerTA,
         config: configPDA,
         tokenProgram: spl.TOKEN_2022_PROGRAM_ID,
-        recipient: recipientTA,
         mint: mint,
-        tokenAuthority: tokenAuth,
-        payload: payloadPDA,
-        bascule: payer //TODO: fill with correct value after implementation
+        treasury: treasury
       })
       .rpc();
 
