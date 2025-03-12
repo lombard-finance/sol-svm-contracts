@@ -24,7 +24,7 @@ const recipient = new PublicKey(process.argv[3]);
 
     console.log("Token authority from program", tokenAuth.toBase58());
 
-    const recipientTA = await spl.getAssociatedTokenAddress(mint, recipient, false, spl.TOKEN_2022_PROGRAM_ID);
+    const recipientTA = await spl.getAssociatedTokenAddress(mint, recipient, false, spl.TOKEN_PROGRAM_ID);
 
     console.log(`Recipient Token Address: ${recipientTA.toBase58()}`);
 
@@ -45,7 +45,7 @@ const recipient = new PublicKey(process.argv[3]);
       .accounts({
         payer,
         config: configPDA,
-        tokenProgram: spl.TOKEN_2022_PROGRAM_ID,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
         recipient: recipientTA,
         mint: mint,
         tokenAuthority: tokenAuth,

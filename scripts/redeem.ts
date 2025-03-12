@@ -22,7 +22,7 @@ const treasury = new PublicKey(process.argv[4]); // this could be retrieved from
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
 
-    const unstakerTA = await spl.getAssociatedTokenAddress(mint, payer, false, spl.TOKEN_2022_PROGRAM_ID);
+    const unstakerTA = await spl.getAssociatedTokenAddress(mint, payer, false, spl.TOKEN_PROGRAM_ID);
 
     console.log(`Unstaker Token Account: ${unstakerTA.toBase58()}`);
 
@@ -37,7 +37,7 @@ const treasury = new PublicKey(process.argv[4]); // this could be retrieved from
         payer: payer,
         holder: unstakerTA,
         config: configPDA,
-        tokenProgram: spl.TOKEN_2022_PROGRAM_ID,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
         mint: mint,
         treasury: treasury
       })
