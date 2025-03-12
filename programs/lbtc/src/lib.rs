@@ -145,6 +145,10 @@ pub mod lbtc {
         instructions::set_treasury(ctx, treasury)
     }
 
+    pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
+        instructions::set_bascule(ctx, bascule)
+    }
+
     pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
         instructions::add_minter(ctx, minter)
     }

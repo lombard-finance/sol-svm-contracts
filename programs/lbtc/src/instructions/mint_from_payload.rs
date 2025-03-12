@@ -26,8 +26,8 @@ pub struct MintFromPayload<'info> {
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
-    /// CHECK: This can be left empty in case of bascule being disabled, so we forego the check
-    /// here.
+    /// CHECK: We constrain this to config-set bascule.
+    #[account(constraint = bascule.key() == config.bascule)]
     pub bascule: UncheckedAccount<'info>,
 }
 

@@ -149,3 +149,8 @@ pub struct SignaturesAdded {
     pub hash: [u8; 32],
     pub signatures: Vec<[u8; 64]>,
 }
+
+#[event]
+pub struct BasculeChanged {
+    pub address: Pubkey,
+}

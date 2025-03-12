@@ -4,7 +4,7 @@ use crate::{
     events::{
         BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved, DustFeeRateSet,
         MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded, PauserRemoved,
-        TreasuryChanged, WithdrawalsEnabled,
+        TreasuryChanged, WithdrawalsEnabled, BasculeChanged,
     },
     state::Config,
 };
@@ -141,5 +141,11 @@ pub fn unpause(ctx: Context<Admin>) -> Result<()> {
     require!(ctx.accounts.config.paused, LBTCError::NotPaused);
     ctx.accounts.config.paused = false;
     emit!(PauseEnabled { enabled: false });
+    Ok(())
+}
+
+pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
+    ctx.accounts.config.bascule = bascule;
+    emit!(BasculeChanged { address: bascule });
     Ok(())
 }
