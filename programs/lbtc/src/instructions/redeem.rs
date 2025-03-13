@@ -2,7 +2,7 @@
 use crate::{
     errors::LBTCError,
     events::UnstakeRequest,
-    state::Config,
+    state::{Config, UnstakeInfo},
     utils::{self, bitcoin_utils},
 };
 use anchor_lang::prelude::*;
@@ -19,12 +19,22 @@ pub struct Redeem<'info> {
         token::token_program = token_program,
     )]
     pub holder: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, address = config.treasury)]
     pub treasury: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        init,
+        seeds = [&config.unstake_counter.to_le_bytes()],
+        bump,
+        payer = payer,
+        space = 8 + UnstakeInfo::INIT_SPACE
+    )]
+    pub unstake_info: Account<'info, UnstakeInfo>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Result<()> {
@@ -61,6 +71,11 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.payer.to_account_info(),
     )?;
+
+    ctx.accounts.unstake_info.from = ctx.accounts.payer.key();
+    ctx.accounts.unstake_info.script_pubkey = script_pubkey.clone();
+    ctx.accounts.unstake_info.amount = amount;
+    ctx.accounts.config.unstake_counter += 1;
 
     emit!(UnstakeRequest {
         from: ctx.accounts.payer.key(),

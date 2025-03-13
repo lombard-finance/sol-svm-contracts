@@ -12,6 +12,9 @@ const OP_DATA_20: u8 = 0x14;
 const BASE_SPEND_COST: u64 = 41; // 32 (txid) + 4 (vout) + 1 (scriptSig size) + 4 (nSequence) + 8 (amount)
 const WITNESS_INPUT_SIZE: u64 = 26; // floor(107 / 4), used for witness outputs (P2WPKH, P2WSH, P2TR)
 
+pub const P2WPKH_LEN: usize = 22;
+pub const P2TR_P2WSH_LEN: usize = 34;
+
 /// The supported output types for the Lombard protocol.
 pub enum OutputType {
     P2WPKH,
@@ -30,14 +33,14 @@ pub fn get_dust_limit_for_output(script_pubkey: &[u8], dust_fee_rate: u64) -> Re
 
 fn get_output_type(script_pubkey: &[u8]) -> Result<OutputType> {
     match script_pubkey.len() {
-        22 => {
+        P2WPKH_LEN => {
             if script_pubkey[0] == OP_0 && script_pubkey[1] == OP_DATA_20 {
                 Ok(OutputType::P2WPKH)
             } else {
                 err!(LBTCError::UnsupportedRedeemAddress)
             }
         }
-        34 => {
+        P2TR_P2WSH_LEN => {
             if script_pubkey[0] == OP_1 && script_pubkey[1] == OP_DATA_32 {
                 Ok(OutputType::P2TR)
             } else if script_pubkey[0] == OP_0 && script_pubkey[1] == OP_DATA_32 {

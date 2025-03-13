@@ -1,8 +1,5 @@
 //! Creates a `Metadata` account for us to construct a validator set.
-use crate::{
-    events::ValsetMetadataCreated,
-    state::{Metadata},
-};
+use crate::{events::ValsetMetadataCreated, state::Metadata};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -25,8 +22,6 @@ pub fn create_metadata_for_valset_payload(
     _ctx: Context<CreateValsetMetadata>,
     hash: [u8; 32],
 ) -> Result<()> {
-    emit!(ValsetMetadataCreated {
-        hash,
-    });
+    emit!(ValsetMetadataCreated { hash });
     Ok(())
 }

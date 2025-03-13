@@ -2,9 +2,9 @@
 use crate::{
     errors::LBTCError,
     events::{
-        BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved, DustFeeRateSet,
-        MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded, PauserRemoved,
-        TreasuryChanged, WithdrawalsEnabled, BasculeChanged,
+        BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
+        DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded,
+        PauserRemoved, TreasuryChanged, WithdrawalsEnabled,
     },
     state::Config,
 };

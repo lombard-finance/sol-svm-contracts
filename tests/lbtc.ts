@@ -2108,6 +2108,16 @@ describe("LBTC", () => {
 
         expect(userBalanceBefore.amount - userBalanceAfter.amount).to.be.eq(amount.bigInt());
         expect(treasuryBalanceAfter.amount - treasuryBalanceBefore.amount).to.be.eq(cfg.burnCommission.bigInt());
+        expect(cfg.unstakeCounter.bigInt()).to.be.eq(1n);
+
+        const unstakeInfoPDA = PublicKey.findProgramAddressSync(
+          [new BN(cfg.unstakeCounter - 1).toArrayLike(Buffer, "le", 8)],
+          program.programId
+        )[0];
+        const unstakeInfo = await program.account.unstakeInfo.fetch(unstakeInfoPDA);
+        expect(unstakeInfo.from == user.publicKey);
+        expect(unstakeInfo.scriptPubkey == scriptPubkey);
+        expect(unstakeInfo.amount == amount);
       });
     });
   });

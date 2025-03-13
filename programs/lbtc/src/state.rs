@@ -1,4 +1,7 @@
-use crate::constants::{MAX_VALIDATOR_SET_SIZE, MINT_PAYLOAD_LEN, VALIDATOR_PUBKEY_SIZE};
+use crate::{
+    constants::{MAX_VALIDATOR_SET_SIZE, MINT_PAYLOAD_LEN, VALIDATOR_PUBKEY_SIZE},
+    utils::bitcoin_utils::P2TR_P2WSH_LEN,
+};
 use anchor_lang::prelude::*;
 
 #[account]
@@ -36,6 +39,9 @@ pub struct Config {
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub weights: Vec<u64>,
     pub weight_threshold: u64,
+
+    // Unstake counter, to generate unique PDAs for each unstake
+    pub unstake_counter: u64,
 }
 
 #[account]
@@ -66,4 +72,13 @@ pub struct ValsetPayload {
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub signed: Vec<bool>,
     pub weight: u64,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct UnstakeInfo {
+    pub from: Pubkey,
+    #[max_len(P2TR_P2WSH_LEN)]
+    pub script_pubkey: Vec<u8>,
+    pub amount: u64,
 }
