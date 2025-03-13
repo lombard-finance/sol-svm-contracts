@@ -66,12 +66,13 @@ class FeePermit {
   maxFees: string;
   expire: string;
 
-  constructor(hex: string) {
-    this.prefix = hex.slice(0, 8);
-    this.chainId = hex.slice(8, 72);
-    this.programId = hex.slice(72, 136);
-    this.maxFees = hex.slice(136, 200);
-    this.expire = hex.slice(200);
+  constructor(programId: string, maxFees: number) {
+    this.prefix = "04acbbb2";
+    this.chainId = "0259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab";
+    this.programId = programId;
+    this.maxFees = maxFees.toString(16).padStart(64, "0");
+    // Hardcode end of unix epoch so tests always pass
+    this.expire = "00000000000000000000000000000000000000000000000000000000ffffffff";
   }
 
   hex(): string {
@@ -1096,9 +1097,7 @@ describe("LBTC", () => {
       program.programId
     )[0] as PublicKey;
 
-    const feePermit = new FeePermit(
-      "04acbbb20259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab42ed4c495cbedc8a5d4b213fe18ba748ebe91264b9a64bea611054af21ad0a8d000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000ffffffff"
-    );
+    const feePermit = new FeePermit(program.programId.toBuffer().toString("hex"), 3);
 
     const events = [];
 
@@ -1663,9 +1662,7 @@ describe("LBTC", () => {
           .rpc();
         await provider.connection.confirmTransaction(tx);
 
-        const feePermit = new FeePermit(
-          "04acbbb20259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab42ed4c495cbedc8a5d4b213fe18ba748ebe91264b9a64bea611054af21ad0a8d000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000ffffffff"
-        );
+        const feePermit = new FeePermit(program.programId.toBuffer().toString("hex"), 3);
         feePermit.maxFees = "0000000000000000000000000000000000000000000000000000000000989680";
 
         await expect(
@@ -1740,9 +1737,7 @@ describe("LBTC", () => {
 
       invalid_permits.forEach(function (arg) {
         it(`mintWithFee: rejects when ${arg.name}`, async () => {
-          const feePermit = new FeePermit(
-            "04acbbb20259db5080fc2c6d3bcf7ca90712d3c2e5e6c28f27f0dfbb9953bdb0894c03ab42ed4c495cbedc8a5d4b213fe18ba748ebe91264b9a64bea611054af21ad0a8d000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000ffffffff"
-          );
+          const feePermit = new FeePermit(program.programId.toBuffer().toString("hex"), 3);
           const [permit, signature] = arg.modifier(feePermit);
 
           await expect(
