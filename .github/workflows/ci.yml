@@ -9,7 +9,7 @@ jobs:
   unit-test:
     if: github.event.pull_request.draft == false
     name: Unit tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -25,7 +25,7 @@ jobs:
   anchor-test:
     if: github.event.pull_request.draft == false
     name: Integration tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v2
       - name: Anchor Test
@@ -38,7 +38,7 @@ jobs:
   fmt:
     if: github.event.pull_request.draft == false
     name: Fmt
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js
