@@ -167,15 +167,39 @@ describe("LBTC", () => {
   });
 
   describe("Initialize and set roles", function () {
+    it("initialize: fails when payer is not deployer", async () => {
+      const programData = PublicKey.findProgramAddressSync(
+        [program.programId.toBuffer()],
+        new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
+      )[0];
+      await expect(
+        program.methods
+          .initialize(admin.publicKey, mint)
+          .accounts({
+            deployer: payer.publicKey,
+            programData,
+            config: configPDA,
+            systemProgram: SystemProgram.programId
+          })
+          .signers([payer])
+          .rpc()
+      ).to.be.rejectedWith("A raw constraint was violated.");
+    });
+
     it("initialize: successful", async () => {
+      const programData = PublicKey.findProgramAddressSync(
+        [program.programId.toBuffer()],
+        new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
+      )[0];
       const tx = await program.methods
         .initialize(admin.publicKey, mint)
         .accounts({
-          payer: payer.publicKey,
+          deployer: provider.wallet.publicKey,
+          programData,
           config: configPDA,
           systemProgram: SystemProgram.programId
         })
-        .signers([payer])
+        .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
         .rpc();
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
@@ -2112,7 +2136,7 @@ describe("LBTC", () => {
         const unstakeInfo = await program.account.unstakeInfo.fetch(unstakeInfoPDA);
         expect(unstakeInfo.from == user.publicKey);
         expect(unstakeInfo.scriptPubkey == scriptPubkey);
-        expect(unstakeInfo.amount == amount);
+        expect(unstakeInfo.amount == amount - cfg.burnCommission);
       });
     });
   });
