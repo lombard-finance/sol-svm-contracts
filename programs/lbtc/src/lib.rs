@@ -149,8 +149,8 @@ pub mod lbtc {
         instructions::set_dust_fee_rate(ctx, rate)
     }
 
-    pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
-        instructions::set_treasury(ctx, treasury)
+    pub fn set_treasury(ctx: Context<SetTreasury>) -> Result<()> {
+        instructions::set_treasury(ctx)
     }
 
     pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {

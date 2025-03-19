@@ -4,7 +4,7 @@ use crate::{
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
         DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, OwnershipTransferInitiated,
-        PauseEnabled, PauserAdded, PauserRemoved, TreasuryChanged, WithdrawalsEnabled,
+        PauseEnabled, PauserAdded, PauserRemoved, WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -65,12 +65,6 @@ pub fn set_operator(ctx: Context<Admin>, operator: Pubkey) -> Result<()> {
 pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
     ctx.accounts.config.dust_fee_rate = rate;
     emit!(DustFeeRateSet { rate });
-    Ok(())
-}
-
-pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
-    ctx.accounts.config.treasury = treasury;
-    emit!(TreasuryChanged { address: treasury });
     Ok(())
 }
 

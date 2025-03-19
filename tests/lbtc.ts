@@ -221,8 +221,8 @@ describe("LBTC", () => {
     //Treasury is an account that collects fees for autoclaim and redeem
     it("setTreasury: successful by admin", async () => {
       const tx = await program.methods
-        .setTreasury(treasury)
-        .accounts({ payer: admin.publicKey, config: configPDA })
+        .setTreasury()
+        .accounts({ payer: admin.publicKey, config: configPDA, treasury })
         .signers([admin])
         .rpc();
       await provider.connection.confirmTransaction(tx);
@@ -618,8 +618,8 @@ describe("LBTC", () => {
       it("setTreasury: rejects when called by not admin", async () => {
         await expect(
           program.methods
-            .setTreasury(treasury)
-            .accounts({ payer: payer.publicKey, config: configPDA })
+            .setTreasury()
+            .accounts({ payer: payer.publicKey, config: configPDA, treasury })
             .signers([payer])
             .rpc()
         ).to.be.rejectedWith("An address constraint was violated");

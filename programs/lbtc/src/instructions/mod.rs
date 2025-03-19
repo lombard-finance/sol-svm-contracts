@@ -14,6 +14,8 @@ pub mod mint_from_payload;
 pub use mint_from_payload::*;
 pub mod mint_with_fee;
 pub use mint_with_fee::*;
+pub mod set_treasury;
+pub use set_treasury::*;
 pub mod operator;
 pub use operator::*;
 pub mod pause;
