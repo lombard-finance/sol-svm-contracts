@@ -5,7 +5,7 @@ use solana_program::bpf_loader_upgradeable;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(mut, 
+    #[account(mut,
         constraint = deployer.key() == program_data.upgrade_authority_address.unwrap_or_default())
     ]
     pub deployer: Signer<'info>,
