@@ -252,6 +252,19 @@ describe("LBTC", () => {
       expect(cfg.minters[0].toBase58() == minter.publicKey.toBase58());
     });
 
+    it("addMinter: adding twice should not increase minters", async () => {
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.minters.length == 1);
+      let tx = await program.methods
+        .addMinter(minter.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg2 = await program.account.config.fetch(configPDA);
+      expect(cfg2.minters.length == 1);
+    });
+
     //Claimer is a role which can perform autoclaim
     it("addClaimer: successful by admin", async () => {
       const tx = await program.methods
@@ -264,6 +277,20 @@ describe("LBTC", () => {
       expect(cfg.claimers[0].toBase58() == claimer.publicKey.toBase58());
     });
 
+    //Claimer is a role which can perform autoclaim
+    it("addClaimer: adding twice should not increase claimers", async () => {
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.claimers.length == 1);
+      const tx = await program.methods
+        .addClaimer(claimer.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg2 = await program.account.config.fetch(configPDA);
+      expect(cfg2.claimers.length == 1);
+    });
+
     //Pauser is a role that can only set contracts on pause
     it("addPauser: successful by admin", async () => {
       const tx = await program.methods
@@ -274,6 +301,20 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx);
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.pausers[0].toBase58() == pauser.publicKey.toBase58());
+    });
+
+    //Pauser is a role that can only set contracts on pause
+    it("addPauser: adding twice should not increase pausers", async () => {
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.pausers.length == 1);
+      const tx = await program.methods
+        .addPauser(pauser.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg2 = await program.account.config.fetch(configPDA);
+      expect(cfg2.pausers.length == 1);
     });
 
     //MintFee is a fee that charged for autoclaim and transfered to treasury

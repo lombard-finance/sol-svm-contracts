@@ -69,8 +69,10 @@ pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
 }
 
 pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    ctx.accounts.config.minters.push(minter);
-    emit!(MinterAdded { minter });
+    if !ctx.accounts.config.minters.iter().any(|m| *m == minter) {
+        ctx.accounts.config.minters.push(minter);
+        emit!(MinterAdded { minter });
+    }
     Ok(())
 }
 
@@ -92,8 +94,10 @@ pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
 }
 
 pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
-    ctx.accounts.config.claimers.push(claimer);
-    emit!(ClaimerAdded { claimer });
+    if !ctx.accounts.config.claimers.iter().any(|c| *c == claimer) {
+        ctx.accounts.config.claimers.push(claimer);
+        emit!(ClaimerAdded { claimer });
+    }
     Ok(())
 }
 
@@ -115,8 +119,10 @@ pub fn remove_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
 }
 
 pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-    ctx.accounts.config.pausers.push(pauser);
-    emit!(PauserAdded { pauser });
+    if !ctx.accounts.config.pausers.iter().any(|p| *p == pauser) {
+        ctx.accounts.config.pausers.push(pauser);
+        emit!(PauserAdded { pauser });
+    }
     Ok(())
 }
 
