@@ -28,3 +28,4 @@ pub const METADATA_SEED: [u8; 32] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
 pub const VALIDATOR_PUBKEY_SIZE: usize = 64;
+pub const LBTC_DECIMALS: u8 = 8;

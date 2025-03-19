@@ -1,5 +1,6 @@
 //! Native redeem functionality for LBTC.
 use crate::{
+    constants,
     errors::LBTCError,
     events::UnstakeRequest,
     state::{Config, UnstakeInfo},
@@ -52,16 +53,18 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
     require!(amount > fee, LBTCError::FeeGTEAmount);
     require!(amount - fee > dust_limit, LBTCError::AmountBelowDustLimit);
 
-    anchor_spl::token_interface::transfer(
+    anchor_spl::token_interface::transfer_checked(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            anchor_spl::token_interface::Transfer {
+            anchor_spl::token_interface::TransferChecked {
                 from: ctx.accounts.holder.to_account_info(),
                 to: ctx.accounts.treasury.to_account_info(),
                 authority: ctx.accounts.payer.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
             },
         ),
         fee,
+        constants::LBTC_DECIMALS,
     )?;
 
     utils::execute_burn(
