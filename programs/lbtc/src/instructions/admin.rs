@@ -77,17 +77,8 @@ pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
 }
 
 pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, m) in ctx.accounts.config.minters.iter().enumerate() {
-        if *m == minter {
-            found = true;
-            index = i;
-        }
-    }
-
+    let found = remove_from_vector(&mut ctx.accounts.config.minters, minter);
     if found {
-        ctx.accounts.config.minters.swap_remove(index);
         emit!(MinterRemoved { minter });
     }
     Ok(())
@@ -102,17 +93,8 @@ pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
 }
 
 pub fn remove_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, c) in ctx.accounts.config.claimers.iter().enumerate() {
-        if *c == claimer {
-            found = true;
-            index = i;
-        }
-    }
-
+    let found = remove_from_vector(&mut ctx.accounts.config.claimers, claimer);
     if found {
-        ctx.accounts.config.claimers.swap_remove(index);
         emit!(ClaimerRemoved { claimer });
     }
     Ok(())
@@ -127,17 +109,8 @@ pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
 }
 
 pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, p) in ctx.accounts.config.pausers.iter().enumerate() {
-        if *p == pauser {
-            found = true;
-            index = i;
-        }
-    }
-
+    let found = remove_from_vector(&mut ctx.accounts.config.pausers, pauser);
     if found {
-        ctx.accounts.config.pausers.swap_remove(index);
         emit!(PauserRemoved { pauser });
     }
     Ok(())
@@ -154,4 +127,22 @@ pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
     ctx.accounts.config.bascule = bascule;
     emit!(BasculeChanged { address: bascule });
     Ok(())
+}
+
+fn remove_from_vector(v: &mut Vec<Pubkey>, to_remove: Pubkey) -> bool {
+    let mut found = false;
+    let mut index = 0;
+    for (i, p) in v.iter().enumerate() {
+        if *p == to_remove {
+            found = true;
+            index = i;
+            break;
+        }
+    }
+
+    if found {
+        v.swap_remove(index);
+    }
+
+    found
 }
