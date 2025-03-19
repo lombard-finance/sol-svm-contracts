@@ -354,6 +354,61 @@ describe("LBTC", () => {
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.dustFeeRate.eq(dustFeeRate));
     });
+
+    it("transferOwnership: failure from unauthorized party", async () => {
+      await expect(
+        program.methods
+          .transferOwnership(payer.publicKey)
+          .accounts({ payer: payer.publicKey, config: configPDA })
+          .signers([payer])
+          .rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
+    });
+
+    it("transferOwnership: successful by admin", async () => {
+      const tx = await program.methods
+        .transferOwnership(payer.publicKey)
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
+      expect(cfg.pendingAdmin.toBase58()).to.be.equal(payer.publicKey.toBase58());
+    });
+
+    it("acceptOwnership: failure from unauthorized party", async () => {
+      await expect(
+        program.methods.acceptOwnership().accounts({ payer: user.publicKey, config: configPDA }).signers([user]).rpc()
+      ).to.be.rejectedWith("An address constraint was violated");
+    });
+
+    it("acceptOwnership: successful by pending admin", async () => {
+      const tx = await program.methods
+        .acceptOwnership()
+        .accounts({ payer: payer.publicKey, config: configPDA })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.admin.toBase58()).to.be.equal(payer.publicKey.toBase58());
+
+      // Reverse it for remainder of test.
+      const tx2 = await program.methods
+        .transferOwnership(admin.publicKey)
+        .accounts({ payer: payer.publicKey, config: configPDA })
+        .signers([payer])
+        .rpc();
+      await provider.connection.confirmTransaction(tx2);
+      const tx3 = await program.methods
+        .acceptOwnership()
+        .accounts({ payer: admin.publicKey, config: configPDA })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx3);
+      const cfg2 = await program.account.config.fetch(configPDA);
+      expect(cfg2.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
+    });
   });
 
   describe("Setters and getters", () => {

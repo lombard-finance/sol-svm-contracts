@@ -154,3 +154,13 @@ pub struct SignaturesAdded {
 pub struct BasculeChanged {
     pub address: Pubkey,
 }
+
+#[event]
+pub struct OwnershipTransferInitiated {
+    pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct OwnershipTransferred {
+    pub new_admin: Pubkey,
+}

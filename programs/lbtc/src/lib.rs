@@ -109,6 +109,14 @@ pub mod lbtc {
         instructions::post_valset_signatures(ctx, hash, signatures, indices)
     }
 
+    pub fn accept_ownership(ctx: Context<AcceptOwnership>) -> Result<()> {
+        instructions::accept_ownership(ctx)
+    }
+
+    pub fn transfer_ownership(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+        instructions::transfer_ownership(ctx, new_admin)
+    }
+
     pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {
         instructions::enable_withdrawals(ctx)
     }

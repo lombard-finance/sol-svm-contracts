@@ -3,8 +3,8 @@ use crate::{
     errors::LBTCError,
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
-        DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded,
-        PauserRemoved, TreasuryChanged, WithdrawalsEnabled,
+        DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, OwnershipTransferInitiated,
+        PauseEnabled, PauserAdded, PauserRemoved, TreasuryChanged, WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -16,6 +16,12 @@ pub struct Admin<'info> {
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
+}
+
+pub fn transfer_ownership(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+    ctx.accounts.config.pending_admin = new_admin;
+    emit!(OwnershipTransferInitiated { new_admin });
+    Ok(())
 }
 
 pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {

@@ -9,6 +9,7 @@ use anchor_lang::prelude::*;
 pub struct Config {
     // Authorities
     pub admin: Pubkey,
+    pub pending_admin: Pubkey,
     pub operator: Pubkey,
     pub treasury: Pubkey,
     #[max_len(10)]

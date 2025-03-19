@@ -1,3 +1,5 @@
+pub mod accept_ownership;
+pub use accept_ownership::*;
 pub mod admin;
 pub use admin::*;
 pub mod create_valset_payload;
