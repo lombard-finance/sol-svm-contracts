@@ -74,13 +74,13 @@ pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Resu
 
     ctx.accounts.unstake_info.from = ctx.accounts.holder.key();
     ctx.accounts.unstake_info.script_pubkey = script_pubkey.clone();
-    ctx.accounts.unstake_info.amount = amount;
+    ctx.accounts.unstake_info.amount = amount - fee;
     ctx.accounts.config.unstake_counter += 1;
 
     emit!(UnstakeRequest {
         from: ctx.accounts.holder.key(),
         script_pubkey,
-        amount,
+        amount: amount - fee,
     });
     Ok(())
 }
