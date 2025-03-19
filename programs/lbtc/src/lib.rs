@@ -17,8 +17,14 @@ declare_id!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx");
 pub mod lbtc {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, mint: Pubkey) -> Result<()> {
-        instructions::initialize(ctx, admin, mint)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        admin: Pubkey,
+        burn_commission: u64,
+        dust_fee_rate: u64,
+        mint_fee: u64,
+    ) -> Result<()> {
+        instructions::initialize(ctx, admin, burn_commission, dust_fee_rate, mint_fee)
     }
 
     pub fn create_mint_payload(

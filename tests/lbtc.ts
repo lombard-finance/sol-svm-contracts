@@ -168,16 +168,21 @@ describe("LBTC", () => {
 
   describe("Initialize and set roles", function () {
     it("initialize: fails when payer is not deployer", async () => {
+      const burnCommission = new BN(1);
+      const dustFeeRate = new BN(1000);
+      const mintFee = new BN(1);
       const programData = PublicKey.findProgramAddressSync(
         [program.programId.toBuffer()],
         new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
       )[0];
       await expect(
         program.methods
-          .initialize(admin.publicKey, mint)
+          .initialize(admin.publicKey, burnCommission, dustFeeRate, mintFee)
           .accounts({
             deployer: payer.publicKey,
             programData,
+            mint,
+            treasury,
             config: configPDA,
             systemProgram: SystemProgram.programId
           })
@@ -187,15 +192,20 @@ describe("LBTC", () => {
     });
 
     it("initialize: successful", async () => {
+      const burnCommission = new BN(1);
+      const dustFeeRate = new BN(1000);
+      const mintFee = new BN(1);
       const programData = PublicKey.findProgramAddressSync(
         [program.programId.toBuffer()],
         new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
       )[0];
       const tx = await program.methods
-        .initialize(admin.publicKey, mint)
+        .initialize(admin.publicKey, burnCommission, dustFeeRate, mintFee)
         .accounts({
           deployer: provider.wallet.publicKey,
           programData,
+          mint,
+          treasury,
           config: configPDA,
           systemProgram: SystemProgram.programId
         })
