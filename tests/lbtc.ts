@@ -251,30 +251,6 @@ describe("LBTC", () => {
       expect(cfg.bascule.toBase58() == payer.publicKey.toBase58());
     });
 
-    it("addMinter: successful by admin", async () => {
-      let tx = await program.methods
-        .addMinter(minter.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.minters[0].toBase58() == minter.publicKey.toBase58());
-    });
-
-    it("addMinter: adding twice should not increase minters", async () => {
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.minters.length == 1);
-      let tx = await program.methods
-        .addMinter(minter.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg2 = await program.account.config.fetch(configPDA);
-      expect(cfg2.minters.length == 1);
-    });
-
     //Claimer is a role which can perform autoclaim
     it("addClaimer: successful by admin", async () => {
       const tx = await program.methods
@@ -645,16 +621,6 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("An address constraint was violated");
       });
 
-      it("addMinter: rejects when called by not admin", async () => {
-        await expect(
-          program.methods
-            .addMinter(payer.publicKey)
-            .accounts({ payer: payer.publicKey, config: configPDA })
-            .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith("An address constraint was violated");
-      });
-
       it("addClaimer: rejects when called by not admin", async () => {
         await expect(
           program.methods
@@ -677,19 +643,11 @@ describe("LBTC", () => {
     });
 
     describe("Remove roles", function () {
-      let newMinter, newClaimer, newPauser;
+      let newClaimer, newPauser;
 
       before(async function () {
-        newMinter = Keypair.generate();
-        let tx = await program.methods
-          .addMinter(newMinter.publicKey)
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
         newClaimer = Keypair.generate();
-        tx = await program.methods
+        let tx = await program.methods
           .addClaimer(newClaimer.publicKey)
           .accounts({ payer: admin.publicKey, config: configPDA })
           .signers([admin])
@@ -705,31 +663,8 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx);
 
         const cfg = await program.account.config.fetch(configPDA);
-        expect(cfg.minters[1].toBase58() == newMinter.publicKey.toBase58());
         expect(cfg.claimers[1].toBase58() == newClaimer.publicKey.toBase58());
         expect(cfg.pausers[1].toBase58() == newPauser.publicKey.toBase58());
-      });
-
-      it("removeMinter: rejects when called by not admin", async () => {
-        await expect(
-          program.methods
-            .removeMinter(newMinter.publicKey)
-            .accounts({ payer: payer.publicKey, config: configPDA })
-            .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith("An address constraint was violated");
-      });
-
-      it("removeMinter: successfully by admin", async () => {
-        let tx = await program.methods
-          .removeMinter(newMinter.publicKey)
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
-        const cfg = await program.account.config.fetch(configPDA);
-        expect(cfg.minters).to.has.length(1);
       });
 
       it("removeClaimer: rejects when called by not admin", async () => {
@@ -1247,99 +1182,6 @@ describe("LBTC", () => {
       events.length = 0;
     });
 
-    //Only minter role can use mint
-    describe("Mint and burn by minter", function () {
-      it("mint: rejects when called by not a minter", async () => {
-        await expect(
-          program.methods
-            .mint(new BN(1000))
-            .accounts({
-              payer: user.publicKey,
-              config: configPDA,
-              recipient: userTA,
-              mint: mint,
-              tokenAuthority: tokenAuth,
-              tokenProgram: spl.TOKEN_PROGRAM_ID
-            })
-            .signers([user])
-            .rpc()
-        ).to.be.rejectedWith("Unauthorized function call");
-      });
-
-      it("mint: successful", async () => {
-        const amount = new BN(1000);
-        const tx = await program.methods
-          .mint(amount)
-          .accounts({
-            payer: minter.publicKey,
-            config: configPDA,
-            recipient: userTA,
-            mint: mint,
-            tokenProgram: spl.TOKEN_PROGRAM_ID
-          })
-          .signers([minter])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
-        const balanceAfter = await spl.getAccount(provider.connection, userTA);
-        console.log("balance after:", balanceAfter.amount);
-        expect(balanceAfter.amount).to.be.eq(amount.bigInt());
-      });
-
-      it("burn: rejects when called by not a minter", async () => {
-        await expect(
-          program.methods
-            .burn(new BN(1000))
-            .accounts({
-              payer: user.publicKey,
-              config: configPDA,
-              recipient: userTA,
-              mint: mint,
-              tokenProgram: spl.TOKEN_PROGRAM_ID
-            })
-            .signers([user])
-            .rpc()
-        ).to.be.rejectedWith("Unauthorized function call");
-      });
-
-      it("burn: minter can only burn from their own address", async () => {
-        let tx = await program.methods
-          .mint(new BN(2000))
-          .accounts({
-            payer: minter.publicKey,
-            config: configPDA,
-            recipient: minterTA,
-            mint: mint,
-            tokenAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID
-          })
-          .signers([minter])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
-        const balanceBefore = await spl.getAccount(provider.connection, minterTA);
-        console.log("balance before:", balanceBefore.amount);
-
-        const burnAmount = new BN(1234);
-        tx = await program.methods
-          .burn(burnAmount)
-          .accounts({
-            payer: minter.publicKey,
-            config: configPDA,
-            recipient: minterTA,
-            mint: mint,
-            tokenProgram: spl.TOKEN_PROGRAM_ID
-          })
-          .signers([minter])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-
-        const balanceAfter = await spl.getAccount(provider.connection, minterTA);
-        console.log("balance after:", balanceAfter.amount);
-        expect(balanceBefore.amount - balanceAfter.amount).to.be.eq(BigInt(burnAmount.toString(10)));
-      });
-    });
-
     //Any account can create mint payload
     describe("Create mint payload", function () {
       const invalid_payloads = [
@@ -1786,7 +1628,7 @@ describe("LBTC", () => {
 
       it("mintWithFee: rejects when amount < fee", async () => {
         let tx = await program.methods
-          .setMintFee(new BN(10_000_000))
+          .setMintFee(new BN(100_000))
           .accounts({ payer: operator.publicKey, config: configPDA })
           .signers([operator])
           .rpc();
@@ -1989,38 +1831,6 @@ describe("LBTC", () => {
         expect(cfg.paused == false);
       });
 
-      it("mint: rejects when paused", async () => {
-        await expect(
-          program.methods
-            .mint(new BN(1000))
-            .accounts({
-              payer: minter.publicKey,
-              config: configPDA,
-              recipient: userTA,
-              mint: mint,
-              tokenProgram: spl.TOKEN_PROGRAM_ID
-            })
-            .signers([minter])
-            .rpc()
-        ).to.be.rejectedWith("LBTC contract is paused");
-      });
-
-      it("burn: rejects when paused", async () => {
-        await expect(
-          program.methods
-            .burn(new BN(1000))
-            .accounts({
-              payer: minter.publicKey,
-              config: configPDA,
-              recipient: minterTA,
-              mint: mint,
-              tokenProgram: spl.TOKEN_PROGRAM_ID
-            })
-            .signers([minter])
-            .rpc()
-        ).to.be.rejectedWith("LBTC contract is paused");
-      });
-
       it("postMintSignatures: rejects when paused", async () => {
         await expect(
           program.methods
@@ -2204,27 +2014,27 @@ describe("LBTC", () => {
       });
 
       it("redeem: successful", async () => {
-        const userBalanceBefore = await spl.getAccount(provider.connection, userTA);
+        const amount = new BN(1000);
+        const userBalanceBefore = await spl.getAccount(provider.connection, recipientTA);
         const treasuryBalanceBefore = await spl.getAccount(provider.connection, treasury);
         console.log("users balance before:", userBalanceBefore.amount);
         console.log("treasury balance before:", treasuryBalanceBefore.amount);
 
-        const amount = new BN(1000);
         const tx = await program.methods
           .redeem(Buffer.from(scriptPubkey), amount)
           .accounts({
-            payer: user.publicKey,
-            holder: userTA,
+            payer: recipient.publicKey,
+            holder: recipientTA,
             config: configPDA,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             mint: mint,
             treasury: treasury
           })
-          .signers([user])
+          .signers([recipient])
           .rpc();
         await provider.connection.confirmTransaction(tx);
 
-        const userBalanceAfter = await spl.getAccount(provider.connection, userTA);
+        const userBalanceAfter = await spl.getAccount(provider.connection, recipientTA);
         const treasuryBalanceAfter = await spl.getAccount(provider.connection, treasury);
         const cfg = await program.account.config.fetch(configPDA);
         console.log("users balance after:", userBalanceAfter.amount);
@@ -2240,7 +2050,7 @@ describe("LBTC", () => {
           program.programId
         )[0];
         const unstakeInfo = await program.account.unstakeInfo.fetch(unstakeInfoPDA);
-        expect(unstakeInfo.from == user.publicKey);
+        expect(unstakeInfo.from == recipient.publicKey);
         expect(unstakeInfo.scriptPubkey == scriptPubkey);
         expect(unstakeInfo.amount == amount - cfg.burnCommission);
       });

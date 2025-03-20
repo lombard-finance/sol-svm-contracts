@@ -1,5 +1,5 @@
 //! Collection of operator-privileged functionality.
-use crate::{events::MintFeeSet, state::Config};
+use crate::{errors::LBTCError, events::MintFeeSet, state::Config};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]

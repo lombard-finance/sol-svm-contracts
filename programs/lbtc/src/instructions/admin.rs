@@ -3,8 +3,8 @@ use crate::{
     errors::LBTCError,
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
-        DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, OwnershipTransferInitiated,
-        PauseEnabled, PauserAdded, PauserRemoved, WithdrawalsEnabled,
+        DustFeeRateSet, OperatorSet, OwnershipTransferInitiated, PauseEnabled, PauserAdded,
+        PauserRemoved, WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -66,22 +66,6 @@ pub fn set_operator(ctx: Context<Admin>, operator: Pubkey) -> Result<()> {
 pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
     ctx.accounts.config.dust_fee_rate = rate;
     emit!(DustFeeRateSet { rate });
-    Ok(())
-}
-
-pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    if !ctx.accounts.config.minters.iter().any(|m| *m == minter) {
-        ctx.accounts.config.minters.push(minter);
-        emit!(MinterAdded { minter });
-    }
-    Ok(())
-}
-
-pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    let found = remove_from_vector(&mut ctx.accounts.config.minters, minter);
-    if found {
-        emit!(MinterRemoved { minter });
-    }
     Ok(())
 }
 

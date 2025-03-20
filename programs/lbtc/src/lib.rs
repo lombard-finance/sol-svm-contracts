@@ -55,14 +55,6 @@ pub mod lbtc {
         instructions::redeem(ctx, script_pubkey, amount)
     }
 
-    pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
-        instructions::mint(ctx, amount)
-    }
-
-    pub fn burn(ctx: Context<Burn>, amount: u64) -> Result<()> {
-        instructions::burn(ctx, amount)
-    }
-
     pub fn mint_with_fee(
         ctx: Context<MintWithFee>,
         mint_payload_hash: [u8; 32],
@@ -161,14 +153,6 @@ pub mod lbtc {
 
     pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
         instructions::set_bascule(ctx, bascule)
-    }
-
-    pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-        instructions::add_minter(ctx, minter)
-    }
-
-    pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-        instructions::remove_minter(ctx, minter)
     }
 
     pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {

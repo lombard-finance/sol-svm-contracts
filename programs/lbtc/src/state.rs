@@ -13,8 +13,6 @@ pub struct Config {
     pub operator: Pubkey,
     pub treasury: Pubkey,
     #[max_len(10)]
-    pub minters: Vec<Pubkey>,
-    #[max_len(10)]
     pub claimers: Vec<Pubkey>,
     #[max_len(10)]
     pub pausers: Vec<Pubkey>,
