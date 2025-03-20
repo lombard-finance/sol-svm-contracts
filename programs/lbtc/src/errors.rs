@@ -71,4 +71,6 @@ pub enum LBTCError {
     InvalidVerifyingcontract,
     #[msg("Mismatch between signatures and indices length")]
     SignaturesIndicesMismatch,
+    #[msg("Selected fee is too high")]
+    FeeTooHigh,
 }

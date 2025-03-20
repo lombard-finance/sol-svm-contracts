@@ -49,6 +49,7 @@ pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
 }
 
 pub fn set_burn_commission(ctx: Context<Admin>, commission: u64) -> Result<()> {
+    require!(commission <= 100000, LBTCError::FeeTooHigh);
     ctx.accounts.config.burn_commission = commission;
     emit!(BurnCommissionSet {
         burn_commission: commission

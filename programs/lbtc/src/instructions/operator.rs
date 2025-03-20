@@ -11,6 +11,7 @@ pub struct Operator<'info> {
 }
 
 pub fn set_mint_fee(ctx: Context<Operator>, mint_fee: u64) -> Result<()> {
+    require!(mint_fee <= 100000, LBTCError::FeeTooHigh);
     ctx.accounts.config.mint_fee = mint_fee;
     emit!(MintFeeSet { mint_fee });
     Ok(())

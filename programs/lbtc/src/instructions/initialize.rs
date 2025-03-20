@@ -42,6 +42,8 @@ pub fn initialize(
     dust_fee_rate: u64,
     mint_fee: u64,
 ) -> Result<()> {
+    require!(commission <= 100000, LBTCError::FeeTooHigh);
+    require!(mint_fee <= 100000, LBTCError::FeeTooHigh);
     ctx.accounts.config.admin = admin;
     ctx.accounts.config.mint = ctx.accounts.mint.key();
     ctx.accounts.config.treasury = ctx.accounts.treasury.key();
