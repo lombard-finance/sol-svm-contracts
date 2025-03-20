@@ -265,16 +265,13 @@ describe("LBTC", () => {
 
     //Claimer is a role which can perform autoclaim
     it("addClaimer: adding twice should not increase claimers", async () => {
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.claimers.length == 1);
-      const tx = await program.methods
-        .addClaimer(claimer.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg2 = await program.account.config.fetch(configPDA);
-      expect(cfg2.claimers.length == 1);
+      await expect(
+        program.methods
+          .addClaimer(claimer.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc()
+      ).to.be.rejectedWith("ClaimerExists");
     });
 
     //Pauser is a role that can only set contracts on pause
@@ -291,16 +288,13 @@ describe("LBTC", () => {
 
     //Pauser is a role that can only set contracts on pause
     it("addPauser: adding twice should not increase pausers", async () => {
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.pausers.length == 1);
-      const tx = await program.methods
-        .addPauser(pauser.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg2 = await program.account.config.fetch(configPDA);
-      expect(cfg2.pausers.length == 1);
+      await expect(
+        program.methods
+          .addPauser(pauser.publicKey)
+          .accounts({ payer: admin.publicKey, config: configPDA })
+          .signers([admin])
+          .rpc()
+      ).to.be.rejectedWith("PauserExists");
     });
 
     //MintFee is a fee that charged for autoclaim and transfered to treasury

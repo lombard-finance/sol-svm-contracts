@@ -73,4 +73,12 @@ pub enum LBTCError {
     SignaturesIndicesMismatch,
     #[msg("Selected fee is too high")]
     FeeTooHigh,
+    #[msg("Claimer already exists")]
+    ClaimerExists,
+    #[msg("Pauser already exists")]
+    PauserExists,
+    #[msg("Claimer not found")]
+    ClaimerNotFound,
+    #[msg("Pauser not found")]
+    PauserNotFound,
 }

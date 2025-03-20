@@ -1,5 +1,5 @@
 //! Collection of operator-privileged functionality.
-use crate::{errors::LBTCError, events::MintFeeSet, state::Config};
+use crate::{constants, errors::LBTCError, events::MintFeeSet, state::Config};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -11,7 +11,7 @@ pub struct Operator<'info> {
 }
 
 pub fn set_mint_fee(ctx: Context<Operator>, mint_fee: u64) -> Result<()> {
-    require!(mint_fee <= 100000, LBTCError::FeeTooHigh);
+    require!(mint_fee <= constants::MAX_FEE, LBTCError::FeeTooHigh);
     ctx.accounts.config.mint_fee = mint_fee;
     emit!(MintFeeSet { mint_fee });
     Ok(())

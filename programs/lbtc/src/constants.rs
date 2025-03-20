@@ -29,3 +29,4 @@ pub const METADATA_SEED: [u8; 32] = [
 ];
 pub const VALIDATOR_PUBKEY_SIZE: usize = 64;
 pub const LBTC_DECIMALS: u8 = 8;
+pub const MAX_FEE: u64 = 100000;

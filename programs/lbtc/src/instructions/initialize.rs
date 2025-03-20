@@ -1,5 +1,5 @@
 //! Initializes the LBTC program, simply setting the admin key.
-use crate::{errors::LBTCError, state::Config};
+use crate::{constants, errors::LBTCError, state::Config};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use solana_program::bpf_loader_upgradeable;
@@ -42,8 +42,8 @@ pub fn initialize(
     dust_fee_rate: u64,
     mint_fee: u64,
 ) -> Result<()> {
-    require!(burn_commission <= 100000, LBTCError::FeeTooHigh);
-    require!(mint_fee <= 100000, LBTCError::FeeTooHigh);
+    require!(burn_commission <= constants::MAX_FEE, LBTCError::FeeTooHigh);
+    require!(mint_fee <= constants::MAX_FEE, LBTCError::FeeTooHigh);
     ctx.accounts.config.admin = admin;
     ctx.accounts.config.mint = ctx.accounts.mint.key();
     ctx.accounts.config.treasury = ctx.accounts.treasury.key();

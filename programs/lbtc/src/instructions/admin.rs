@@ -1,5 +1,6 @@
 //! Collection of admin-privileged functionality.
 use crate::{
+    constants,
     errors::LBTCError,
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
@@ -49,7 +50,7 @@ pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
 }
 
 pub fn set_burn_commission(ctx: Context<Admin>, commission: u64) -> Result<()> {
-    require!(commission <= 100000, LBTCError::FeeTooHigh);
+    require!(commission <= constants::MAX_FEE, LBTCError::FeeTooHigh);
     ctx.accounts.config.burn_commission = commission;
     emit!(BurnCommissionSet {
         burn_commission: commission
@@ -70,34 +71,40 @@ pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
 }
 
 pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
-    if !ctx.accounts.config.claimers.iter().any(|c| *c == claimer) {
-        ctx.accounts.config.claimers.push(claimer);
-        emit!(ClaimerAdded { claimer });
-    }
+    require!(
+        !ctx.accounts.config.claimers.iter().any(|c| *c == claimer),
+        LBTCError::ClaimerExists
+    );
+    ctx.accounts.config.claimers.push(claimer);
+    emit!(ClaimerAdded { claimer });
     Ok(())
 }
 
 pub fn remove_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
-    let found = remove_from_vector(&mut ctx.accounts.config.claimers, claimer);
-    if found {
-        emit!(ClaimerRemoved { claimer });
-    }
+    require!(
+        remove_from_vector(&mut ctx.accounts.config.claimers, claimer),
+        LBTCError::ClaimerNotFound
+    );
+    emit!(ClaimerRemoved { claimer });
     Ok(())
 }
 
 pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-    if !ctx.accounts.config.pausers.iter().any(|p| *p == pauser) {
-        ctx.accounts.config.pausers.push(pauser);
-        emit!(PauserAdded { pauser });
-    }
+    require!(
+        !ctx.accounts.config.pausers.iter().any(|p| *p == pauser),
+        LBTCError::PauserExists
+    );
+    ctx.accounts.config.pausers.push(pauser);
+    emit!(PauserAdded { pauser });
     Ok(())
 }
 
 pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-    let found = remove_from_vector(&mut ctx.accounts.config.pausers, pauser);
-    if found {
-        emit!(PauserRemoved { pauser });
-    }
+    require!(
+        remove_from_vector(&mut ctx.accounts.config.pausers, pauser),
+        LBTCError::PauserNotFound
+    );
+    emit!(PauserRemoved { pauser });
     Ok(())
 }
 
