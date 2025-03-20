@@ -1,10 +1,11 @@
 //! Collection of admin-privileged functionality.
 use crate::{
+    constants,
     errors::LBTCError,
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
-        DustFeeRateSet, MinterAdded, MinterRemoved, OperatorSet, PauseEnabled, PauserAdded,
-        PauserRemoved, TreasuryChanged, WithdrawalsEnabled,
+        DustFeeRateSet, OperatorSet, OwnershipTransferInitiated, PauseEnabled, PauserAdded,
+        PauserRemoved, WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -16,6 +17,12 @@ pub struct Admin<'info> {
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
+}
+
+pub fn transfer_ownership(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+    ctx.accounts.config.pending_admin = new_admin;
+    emit!(OwnershipTransferInitiated { new_admin });
+    Ok(())
 }
 
 pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {
@@ -43,6 +50,7 @@ pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
 }
 
 pub fn set_burn_commission(ctx: Context<Admin>, commission: u64) -> Result<()> {
+    require!(commission <= constants::MAX_FEE, LBTCError::FeeTooHigh);
     ctx.accounts.config.burn_commission = commission;
     emit!(BurnCommissionSet {
         burn_commission: commission
@@ -62,78 +70,41 @@ pub fn set_dust_fee_rate(ctx: Context<Admin>, rate: u64) -> Result<()> {
     Ok(())
 }
 
-pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
-    ctx.accounts.config.treasury = treasury;
-    emit!(TreasuryChanged { address: treasury });
-    Ok(())
-}
-
-pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    ctx.accounts.config.minters.push(minter);
-    emit!(MinterAdded { minter });
-    Ok(())
-}
-
-pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, m) in ctx.accounts.config.minters.iter().enumerate() {
-        if *m == minter {
-            found = true;
-            index = i;
-        }
-    }
-
-    if found {
-        ctx.accounts.config.minters.swap_remove(index);
-        emit!(MinterRemoved { minter });
-    }
-    Ok(())
-}
-
 pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
+    require!(
+        !ctx.accounts.config.claimers.iter().any(|c| *c == claimer),
+        LBTCError::ClaimerExists
+    );
     ctx.accounts.config.claimers.push(claimer);
     emit!(ClaimerAdded { claimer });
     Ok(())
 }
 
 pub fn remove_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, c) in ctx.accounts.config.claimers.iter().enumerate() {
-        if *c == claimer {
-            found = true;
-            index = i;
-        }
-    }
-
-    if found {
-        ctx.accounts.config.claimers.swap_remove(index);
-        emit!(ClaimerRemoved { claimer });
-    }
+    require!(
+        remove_from_vector(&mut ctx.accounts.config.claimers, claimer),
+        LBTCError::ClaimerNotFound
+    );
+    emit!(ClaimerRemoved { claimer });
     Ok(())
 }
 
 pub fn add_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
+    require!(
+        !ctx.accounts.config.pausers.iter().any(|p| *p == pauser),
+        LBTCError::PauserExists
+    );
     ctx.accounts.config.pausers.push(pauser);
     emit!(PauserAdded { pauser });
     Ok(())
 }
 
 pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
-    let mut found = false;
-    let mut index = 0;
-    for (i, p) in ctx.accounts.config.pausers.iter().enumerate() {
-        if *p == pauser {
-            found = true;
-            index = i;
-        }
-    }
-
-    if found {
-        ctx.accounts.config.pausers.swap_remove(index);
-        emit!(PauserRemoved { pauser });
-    }
+    require!(
+        remove_from_vector(&mut ctx.accounts.config.pausers, pauser),
+        LBTCError::PauserNotFound
+    );
+    emit!(PauserRemoved { pauser });
     Ok(())
 }
 
@@ -148,4 +119,22 @@ pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
     ctx.accounts.config.bascule = bascule;
     emit!(BasculeChanged { address: bascule });
     Ok(())
+}
+
+fn remove_from_vector(v: &mut Vec<Pubkey>, to_remove: Pubkey) -> bool {
+    let mut found = false;
+    let mut index = 0;
+    for (i, p) in v.iter().enumerate() {
+        if *p == to_remove {
+            found = true;
+            index = i;
+            break;
+        }
+    }
+
+    if found {
+        v.swap_remove(index);
+    }
+
+    found
 }

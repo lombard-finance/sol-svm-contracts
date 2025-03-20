@@ -63,16 +63,6 @@ pub struct TreasuryChanged {
 }
 
 #[event]
-pub struct MinterAdded {
-    pub minter: Pubkey,
-}
-
-#[event]
-pub struct MinterRemoved {
-    pub minter: Pubkey,
-}
-
-#[event]
 pub struct ClaimerAdded {
     pub claimer: Pubkey,
 }
@@ -153,4 +143,14 @@ pub struct SignaturesAdded {
 #[event]
 pub struct BasculeChanged {
     pub address: Pubkey,
+}
+
+#[event]
+pub struct OwnershipTransferInitiated {
+    pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct OwnershipTransferred {
+    pub new_admin: Pubkey,
 }

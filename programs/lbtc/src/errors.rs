@@ -71,4 +71,14 @@ pub enum LBTCError {
     InvalidVerifyingcontract,
     #[msg("Mismatch between signatures and indices length")]
     SignaturesIndicesMismatch,
+    #[msg("Selected fee is too high")]
+    FeeTooHigh,
+    #[msg("Claimer already exists")]
+    ClaimerExists,
+    #[msg("Pauser already exists")]
+    PauserExists,
+    #[msg("Claimer not found")]
+    ClaimerNotFound,
+    #[msg("Pauser not found")]
+    PauserNotFound,
 }

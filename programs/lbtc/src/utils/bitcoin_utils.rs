@@ -9,7 +9,7 @@ const OP_1: u8 = 0x51;
 const OP_DATA_32: u8 = 0x20;
 const OP_DATA_20: u8 = 0x14;
 
-const BASE_SPEND_COST: u64 = 41; // 32 (txid) + 4 (vout) + 1 (scriptSig size) + 4 (nSequence) + 8 (amount)
+const BASE_SPEND_COST: u64 = 41; // 32 (txid) + 4 (vout) + 1 (scriptSig size) + 4 (nSequence)
 const WITNESS_INPUT_SIZE: u64 = 26; // floor(107 / 4), used for witness outputs (P2WPKH, P2WSH, P2TR)
 
 pub const P2WPKH_LEN: usize = 22;

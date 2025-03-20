@@ -17,8 +17,14 @@ declare_id!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx");
 pub mod lbtc {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, mint: Pubkey) -> Result<()> {
-        instructions::initialize(ctx, admin, mint)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        admin: Pubkey,
+        burn_commission: u64,
+        dust_fee_rate: u64,
+        mint_fee: u64,
+    ) -> Result<()> {
+        instructions::initialize(ctx, admin, burn_commission, dust_fee_rate, mint_fee)
     }
 
     pub fn create_mint_payload(
@@ -47,14 +53,6 @@ pub mod lbtc {
 
     pub fn redeem(ctx: Context<Redeem>, script_pubkey: Vec<u8>, amount: u64) -> Result<()> {
         instructions::redeem(ctx, script_pubkey, amount)
-    }
-
-    pub fn mint(ctx: Context<Mint>, amount: u64) -> Result<()> {
-        instructions::mint(ctx, amount)
-    }
-
-    pub fn burn(ctx: Context<Burn>, amount: u64) -> Result<()> {
-        instructions::burn(ctx, amount)
     }
 
     pub fn mint_with_fee(
@@ -109,6 +107,14 @@ pub mod lbtc {
         instructions::post_valset_signatures(ctx, hash, signatures, indices)
     }
 
+    pub fn accept_ownership(ctx: Context<AcceptOwnership>) -> Result<()> {
+        instructions::accept_ownership(ctx)
+    }
+
+    pub fn transfer_ownership(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+        instructions::transfer_ownership(ctx, new_admin)
+    }
+
     pub fn enable_withdrawals(ctx: Context<Admin>) -> Result<()> {
         instructions::enable_withdrawals(ctx)
     }
@@ -141,20 +147,12 @@ pub mod lbtc {
         instructions::set_dust_fee_rate(ctx, rate)
     }
 
-    pub fn set_treasury(ctx: Context<Admin>, treasury: Pubkey) -> Result<()> {
-        instructions::set_treasury(ctx, treasury)
+    pub fn set_treasury(ctx: Context<SetTreasury>) -> Result<()> {
+        instructions::set_treasury(ctx)
     }
 
     pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
         instructions::set_bascule(ctx, bascule)
-    }
-
-    pub fn add_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-        instructions::add_minter(ctx, minter)
-    }
-
-    pub fn remove_minter(ctx: Context<Admin>, minter: Pubkey) -> Result<()> {
-        instructions::remove_minter(ctx, minter)
     }
 
     pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {

@@ -8,10 +8,10 @@ pub struct CreateValsetMetadata<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(
-        init, 
+        init,
         payer = payer,
         space = 8 + Metadata::INIT_SPACE,
-        seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], 
+        seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()],
         bump,
     )]
     pub metadata: Account<'info, Metadata>,
