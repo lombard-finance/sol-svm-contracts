@@ -1,11 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 
-import {
-  ConfirmOptions,
-  Keypair,
-  PublicKey,
-  SendTransactionError,
-} from "@solana/web3.js";
+import { ConfirmOptions, Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
 import { BankrunProvider, startAnchor } from "anchor-bankrun";
 import { Program } from "@coral-xyz/anchor";
 import { Bascule } from "../target/types/bascule";
@@ -25,7 +20,7 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   delayMs,
-  rpcOpts,
+  rpcOpts
 } from "./util";
 import * as util from "./util";
 
@@ -36,22 +31,14 @@ describe("bascule", () => {
 
   // Helper that calls the 'initialize' method using the default wallet
   const callInit = (wallet: anchor.Wallet) =>
-    program.methods
-      .initialize()
-      .accounts({ payer: wallet.publicKey })
-      .signers([wallet.payer])
-      .rpc(rpcOpts);
+    program.methods.initialize().accounts({ payer: wallet.publicKey }).signers([wallet.payer]).rpc(rpcOpts);
 
   // Waits until the blockhash changes
   const untilNextBlockHash = async () => {
-    const [bh0] = await provider.context.banksClient.getLatestBlockhash(
-      rpcOpts.commitment
-    );
+    const [bh0] = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
     for (let i = 0; i < 10; i++) {
       await delayMs(50);
-      const [bh1] = await provider.context.banksClient.getLatestBlockhash(
-        rpcOpts.commitment
-      );
+      const [bh1] = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
       if (bh1 !== bh0) return;
     }
     throw new Error("Blockhash didn't change");
@@ -66,15 +53,15 @@ describe("bascule", () => {
     const context = await startAnchor(
       ".",
       [],
-      [pauser, reporter, validator, other].map((w) => {
+      [pauser, reporter, validator, other].map(w => {
         return {
           address: w.publicKey,
           info: {
             lamports: 1_000_000_000, // 1 SOL equivalent
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
-            executable: false,
-          },
+            executable: false
+          }
         };
       })
     );
@@ -85,7 +72,7 @@ describe("bascule", () => {
       pauser,
       reporter,
       validator,
-      other,
+      other
     });
 
     // call initialize
@@ -110,9 +97,7 @@ describe("bascule", () => {
       console.log("calling init again with wallet", w.publicKey.toBase58());
       const err = await assertError(callInit(w));
       expect(err).to.be.instanceOf(SendTransactionError);
-      expect((err as SendTransactionError).logs[3]).to.match(
-        /^Allocate: account Address.* already in use$/
-      );
+      expect((err as SendTransactionError).logs[3]).to.match(/^Allocate: account Address.* already in use$/);
     }
   });
 
@@ -155,27 +140,17 @@ describe("bascule", () => {
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
       .rpc(rpcOpts);
-    await program.methods
-      .pause()
-      .accounts({ pauser: pauser.publicKey })
-      .signers([pauser.payer])
-      .rpc(rpcOpts);
+    await program.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
 
     // not allowed even by admin while paused
     await assertError(ts.setThreshold(newThreshold), EPaused);
 
     // unpause and try again
-    await program.methods
-      .unpause()
-      .accounts({ pauser: pauser.publicKey })
-      .signers([pauser.payer])
-      .rpc(rpcOpts);
+    await program.methods.unpause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
-    expect(
-      await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())
-    ).to.eq(1);
+    expect(await ts.fetchData().then(bd => bd.validateThreshold.toNumber())).to.eq(1);
   });
 
   // Checks:
@@ -201,19 +176,11 @@ describe("bascule", () => {
 
     // the admin cannot pause/unpause
     await assertError(
-      program.methods
-        .pause()
-        .accounts({ pauser: ts.acc.admin.publicKey })
-        .signers([ts.acc.admin.payer])
-        .rpc(rpcOpts),
+      program.methods.pause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
       ENotPauser
     );
     await assertError(
-      program.methods
-        .unpause()
-        .accounts({ pauser: ts.acc.admin.publicKey })
-        .signers([ts.acc.admin.payer])
-        .rpc(rpcOpts),
+      program.methods.unpause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
       ENotPauser
     );
 
@@ -223,13 +190,13 @@ describe("bascule", () => {
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.true;
+    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.true;
     await program.methods
       .unpause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.false;
+    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.false;
   });
 
   // Checks:
@@ -271,7 +238,7 @@ describe("bascule", () => {
   // - reporting the same deposit multiple times is allowed
   // - reporting a deposit id of a wrong length is outright denied
   it("report", async () => {
-    const depositId = [...Array(32)].map((_) => 0);
+    const depositId = [...Array(32)].map(_ => 0);
 
     // grant reporter
     await program.methods
@@ -306,10 +273,7 @@ describe("bascule", () => {
         [Buffer.from("deposit"), Buffer.from(depositId)],
         program.programId
       );
-      const deposit = await program.account.deposit.fetch(
-        depositPda,
-        rpcOpts.commitment
-      );
+      const deposit = await program.account.deposit.fetch(depositPda, rpcOpts.commitment);
       expect(deposit.bump).to.eq(bump);
       expect(deposit.state.reported).to.exist;
       expect(deposit.state.withdrawn).to.be.undefined;
@@ -338,13 +302,7 @@ describe("bascule", () => {
     for (const v of validators) {
       await assertError(
         program.methods
-          .validateWithdrawal(
-            d.depositId,
-            d.recipient,
-            d.amount,
-            [...d.txId],
-            d.txVout
-          )
+          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
           .accounts({ validator: v.publicKey })
           .signers([v.payer])
           .rpc(rpcOpts),
@@ -366,13 +324,7 @@ describe("bascule", () => {
     for (const validator of validators) {
       await assertError(
         program.methods
-          .validateWithdrawal(
-            d.depositId,
-            d.recipient,
-            d.amount,
-            [...d.txId],
-            d.txVout
-          )
+          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
           .accounts({ validator: validator.publicKey })
           .signers([validator.payer])
           .rpc(rpcOpts),
@@ -393,13 +345,7 @@ describe("bascule", () => {
     // admin is not allowed to validate but validator is
     for (const v of validators) {
       const rpc = program.methods
-        .validateWithdrawal(
-          d.depositId,
-          d.recipient,
-          d.amount,
-          [...d.txId],
-          d.txVout
-        )
+        .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
         .accounts({ validator: v.publicKey })
         .signers([v.payer])
         .rpc(rpcOpts);
@@ -484,10 +430,7 @@ describe("bascule", () => {
       } else {
         await assertError(rpc, EWithdrawalFailedValidation);
         // trying to validate again fails again
-        await assertError(
-          ts.validateWithdrawal(depositId),
-          EWithdrawalFailedValidation
-        );
+        await assertError(ts.validateWithdrawal(depositId), EWithdrawalFailedValidation);
         // reporting can still be done
         await ts.reportDeposit(depositId);
         // and then validation works too

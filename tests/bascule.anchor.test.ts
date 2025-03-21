@@ -15,7 +15,7 @@ import {
   assertError,
   TestSetup,
   rpcOpts,
-  promiseWithResolvers,
+  promiseWithResolvers
 } from "./util";
 
 describe("bascule", () => {
@@ -36,11 +36,7 @@ describe("bascule", () => {
     // (1) pause not allowed to 'admin', 'reporter', and 'validator'
     for (const w of [ts.acc.admin, ts.acc.reporter, ts.acc.validator]) {
       await assertError(
-        program.methods
-          .pause()
-          .accounts({ pauser: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
+        program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts),
         ENotPauser
       );
     }
@@ -97,13 +93,7 @@ describe("bascule", () => {
     for (const w of [ts.acc.admin, ts.acc.pauser, ts.acc.reporter]) {
       await assertError(
         program.methods
-          .validateWithdrawal(
-            d10.depositId,
-            d10.recipient,
-            d10.amount,
-            [...d10.txId],
-            d10.txVout
-          )
+          .validateWithdrawal(d10.depositId, d10.recipient, d10.amount, [...d10.txId], d10.txVout)
           .accounts({ validator: w.publicKey })
           .signers([w.payer])
           .rpc(rpcOpts),
@@ -115,16 +105,8 @@ describe("bascule", () => {
 
     try {
       // set threshold to 50 and validate event is emitted
-      const evUpdateThreshold =
-        promiseWithResolvers<
-          anchor.IdlEvents<Bascule>["updateValidateThreshold"]
-        >();
-      listeners.push(
-        program.addEventListener(
-          "updateValidateThreshold",
-          evUpdateThreshold.resolve
-        )
-      );
+      const evUpdateThreshold = promiseWithResolvers<anchor.IdlEvents<Bascule>["updateValidateThreshold"]>();
+      listeners.push(program.addEventListener("updateValidateThreshold", evUpdateThreshold.resolve));
       await ts.setThreshold(50);
       {
         const ev = await evUpdateThreshold.promise;
@@ -133,21 +115,11 @@ describe("bascule", () => {
       }
 
       // double check the bascule data was updated
-      expect(
-        await ts.fetchData().then((d) => d.validateThreshold.toNumber())
-      ).to.eq(50);
+      expect(await ts.fetchData().then(d => d.validateThreshold.toNumber())).to.eq(50);
 
       // validating d10 is allowed because below threshold, but it emits an event
-      const evNotValidated =
-        promiseWithResolvers<
-          anchor.IdlEvents<Bascule>["withdrawalNotValidated"]
-        >();
-      listeners.push(
-        program.addEventListener(
-          "withdrawalNotValidated",
-          evNotValidated.resolve
-        )
-      );
+      const evNotValidated = promiseWithResolvers<anchor.IdlEvents<Bascule>["withdrawalNotValidated"]>();
+      listeners.push(program.addEventListener("withdrawalNotValidated", evNotValidated.resolve));
       await ts.validateWithdrawal(d10);
       await ts.expectWithdrawn(d10);
       {
@@ -161,17 +133,11 @@ describe("bascule", () => {
       await ts.expectWithdrawn(d10);
 
       // validating d100 is NOT allowed because above threshold
-      await assertError(
-        ts.validateWithdrawal(d100),
-        EWithdrawalFailedValidation
-      );
+      await assertError(ts.validateWithdrawal(d100), EWithdrawalFailedValidation);
 
       // we can still report it
-      const evDepositReported =
-        promiseWithResolvers<anchor.IdlEvents<Bascule>["depositReported"]>();
-      listeners.push(
-        program.addEventListener("depositReported", evDepositReported.resolve)
-      );
+      const evDepositReported = promiseWithResolvers<anchor.IdlEvents<Bascule>["depositReported"]>();
+      listeners.push(program.addEventListener("depositReported", evDepositReported.resolve));
       await ts.reportDeposit(d100);
       await ts.expectReported(d100);
       {
@@ -180,13 +146,8 @@ describe("bascule", () => {
       }
 
       // and then validate it
-      const evValidated =
-        promiseWithResolvers<
-          anchor.IdlEvents<Bascule>["withdrawalValidated"]
-        >();
-      listeners.push(
-        program.addEventListener("withdrawalValidated", evValidated.resolve)
-      );
+      const evValidated = promiseWithResolvers<anchor.IdlEvents<Bascule>["withdrawalValidated"]>();
+      listeners.push(program.addEventListener("withdrawalValidated", evValidated.resolve));
       await ts.validateWithdrawal(d100);
       await ts.expectWithdrawn(d100);
       {
@@ -196,11 +157,8 @@ describe("bascule", () => {
       }
 
       // reporting previously reported or withdrawn deposit is ok
-      const evAlreadyReported =
-        promiseWithResolvers<anchor.IdlEvents<Bascule>["alreadyReported"]>();
-      listeners.push(
-        program.addEventListener("alreadyReported", evAlreadyReported.resolve)
-      );
+      const evAlreadyReported = promiseWithResolvers<anchor.IdlEvents<Bascule>["alreadyReported"]>();
+      listeners.push(program.addEventListener("alreadyReported", evAlreadyReported.resolve));
       await ts.reportDeposit(d100);
       await ts.expectWithdrawn(d100);
       {

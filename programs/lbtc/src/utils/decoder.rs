@@ -197,7 +197,7 @@ mod tests {
         assert_eq!(fee_action.chain_id, crate::constants::CHAIN_ID);
         assert_eq!(
             fee_action.verifying_contract,
-            solana_program::pubkey!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx")
+            anchor_lang::solana_program::pubkey!("5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx")
         );
         assert_eq!(fee_action.fee, 99999999);
         assert_eq!(fee_action.expiry, 1736843719);

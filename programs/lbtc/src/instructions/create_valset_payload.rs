@@ -8,7 +8,7 @@ use crate::{
     utils::{actions::ValsetAction, validation},
 };
 use anchor_lang::prelude::*;
-use solana_program::hash::hash as sha256;
+use anchor_lang::solana_program::hash::hash as sha256;
 
 #[derive(Accounts)]
 #[instruction(hash: [u8; 32])]

@@ -1298,7 +1298,12 @@ describe("LBTC", () => {
               mint: mint,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("NotEnoughSignatures");
@@ -1330,7 +1335,12 @@ describe("LBTC", () => {
               mint: mint,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("NotEnoughSignatures");
@@ -1435,7 +1445,12 @@ describe("LBTC", () => {
               mint: mint,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("Mismatch between mint payload and passed account");
@@ -1454,7 +1469,10 @@ describe("LBTC", () => {
             mint: mint,
             tokenAuthority: tokenAuth,
             payload: mintPayloadPDA,
-            bascule: payer.publicKey
+            bascule: payer.publicKey,
+            basculeData: configPDA, // dummy value
+            deposit: configPDA, // dummy value
+            systemProgram: SystemProgram.programId
           })
           .rpc();
         await provider.connection.confirmTransaction(tx);
@@ -1488,7 +1506,10 @@ describe("LBTC", () => {
               mint: mint,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("Mint payload already used");
@@ -1544,7 +1565,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()
@@ -1571,7 +1595,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([payer])
             .rpc()
@@ -1592,7 +1619,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: payer.publicKey,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()
@@ -1613,7 +1643,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()
@@ -1644,7 +1677,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()
@@ -1719,7 +1755,10 @@ describe("LBTC", () => {
                 tokenAuthority: tokenAuth,
                 treasury: treasury,
                 payload: mintPayloadPDA2,
-                bascule: payer.publicKey
+                bascule: payer.publicKey,
+                basculeData: configPDA, // dummy value
+                deposit: configPDA, // dummy value
+                systemProgram: SystemProgram.programId
               })
               .signers([claimer])
               .rpc()
@@ -1750,7 +1789,10 @@ describe("LBTC", () => {
             tokenAuthority: tokenAuth,
             treasury: treasury,
             payload: mintPayloadPDA2,
-            bascule: payer.publicKey
+            bascule: payer.publicKey,
+            basculeData: configPDA, // dummy value
+            deposit: configPDA, // dummy value
+            systemProgram: SystemProgram.programId
           })
           .signers([claimer])
           .rpc();
@@ -1793,7 +1835,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()
@@ -1845,7 +1890,10 @@ describe("LBTC", () => {
               mint: mint,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("LBTC contract is paused");
@@ -1865,7 +1913,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()

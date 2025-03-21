@@ -32,11 +32,11 @@ pub struct Validator<'info> {
         // CHECK: deposit id integrity
         constraint = deposit_id == to_deposit_id(recipient, amount, tx_id, tx_vout) @ BasculeError::EInvalidDepositId,
     )]
-    validator: Signer<'info>,
+    pub validator: Signer<'info>,
 
     /// The program state
     #[account(mut, seeds = [BASCULE_SEED], bump = bascule_data.bump)]
-    bascule_data: Account<'info, BasculeData>,
+    pub bascule_data: Account<'info, BasculeData>,
 
     /// The deposit account
     #[account(
@@ -49,10 +49,10 @@ pub struct Validator<'info> {
         // the fixed space for the account
         space = 8 + Deposit::INIT_SPACE,
     )]
-    deposit: Account<'info, Deposit>,
+    pub deposit: Account<'info, Deposit>,
 
     // The system program (needed for the 'init_if_needed' constraint of the 'deposit' account)
-    system_program: Program<'info, System>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Validate a withdrawal if the amount is above the threshold.
@@ -111,7 +111,7 @@ pub fn validate_withdrawal(
 /// keccak256([0u8; 32] || [0x03, 0x53, 0x4f, 0x4c] || recipient || amount (be_bytes) || tx_id || tx_vout (be_bytes))
 //
 // TODO: synchronize this implementation with Lombard's
-fn to_deposit_id(recipient: Pubkey, amount: u64, tx_id: [u8; 32], tx_vout: u32) -> DepositId {
+pub fn to_deposit_id(recipient: Pubkey, amount: u64, tx_id: [u8; 32], tx_vout: u32) -> DepositId {
     let mut hash_data = Vec::with_capacity(112);
 
     // CODESYNC(non-evm-prefix)

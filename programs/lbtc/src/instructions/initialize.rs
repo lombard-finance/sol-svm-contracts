@@ -1,8 +1,8 @@
 //! Initializes the LBTC program, simply setting the admin key.
 use crate::{constants, errors::LBTCError, state::Config};
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::bpf_loader_upgradeable;
 use anchor_spl::token_interface::{Mint, TokenAccount};
-use solana_program::bpf_loader_upgradeable;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -26,7 +26,7 @@ pub struct Initialize<'info> {
 
     #[account(
         init,
-        seeds = [b"lbtc_config"],
+        seeds = [constants::CONFIG_SEED],
         bump,
         payer = deployer,
         space = 8 + Config::INIT_SPACE
