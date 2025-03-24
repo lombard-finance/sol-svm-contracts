@@ -4,8 +4,8 @@ use crate::{
     errors::LBTCError,
     events::{
         BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
-        DustFeeRateSet, OperatorSet, OwnershipTransferInitiated, PauseEnabled, PauserAdded,
-        PauserRemoved, WithdrawalsEnabled,
+        DustFeeRateSet, OperatorSet, OwnershipTransferInitiated, PauserAdded, PauserRemoved,
+        WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -105,13 +105,6 @@ pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
         LBTCError::PauserNotFound
     );
     emit!(PauserRemoved { pauser });
-    Ok(())
-}
-
-pub fn unpause(ctx: Context<Admin>) -> Result<()> {
-    require!(ctx.accounts.config.paused, LBTCError::NotPaused);
-    ctx.accounts.config.paused = false;
-    emit!(PauseEnabled { enabled: false });
     Ok(())
 }
 

@@ -433,19 +433,21 @@ describe("LBTC", () => {
         ).to.be.rejectedWith("LBTC contract is paused");
       });
 
-      it("unpause: rejects when called by pauser", async () => {
+      it("unpause: rejects when called by admin", async () => {
         const cfg = await program.account.config.fetch(configPDA);
         expect(cfg.paused == true);
         await expect(
-          program.methods.unpause().accounts({ payer: pauser.publicKey, config: configPDA }).signers([pauser]).rpc()
-        ).to.be.rejectedWith("An address constraint was violated");
+          program.methods.unpause().accounts({ payer: admin.publicKey, config: configPDA }).signers([admin]).rpc()
+        ).to.be.rejectedWith(
+          "Error Code: Unauthorized. Error Number: 6000. Error Message: Unauthorized function call."
+        );
       });
 
-      it("unpause: successful by admin", async () => {
+      it("unpause: successful by pauser", async () => {
         const tx = await program.methods
           .unpause()
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
+          .accounts({ payer: pauser.publicKey, config: configPDA })
+          .signers([pauser])
           .rpc();
         await provider.connection.confirmTransaction(tx);
         const cfg = await program.account.config.fetch(configPDA);
@@ -456,7 +458,7 @@ describe("LBTC", () => {
         const cfg = await program.account.config.fetch(configPDA);
         expect(cfg.paused == true);
         await expect(
-          program.methods.unpause().accounts({ payer: admin.publicKey, config: configPDA }).signers([admin]).rpc()
+          program.methods.unpause().accounts({ payer: pauser.publicKey, config: configPDA }).signers([pauser]).rpc()
         ).to.be.rejectedWith("LBTC contract is not paused");
       });
 
@@ -1817,8 +1819,8 @@ describe("LBTC", () => {
       after(async () => {
         const tx = await program.methods
           .unpause()
-          .accounts({ payer: admin.publicKey, config: configPDA })
-          .signers([admin])
+          .accounts({ payer: pauser.publicKey, config: configPDA })
+          .signers([pauser])
           .rpc();
         await provider.connection.confirmTransaction(tx);
         const cfg = await program.account.config.fetch(configPDA);
