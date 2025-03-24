@@ -7,8 +7,6 @@ pub enum LBTCError {
     Unauthorized,
     #[msg("Mismatch between mint payload and passed account")]
     RecipientMismatch,
-    #[msg("Invalid treasury provided for redeem")]
-    InvalidTreasury,
     #[msg("Mint payload already used")]
     MintPayloadUsed,
     #[msg("Passed mint payload hash does not match computed hash")]
@@ -21,8 +19,6 @@ pub enum LBTCError {
     FeeGTEAmount,
     #[msg("Fee approval expired")]
     FeeApprovalExpired,
-    #[msg("Signatures array length mismatch with validators array")]
-    SignatureLengthMismatch,
     #[msg("Script pubkey is unsupported")]
     UnsupportedRedeemAddress,
     #[msg("Redeemed amount is below the BTC dust limit")]
@@ -31,8 +27,6 @@ pub enum LBTCError {
     NotEnoughSignatures,
     #[msg("Fee signature invalid")]
     InvalidFeeSignature,
-    #[msg("Error when attempting to recover Secp256k1 public key")]
-    Secp256k1RecoverError,
     #[msg("Invalid action bytes")]
     InvalidActionBytes,
     #[msg("Invalid chain ID")]
