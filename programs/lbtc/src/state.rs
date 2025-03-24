@@ -12,6 +12,10 @@ pub struct Config {
     pub pending_admin: Pubkey,
     pub operator: Pubkey,
     pub treasury: Pubkey,
+    // NOTE: Since we have this as a contiguous block of memory, we can initially add more than 10
+    // claimers (provided that the pausers vector is smaller than 10 elements at the time), so this
+    // attribute is not a hard limit that's unique to the vector, but rather an instruction to
+    // anchor about how much storage we allocate for this account.
     #[max_len(10)]
     pub claimers: Vec<Pubkey>,
     #[max_len(10)]
