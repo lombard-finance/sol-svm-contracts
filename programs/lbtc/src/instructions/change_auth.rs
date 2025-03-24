@@ -7,7 +7,7 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
-use anchor_spl::token_interface::{set_authority, Mint, SetAuthority};
+use anchor_spl::token_interface::{set_authority, Mint, SetAuthority, TokenInterface};
 
 #[derive(Accounts)]
 pub struct ChangeAuth<'info> {
@@ -20,6 +20,7 @@ pub struct ChangeAuth<'info> {
     /// CHECK: We only need the account info and don't need to constrain otherwise. If the wrong
     /// current authority is passed the function call will fail.
     pub current_auth: UncheckedAccount<'info>,
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 pub fn change_mint_auth(ctx: Context<ChangeAuth>, new_auth: Pubkey) -> Result<()> {
@@ -27,7 +28,7 @@ pub fn change_mint_auth(ctx: Context<ChangeAuth>, new_auth: Pubkey) -> Result<()
     let signer_seeds: &[&[&[u8]]] = &[&[constants::CONFIG_SEED, &[ctx.bumps.config]]];
     set_authority(
         CpiContext::new_with_signer(
-            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             SetAuthority {
                 current_authority: ctx.accounts.current_auth.to_account_info(),
                 account_or_mint: ctx.accounts.mint.to_account_info(),
@@ -46,7 +47,7 @@ pub fn change_freeze_auth(ctx: Context<ChangeAuth>, new_auth: Pubkey) -> Result<
     let signer_seeds: &[&[&[u8]]] = &[&[constants::CONFIG_SEED, &[ctx.bumps.config]]];
     set_authority(
         CpiContext::new_with_signer(
-            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             SetAuthority {
                 current_authority: ctx.accounts.current_auth.to_account_info(),
                 account_or_mint: ctx.accounts.mint.to_account_info(),
