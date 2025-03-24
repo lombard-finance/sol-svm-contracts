@@ -64,12 +64,12 @@ pub mod lbtc {
         instructions::mint_with_fee(ctx, mint_payload_hash, fee_payload, fee_signature)
     }
 
-    pub fn set_initial_valset(ctx: Context<SetInitialValset>, hash: [u8; 32]) -> Result<()> {
-        instructions::set_initial_valset(ctx, hash)
+    pub fn set_initial_valset(ctx: Context<SetInitialValset>) -> Result<()> {
+        instructions::set_initial_valset(ctx)
     }
 
-    pub fn set_next_valset(ctx: Context<SetNextValset>, hash: [u8; 32]) -> Result<()> {
-        instructions::set_next_valset(ctx, hash)
+    pub fn set_next_valset(ctx: Context<SetNextValset>) -> Result<()> {
+        instructions::set_next_valset(ctx)
     }
 
     pub fn create_metadata_for_valset_payload(
@@ -81,30 +81,27 @@ pub mod lbtc {
 
     pub fn post_metadata_for_valset_payload(
         ctx: Context<ValsetMetadata>,
-        hash: [u8; 32],
         validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
         weights: Vec<u64>,
     ) -> Result<()> {
-        instructions::post_metadata_for_valset_payload(ctx, hash, validators, weights)
+        instructions::post_metadata_for_valset_payload(ctx, validators, weights)
     }
 
     pub fn create_valset_payload(
         ctx: Context<CreateValset>,
-        hash: [u8; 32],
         epoch: u64,
         weight_threshold: u64,
         height: u64,
     ) -> Result<()> {
-        instructions::create_valset_payload(ctx, hash, epoch, weight_threshold, height)
+        instructions::create_valset_payload(ctx, epoch, weight_threshold, height)
     }
 
     pub fn post_valset_signatures(
         ctx: Context<PostValsetSignatures>,
-        hash: [u8; 32],
         signatures: Vec<[u8; 64]>,
         indices: Vec<u64>,
     ) -> Result<()> {
-        instructions::post_valset_signatures(ctx, hash, signatures, indices)
+        instructions::post_valset_signatures(ctx, signatures, indices)
     }
 
     pub fn accept_ownership(ctx: Context<AcceptOwnership>) -> Result<()> {

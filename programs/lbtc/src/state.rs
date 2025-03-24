@@ -61,6 +61,7 @@ pub struct MintPayload {
 #[account]
 #[derive(InitSpace)]
 pub struct Metadata {
+    pub hash: [u8; 32],
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
@@ -70,6 +71,7 @@ pub struct Metadata {
 #[account]
 #[derive(InitSpace)]
 pub struct ValsetPayload {
+    pub hash: [u8; 32],
     pub epoch: u64,
     pub weight_threshold: u64,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]

@@ -11,18 +11,17 @@ use anchor_lang::prelude::*;
 use solana_program::hash::hash as sha256;
 
 #[derive(Accounts)]
-#[instruction(hash: [u8; 32])]
 pub struct CreateValset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
+    #[account(mut, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
     #[account(
         init,
         payer = payer,
         space = 8 + ValsetPayload::INIT_SPACE,
-        seeds = [&hash, &payer.key.to_bytes()],
+        seeds = [&metadata.hash, &payer.key.to_bytes()],
         bump,
     )]
     pub payload: Account<'info, ValsetPayload>,
@@ -31,7 +30,6 @@ pub struct CreateValset<'info> {
 
 pub fn create_valset_payload(
     ctx: Context<CreateValset>,
-    hash: [u8; 32],
     epoch: u64,
     weight_threshold: u64,
     height: u64,
@@ -54,13 +52,17 @@ pub fn create_valset_payload(
 
     let bytes = payload.abi_encode();
     let bytes_hash = sha256(&bytes).to_bytes();
-    require!(bytes_hash == hash, LBTCError::ValsetPayloadHashMismatch);
+    require!(
+        bytes_hash == ctx.accounts.metadata.hash,
+        LBTCError::ValsetPayloadHashMismatch
+    );
 
+    ctx.accounts.payload.hash = ctx.accounts.metadata.hash;
     ctx.accounts.payload.epoch = epoch;
     ctx.accounts.payload.weight_threshold = weight_threshold;
     ctx.accounts.payload.signed = vec![false; ctx.accounts.config.validators.len()];
     emit!(ValsetPayloadCreated {
-        hash,
+        hash: ctx.accounts.metadata.hash,
         epoch,
         weight_threshold,
         height,

@@ -783,6 +783,15 @@ describe("LBTC", () => {
         program.programId
       )[0];
 
+      const metadataPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from(initialValsetHash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
+        program.programId
+      )[0];
+      const payloadPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from(initialValsetHash, "hex"), admin.publicKey.toBuffer()],
+        program.programId
+      )[0];
+
       it("createMetadataForValsetPayload: anyone can create", async () => {
         let tx = await program.methods
           .createMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"))
@@ -798,7 +807,7 @@ describe("LBTC", () => {
       it("postMetadataForValsetPayload: rejects when posted by not the creator", async () => {
         await expect(
           program.methods
-            .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+            .postMetadataForValsetPayload(initialValidators, initialWeights)
             .accounts({
               payer: admin.publicKey,
               metadata: metadataPDAPayer
@@ -810,7 +819,7 @@ describe("LBTC", () => {
 
       it("postMetadataForValsetPayload: successful by creator", async () => {
         const tx = await program.methods
-          .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+          .postMetadataForValsetPayload(initialValidators, initialWeights)
           .accounts({
             payer: payer.publicKey,
             metadata: metadataPDAPayer
@@ -823,7 +832,7 @@ describe("LBTC", () => {
       it("createValsetPayload: rejects when called by not the creator", async () => {
         await expect(
           program.methods
-            .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
+            .createValsetPayload(new BN(1), new BN(1), new BN(1))
             .accounts({
               payer: admin.publicKey,
               config: configPDA,
@@ -837,7 +846,7 @@ describe("LBTC", () => {
 
       it("createValsetPayload: successful by the creator", async () => {
         let tx = await program.methods
-          .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
+          .createValsetPayload(new BN(1), new BN(1), new BN(1))
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -852,23 +861,19 @@ describe("LBTC", () => {
       it("setInitialValset: rejects when called by not admin", async () => {
         await expect(
           program.methods
-            .setInitialValset(Buffer.from(initialValsetHash, "hex"))
-            .accounts({ payer: payer.publicKey, config: configPDA })
+            .setInitialValset()
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              metadata: metadataPDAPayer,
+              payload: payloadPDAPayer
+            })
             .signers([payer])
             .rpc()
         ).to.be.rejectedWith("An address constraint was violated");
       });
 
       it("setInitialValset: successful by admin", async () => {
-        const metadataPDA = PublicKey.findProgramAddressSync(
-          [Buffer.from(initialValsetHash, "hex"), metadata_seed, admin.publicKey.toBuffer()],
-          program.programId
-        )[0];
-        const payloadPDA = PublicKey.findProgramAddressSync(
-          [Buffer.from(initialValsetHash, "hex"), admin.publicKey.toBuffer()],
-          program.programId
-        )[0];
-
         let tx = await program.methods
           .createMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"))
           .accounts({
@@ -880,7 +885,7 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx);
 
         tx = await program.methods
-          .postMetadataForValsetPayload(Buffer.from(initialValsetHash, "hex"), initialValidators, initialWeights)
+          .postMetadataForValsetPayload(initialValidators, initialWeights)
           .accounts({
             payer: admin.publicKey,
             metadata: metadataPDA
@@ -890,7 +895,7 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx);
 
         tx = await program.methods
-          .createValsetPayload(Buffer.from(initialValsetHash, "hex"), new BN(1), new BN(1), new BN(1))
+          .createValsetPayload(new BN(1), new BN(1), new BN(1))
           .accounts({
             payer: admin.publicKey,
             config: configPDA,
@@ -902,8 +907,8 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx);
 
         tx = await program.methods
-          .setInitialValset(Buffer.from(initialValsetHash, "hex"))
-          .accounts({ payer: admin.publicKey, config: configPDA })
+          .setInitialValset()
+          .accounts({ payer: admin.publicKey, config: configPDA, metadata: metadataPDA, payload: payloadPDA })
           .signers([admin])
           .rpc();
         await provider.connection.confirmTransaction(tx);
@@ -936,7 +941,7 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx);
 
         const tx2 = await program.methods
-          .postMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"), nextValidators, nextWeights)
+          .postMetadataForValsetPayload(nextValidators, nextWeights)
           .accounts({
             payer: admin.publicKey,
             metadata: metadataPDA2
@@ -946,7 +951,7 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx2);
 
         const tx3 = await program.methods
-          .createValsetPayload(Buffer.from(nextValsetHash, "hex"), new BN(2), new BN(2), new BN(1))
+          .createValsetPayload(new BN(2), new BN(2), new BN(1))
           .accounts({
             payer: admin.publicKey,
             config: configPDA,
@@ -959,8 +964,8 @@ describe("LBTC", () => {
 
         await expect(
           program.methods
-            .setInitialValset(Buffer.from(nextValsetHash, "hex"))
-            .accounts({ payer: admin.publicKey, config: configPDA })
+            .setInitialValset()
+            .accounts({ payer: admin.publicKey, config: configPDA, metadata: metadataPDA2, payload: payloadPDA2 })
             .signers([admin])
             .rpc()
         ).to.be.rejectedWith("Validator set already set");
@@ -992,7 +997,7 @@ describe("LBTC", () => {
 
       it("setNextValset: when signatures are invalid", async () => {
         const tx2 = await program.methods
-          .postMetadataForValsetPayload(Buffer.from(nextValsetHash, "hex"), nextValidators, nextWeights)
+          .postMetadataForValsetPayload(nextValidators, nextWeights)
           .accounts({
             payer: payer.publicKey,
             metadata: metadataPDA2
@@ -1002,7 +1007,7 @@ describe("LBTC", () => {
         await provider.connection.confirmTransaction(tx2);
 
         const tx3 = await program.methods
-          .createValsetPayload(Buffer.from(nextValsetHash, "hex"), new BN(2), new BN(2), new BN(1))
+          .createValsetPayload(new BN(2), new BN(2), new BN(1))
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1015,7 +1020,7 @@ describe("LBTC", () => {
 
         await expect(
           program.methods
-            .setNextValset(Buffer.from(nextValsetHash, "hex"))
+            .setNextValset()
             .accounts({
               payer: payer.publicKey,
               config: configPDA,
@@ -1029,7 +1034,7 @@ describe("LBTC", () => {
 
       it("postValsetSignatures: ignores invalid signatures", async () => {
         const tx = await program.methods
-          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), wrongSigs, [new BN(0), new BN(1)])
+          .postValsetSignatures(wrongSigs, [new BN(0), new BN(1)])
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1045,7 +1050,7 @@ describe("LBTC", () => {
 
       it("postValsetSignatures: ignores duplicates", async () => {
         const tx = await program.methods
-          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), [sigs[0], sigs[0]], [new BN(0), new BN(0)])
+          .postValsetSignatures([sigs[0], sigs[0]], [new BN(0), new BN(0)])
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1059,7 +1064,7 @@ describe("LBTC", () => {
         expect(payload.weight.bigInt()).to.be.eq(1n);
 
         const tx2 = await program.methods
-          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), [sigs[0]], [new BN(0)])
+          .postValsetSignatures([sigs[0]], [new BN(0)])
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1078,7 +1083,7 @@ describe("LBTC", () => {
         expect(payload.weight.bigInt()).to.be.eq(1n);
 
         let tx = await program.methods
-          .postValsetSignatures(Buffer.from(nextValsetHash, "hex"), sigs, [new BN(0), new BN(1)])
+          .postValsetSignatures(sigs, [new BN(0), new BN(1)])
           .accounts({
             payer: payer.publicKey,
             config: configPDA,
@@ -1092,7 +1097,7 @@ describe("LBTC", () => {
         expect(payload2.weight.bigInt()).to.be.eq(2n);
 
         tx = await program.methods
-          .setNextValset(Buffer.from(nextValsetHash, "hex"))
+          .setNextValset()
           .accounts({
             payer: payer.publicKey,
             config: configPDA,

@@ -7,19 +7,18 @@ use crate::{
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(hash: [u8; 32])]
 pub struct SetInitialValset<'info> {
     #[account(mut, address = config.admin)]
     pub payer: Signer<'info>,
     #[account(mut)]
     pub config: Account<'info, Config>,
-    #[account(mut, close = payer, seeds = [&hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
+    #[account(mut, close = payer, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
-    #[account(mut, close = payer, seeds = [&hash, &payer.key.to_bytes()], bump)]
+    #[account(mut, close = payer, seeds = [&payload.hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
 }
 
-pub fn set_initial_valset(ctx: Context<SetInitialValset>, _hash: [u8; 32]) -> Result<()> {
+pub fn set_initial_valset(ctx: Context<SetInitialValset>) -> Result<()> {
     require!(
         ctx.accounts.config.epoch == 0,
         LBTCError::ValidatorSetAlreadySet
