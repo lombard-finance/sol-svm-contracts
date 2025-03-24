@@ -154,3 +154,13 @@ pub struct OwnershipTransferInitiated {
 pub struct OwnershipTransferred {
     pub new_admin: Pubkey,
 }
+
+#[event]
+pub struct MintAuthorityUpdated {
+    pub new_auth: Pubkey,
+}
+
+#[event]
+pub struct FreezeAuthorityUpdated {
+    pub new_auth: Pubkey,
+}
