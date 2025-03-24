@@ -20,7 +20,6 @@ pub const FEE_APPROVAL_ACTION: u32 = 0x04acbbb2;
 pub const NEW_VALSET_ACTION: u32 = 0x4aab1d6f;
 
 pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
-pub const CONFIG_SEED: &[u8] = b"lbtc_config";
 pub const MIN_VALIDATOR_SET_SIZE: usize = 1;
 pub const MAX_VALIDATOR_SET_SIZE: usize = 102;
 pub const MINT_PAYLOAD_LEN: usize = 164;
