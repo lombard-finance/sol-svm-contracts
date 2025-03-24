@@ -111,6 +111,7 @@ pub fn validate_withdrawal(
 /// keccak256([0u8; 32] || [0x03, 0x53, 0x4f, 0x4c] || recipient || amount (be_bytes) || tx_id || tx_vout (be_bytes))
 //
 // TODO: synchronize this implementation with Lombard's
+// CODESYNC(solana-deposit-id)
 pub fn to_deposit_id(recipient: Pubkey, amount: u64, tx_id: [u8; 32], tx_vout: u32) -> DepositId {
     let mut hash_data = Vec::with_capacity(112);
 

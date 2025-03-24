@@ -14,8 +14,7 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   TestSetup,
-  rpcOpts,
-  promiseWithResolvers
+  promiseWithResolvers,
 } from "./util";
 
 describe("bascule", () => {
@@ -35,73 +34,28 @@ describe("bascule", () => {
     // access checks:
     // (1) pause not allowed to 'admin', 'reporter', and 'validator'
     for (const w of [ts.acc.admin, ts.acc.reporter, ts.acc.validator]) {
-      await assertError(
-        program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts),
-        ENotPauser
-      );
+      await assertError(ts.pause(w), ENotPauser);
     }
     // (2) update threshold not allowed to 'pauser', 'reporter', and 'validator'
     for (const w of [ts.acc.pauser, ts.acc.reporter, ts.acc.validator]) {
-      await assertError(
-        program.methods
-          .updateValidateThreshold(new anchor.BN(10))
-          .accounts({ admin: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotAdmin
-      );
+      await assertError(ts.setThreshold(new anchor.BN(10), w), ENotAdmin);
     }
     // (3) grant pauser/reporter/validator not allowed to 'pauser', 'reporter', and 'validator'
     for (const w of [ts.acc.pauser, ts.acc.reporter, ts.acc.validator]) {
-      await assertError(
-        program.methods
-          .grantPauser(ts.acc.other.publicKey)
-          .accounts({ admin: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotAdmin
-      );
-      await assertError(
-        program.methods
-          .grantReporter(ts.acc.other.publicKey)
-          .accounts({ admin: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotAdmin
-      );
-      await assertError(
-        program.methods
-          .addWithdrawalValidator(ts.acc.other.publicKey)
-          .accounts({ admin: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotAdmin
-      );
+      await assertError(ts.grantPauser(ts.acc.other.publicKey, w), ENotAdmin);
+      await assertError(ts.grantReporter(ts.acc.other.publicKey, w), ENotAdmin);
+      await assertError(ts.grantValidator(ts.acc.other.publicKey, w), ENotAdmin);
     }
     // (4) report deposit is not allowed to 'admin', 'pauser', 'validator'
     for (const w of [ts.acc.admin, ts.acc.pauser, ts.acc.validator]) {
-      await assertError(
-        program.methods
-          .reportDeposit(d10.depositId)
-          .accounts({ reporter: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotReporter
-      );
+      await assertError(ts.reportDeposit(d10.depositId, w), ENotReporter);
     }
     // (5) validate withdrawal is not allowed to 'admin', 'pauser', 'reporter'
     for (const w of [ts.acc.admin, ts.acc.pauser, ts.acc.reporter]) {
-      await assertError(
-        program.methods
-          .validateWithdrawal(d10.depositId, d10.recipient, d10.amount, [...d10.txId], d10.txVout)
-          .accounts({ validator: w.publicKey })
-          .signers([w.payer])
-          .rpc(rpcOpts),
-        ENotValidator
-      );
+      await assertError(ts.validateWithdrawal(d10, w), ENotValidator);
     }
 
-    const listeners = [];
+    const listeners: number[] = [];
 
     try {
       // set threshold to 50 and validate event is emitted
@@ -115,7 +69,7 @@ describe("bascule", () => {
       }
 
       // double check the bascule data was updated
-      expect(await ts.fetchData().then(d => d.validateThreshold.toNumber())).to.eq(50);
+      expect(await ts.fetchData().then((d) => d.validateThreshold.toNumber())).to.eq(50);
 
       // validating d10 is allowed because below threshold, but it emits an event
       const evNotValidated = promiseWithResolvers<anchor.IdlEvents<Bascule>["withdrawalNotValidated"]>();
@@ -171,6 +125,15 @@ describe("bascule", () => {
       await assertError(ts.reportDeposit(d10), EPaused);
       await assertError(ts.validateWithdrawal(d10), EPaused);
       await assertError(ts.setThreshold(0), EPaused);
+
+      // unpause and assert that reporting, validating, and updating threshold works again.
+      await ts.unpause();
+      await ts.setThreshold(0);
+      const d0 = DepositId.randomForAmount(0);
+      await ts.reportDeposit(d0);
+      await ts.expectReported(d0);
+      await ts.validateWithdrawal(d0);
+      await ts.expectWithdrawn(d0);
     } finally {
       // ensure to remove all listeners, otherwise 'anchor test' will remain stuck
       for (const listener of listeners) {

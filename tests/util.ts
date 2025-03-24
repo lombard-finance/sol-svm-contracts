@@ -1,10 +1,8 @@
 import { expect } from "chai";
 import * as anchor from "@coral-xyz/anchor";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { ConfirmOptions, Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
+import { ConfirmOptions, Keypair, PublicKey } from "@solana/web3.js";
 import { Bascule } from "../target/types/bascule";
-
-export const BASCULE_IDL = require("./../target/idl/bascule.json");
 
 export const EPaused = "EPaused";
 export const ENotAdmin = "ENotAdmin";
@@ -39,8 +37,9 @@ export class DepositId {
     /** Bitcoin transaction output index (32-bit unsigned int) */
     readonly txVout: number
   ) {
+    // CODESYNC(solana-deposit-id)
     // fixed-bytes32(0x00) || 0x03, 0x53, 0x4f, 0x4c || recipient || amount (BE) || txId || txVout (BE)
-    const bytes = [];
+    const bytes: number[] = [];
     bytes.push(...new Uint8Array(32));
     bytes.push(...[0x03, 0x53, 0x4f, 0x4c]);
     bytes.push(...recipient.toBytes());
@@ -60,12 +59,12 @@ export class DepositId {
 }
 
 export function delayMs(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function assertError(p: Promise<any>, code?: string): Promise<Error> {
-  const err = await p.then(_ => undefined).catch(e => e);
-  expect(err).to.not.be.undefined;
+export async function assertError(p: Promise<unknown>, code?: string): Promise<Error> {
+  const err = await p.then((_) => undefined).catch((e) => e);
+  expect(err).to.exist;
   console.log("Got error, as expected", err.toString());
   if (code) {
     expect(err).to.be.instanceOf(anchor.AnchorError, err);
@@ -86,7 +85,7 @@ export class TestSetup {
             pauser: new anchor.Wallet(Keypair.generate()),
             reporter: new anchor.Wallet(Keypair.generate()),
             validator: new anchor.Wallet(Keypair.generate()),
-            other: new anchor.Wallet(Keypair.generate())
+            other: new anchor.Wallet(Keypair.generate()),
           }
         : acc;
     [this.basculePda] = PublicKey.findProgramAddressSync([Buffer.from("bascule")], program.programId);
@@ -114,84 +113,95 @@ export class TestSetup {
   }
 
   /**
+   * Grant the 'pauser' permissions to `pauser`, performing the action with wallet `w` (defaulting to `this.acc.admin`).
+   */
+  async grantPauser(pauser: PublicKey, w?: anchor.Wallet) {
+    console.log("grant pauser to", pauser.toBase58());
+    w ??= this.acc.admin;
+    await this.program.methods.grantPauser(pauser).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+  }
+
+  /**
+   * Grant the 'reporter' permissions to `reporter`, performing the action with wallet `w` (defaulting to `this.acc.admin`).
+   */
+  async grantReporter(reporter: PublicKey, w?: anchor.Wallet) {
+    console.log("grant reporter to", reporter.toBase58());
+    w ??= this.acc.admin;
+    await this.program.methods.grantReporter(reporter).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+  }
+
+  /**
+   * Grant the 'validator' permissions to `validator`, performing the action with wallet `w` (defaulting to `this.acc.admin`).
+   */
+  async grantValidator(validator: PublicKey, w?: anchor.Wallet) {
+    console.log("grant validator to", validator.toBase58());
+    w ??= this.acc.admin;
+    await this.program.methods
+      .addWithdrawalValidator(validator)
+      .accounts({ admin: w.publicKey })
+      .signers([w.payer])
+      .rpc(rpcOpts);
+  }
+
+  /**
    * Grant the 'pauser', 'reporter', and 'validator'
    * permissions to the designated test wallets.
    */
   async grantPermissions() {
-    console.log("grant pauser to", this.acc.pauser.publicKey.toBase58());
-    await this.program.methods
-      .grantPauser(this.acc.pauser.publicKey)
-      .accounts({ admin: this.acc.admin.publicKey })
-      .signers([this.acc.admin.payer])
-      .rpc(rpcOpts);
-
-    console.log("grant reporter to", this.acc.reporter.publicKey.toBase58());
-    await this.program.methods
-      .grantReporter(this.acc.reporter.publicKey)
-      .accounts({ admin: this.acc.admin.publicKey })
-      .signers([this.acc.admin.payer])
-      .rpc(rpcOpts);
-
-    console.log("grant validator to", this.acc.validator.publicKey.toBase58());
-    await this.program.methods
-      .addWithdrawalValidator(this.acc.validator.publicKey)
-      .accounts({ admin: this.acc.admin.publicKey })
-      .signers([this.acc.admin.payer])
-      .rpc(rpcOpts);
+    await this.grantPauser(this.acc.pauser.publicKey);
+    await this.grantReporter(this.acc.reporter.publicKey);
+    await this.grantValidator(this.acc.validator.publicKey);
   }
 
   /**
    * Update validate threshold using the designated 'admin' account.
    */
-  async setThreshold(amount: number | anchor.BN) {
+  async setThreshold(amount: number | anchor.BN, w?: anchor.Wallet) {
+    w ??= this.acc.admin;
     return await this.program.methods
       .updateValidateThreshold(new anchor.BN(amount))
-      .accounts({ admin: this.acc.admin.publicKey })
-      .signers([this.acc.admin.payer])
+      .accounts({ admin: w.publicKey })
+      .signers([w.payer])
       .rpc(rpcOpts);
   }
 
   /**
    * Pause the program using the designated 'admin' account
    */
-  async pause() {
-    return await this.program.methods
-      .pause()
-      .accounts({ pauser: this.acc.pauser.publicKey })
-      .signers([this.acc.pauser.payer])
-      .rpc(rpcOpts);
+  async pause(w?: anchor.Wallet) {
+    w ??= this.acc.pauser;
+    return await this.program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
    * Unpause the program using the designated 'admin' account
    */
-  async unpause() {
-    return await this.program.methods
-      .unpause()
-      .accounts({ pauser: this.acc.admin.publicKey })
-      .signers([this.acc.admin.payer])
-      .rpc(rpcOpts);
+  async unpause(w?: anchor.Wallet) {
+    w ??= this.acc.pauser;
+    return await this.program.methods.unpause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
    * Report deposit using the using the designated 'reporter' account.
    */
-  async reportDeposit(depositId: number[] | DepositId) {
+  async reportDeposit(depositId: number[] | DepositId, w?: anchor.Wallet) {
+    w ??= this.acc.reporter;
     return await this.program.methods
       .reportDeposit(depositId instanceof DepositId ? depositId.depositId : depositId)
-      .accounts({ reporter: this.acc.reporter.publicKey })
-      .signers([this.acc.reporter.payer])
+      .accounts({ reporter: w.publicKey })
+      .signers([w.payer])
       .rpc(rpcOpts);
   }
 
   /**
    * Validate deposit withdrawal using the using the designated 'validator' account.
    */
-  async validateWithdrawal(d: DepositId) {
+  async validateWithdrawal(d: DepositId, w?: anchor.Wallet) {
+    w ??= this.acc.validator;
     return await this.program.methods
       .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-      .accounts({ validator: this.acc.validator.publicKey })
-      .signers([this.acc.validator.payer])
+      .accounts({ validator: w.publicKey })
+      .signers([w.payer])
       .rpc(rpcOpts);
   }
 
@@ -231,7 +241,7 @@ export class TestSetup {
 export type PromiseWithResolvers<T> = {
   promise: Promise<T>;
   resolve: (value: T | PromiseLike<T>) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 };
 
 /**
@@ -240,13 +250,15 @@ export type PromiseWithResolvers<T> = {
  */
 export function promiseWithResolvers<T>(): PromiseWithResolvers<T> {
   let resolve: (value: T | PromiseLike<T>) => void;
-  let reject: (reason?: any) => void;
+  let reject: (reason?: unknown) => void;
   return {
     promise: new Promise<T>((res, rej) => {
       resolve = res;
       reject = rej;
     }),
+    // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
     resolve,
-    reject
+    // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
+    reject,
   };
 }

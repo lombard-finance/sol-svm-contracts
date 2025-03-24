@@ -1,14 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 
-import { ConfirmOptions, Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
+import { Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
 import { BankrunProvider, startAnchor } from "anchor-bankrun";
 import { Program } from "@coral-xyz/anchor";
 import { Bascule } from "../target/types/bascule";
 import { expect } from "chai";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
+
 import {
-  BASCULE_IDL,
-  TestAccounts,
   DepositId,
   EAlreadyWithdrawn,
   EMaxValidators,
@@ -20,9 +19,11 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   delayMs,
-  rpcOpts
+  rpcOpts,
 } from "./util";
 import * as util from "./util";
+
+import BASCULE_IDL from "./../target/idl/bascule.json";
 
 describe("bascule", () => {
   let provider: BankrunProvider;
@@ -35,11 +36,11 @@ describe("bascule", () => {
 
   // Waits until the blockhash changes
   const untilNextBlockHash = async () => {
-    const [bh0] = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
+    const bh0 = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
     for (let i = 0; i < 10; i++) {
       await delayMs(50);
-      const [bh1] = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
-      if (bh1 !== bh0) return;
+      const bh1 = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
+      if (bh1?.[0] !== bh0?.[0]) return;
     }
     throw new Error("Blockhash didn't change");
   };
@@ -53,26 +54,26 @@ describe("bascule", () => {
     const context = await startAnchor(
       ".",
       [],
-      [pauser, reporter, validator, other].map(w => {
+      [pauser, reporter, validator, other].map((w) => {
         return {
           address: w.publicKey,
           info: {
             lamports: 1_000_000_000, // 1 SOL equivalent
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
-            executable: false
-          }
+            executable: false,
+          },
         };
       })
     );
     provider = new BankrunProvider(context);
-    program = new Program<Bascule>(BASCULE_IDL, provider);
+    program = new Program<Bascule>(BASCULE_IDL as Bascule, provider);
     ts = new util.TestSetup(program, {
       admin: new anchor.Wallet(provider.context.payer),
       pauser,
       reporter,
       validator,
-      other
+      other,
     });
 
     // call initialize
@@ -97,7 +98,7 @@ describe("bascule", () => {
       console.log("calling init again with wallet", w.publicKey.toBase58());
       const err = await assertError(callInit(w));
       expect(err).to.be.instanceOf(SendTransactionError);
-      expect((err as SendTransactionError).logs[3]).to.match(/^Allocate: account Address.* already in use$/);
+      expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/^Allocate: account Address.* already in use$/);
     }
   });
 
@@ -150,7 +151,7 @@ describe("bascule", () => {
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
-    expect(await ts.fetchData().then(bd => bd.validateThreshold.toNumber())).to.eq(1);
+    expect(await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())).to.eq(1);
   });
 
   // Checks:
@@ -190,13 +191,13 @@ describe("bascule", () => {
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.true;
+    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.true;
     await program.methods
       .unpause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.false;
+    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.false;
   });
 
   // Checks:
@@ -238,7 +239,7 @@ describe("bascule", () => {
   // - reporting the same deposit multiple times is allowed
   // - reporting a deposit id of a wrong length is outright denied
   it("report", async () => {
-    const depositId = [...Array(32)].map(_ => 0);
+    const depositId = [...Array(32)].map((_) => 0);
 
     // grant reporter
     await program.methods
