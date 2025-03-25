@@ -634,6 +634,40 @@ describe("LBTC", () => {
             .rpc()
         ).to.be.rejectedWith("An address constraint was violated");
       });
+
+      it("changeFreezeAuth: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .changeFreezeAuth(payer.publicKey)
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              mint,
+              currentAuth: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              tokenAuthority: tokenAuth
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
+
+      it("changeMintAuth: rejects when called by not admin", async () => {
+        await expect(
+          program.methods
+            .changeMintAuth(payer.publicKey)
+            .accounts({
+              payer: payer.publicKey,
+              config: configPDA,
+              mint,
+              currentAuth: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              tokenAuthority: tokenAuth
+            })
+            .signers([payer])
+            .rpc()
+        ).to.be.rejectedWith("An address constraint was violated");
+      });
     });
 
     describe("Remove roles", function () {
