@@ -1301,6 +1301,7 @@ describe("LBTC", () => {
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               recipient: recipientTA,
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
               bascule: payer.publicKey
@@ -1333,6 +1334,7 @@ describe("LBTC", () => {
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               recipient: recipientTA,
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
               bascule: payer.publicKey
@@ -1438,12 +1440,31 @@ describe("LBTC", () => {
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               recipient: minterTA,
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
               bascule: payer.publicKey
             })
             .rpc()
         ).to.be.rejectedWith("Mismatch between mint payload and passed account");
+      });
+
+      it("mintFromPayload: rejects when mint authority is wrong", async () => {
+        await expect(
+          program.methods
+            .mintFromPayload(mintPayload.hashAsBytes())
+            .accounts({
+              config: configPDA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              recipient: mintPayload.recipientPubKey(),
+              mint: mint,
+              mintAuthority: payer.publicKey,
+              tokenAuthority: tokenAuth,
+              payload: mintPayloadPDA,
+              bascule: payer.publicKey
+            })
+            .rpc()
+        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
       });
 
       it("mintFromPayload: successful", async () => {
@@ -1457,6 +1478,7 @@ describe("LBTC", () => {
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             recipient: mintPayload.recipientPubKey(),
             mint: mint,
+            mintAuthority: tokenAuth,
             tokenAuthority: tokenAuth,
             payload: mintPayloadPDA,
             bascule: payer.publicKey
@@ -1491,6 +1513,7 @@ describe("LBTC", () => {
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               recipient: mintPayload.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
               bascule: payer.publicKey
@@ -1546,6 +1569,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
@@ -1573,6 +1597,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
@@ -1594,6 +1619,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: payer.publicKey,
               payload: mintPayloadPDA2,
@@ -1615,6 +1641,7 @@ describe("LBTC", () => {
               recipientAuth: user.publicKey,
               recipient: userTA,
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
@@ -1623,6 +1650,28 @@ describe("LBTC", () => {
             .signers([claimer])
             .rpc()
         ).to.be.rejectedWith("Mismatch between mint payload and passed account");
+      });
+
+      it("mintWithFee: rejects when mint authority is wrong", async () => {
+        await expect(
+          program.methods
+            .mintWithFee(mintPayload2.hashAsBytes(), feePermit.bytes(), feePermit.signature(recipient.secretKey))
+            .accounts({
+              payer: claimer.publicKey,
+              config: configPDA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              recipientAuth: recipient.publicKey,
+              recipient: mintPayload2.recipientPubKey(),
+              mint: mint,
+              mintAuthority: recipient.publicKey,
+              tokenAuthority: tokenAuth,
+              treasury: treasury,
+              payload: mintPayloadPDA2,
+              bascule: payer.publicKey
+            })
+            .signers([claimer])
+            .rpc()
+        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
       });
 
       it("mintWithFee: rejects when amount < fee", async () => {
@@ -1646,6 +1695,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
@@ -1721,6 +1771,7 @@ describe("LBTC", () => {
                 recipientAuth: recipient.publicKey,
                 recipient: mintPayload2.recipientPubKey(),
                 mint: mint,
+                mintAuthority: tokenAuth,
                 tokenAuthority: tokenAuth,
                 treasury: treasury,
                 payload: mintPayloadPDA2,
@@ -1752,6 +1803,7 @@ describe("LBTC", () => {
             recipientAuth: recipient.publicKey,
             recipient: mintPayload2.recipientPubKey(),
             mint: mint,
+            mintAuthority: tokenAuth,
             tokenAuthority: tokenAuth,
             treasury: treasury,
             payload: mintPayloadPDA2,
@@ -1795,6 +1847,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
@@ -1848,6 +1901,7 @@ describe("LBTC", () => {
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA2,
               bascule: payer.publicKey
@@ -1867,6 +1921,7 @@ describe("LBTC", () => {
               recipientAuth: recipient.publicKey,
               recipient: mintPayload2.recipientPubKey(),
               mint: mint,
+              mintAuthority: tokenAuth,
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,

@@ -33,6 +33,7 @@ const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         mint: mint,
         tokenAuthority: tokenAuth,
+        currentAuth: tokenAuth,
       })
       .rpc();
 

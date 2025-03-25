@@ -27,6 +27,9 @@ pub struct MintWithFee<'info> {
     pub recipient: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, Mint>,
+    /// CHECK: This being used in the mint call constrains it to be correct, otherwise the
+    /// instruction will fail.
+    pub mint_authority: UncheckedAccount<'info>,
     /// CHECK: The seeds constraint ensures the correct address is passed.
     #[account(seeds = [crate::constants::TOKEN_AUTHORITY_SEED], bump)]
     pub token_authority: UncheckedAccount<'info>,
@@ -83,7 +86,7 @@ pub fn mint_with_fee(
         ctx.accounts.treasury.to_account_info(),
         fee,
         ctx.accounts.mint.to_account_info(),
-        ctx.accounts.token_authority.to_account_info(),
+        ctx.accounts.mint_authority.to_account_info(),
         ctx.bumps.token_authority,
     )?;
     utils::execute_mint(
@@ -91,7 +94,7 @@ pub fn mint_with_fee(
         ctx.accounts.recipient.to_account_info(),
         amount - fee,
         ctx.accounts.mint.to_account_info(),
-        ctx.accounts.token_authority.to_account_info(),
+        ctx.accounts.mint_authority.to_account_info(),
         ctx.bumps.token_authority,
     )
 }
