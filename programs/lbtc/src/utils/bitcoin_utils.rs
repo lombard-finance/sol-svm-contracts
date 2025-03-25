@@ -28,7 +28,7 @@ pub fn get_dust_limit_for_output(script_pubkey: &[u8], dust_fee_rate: u64) -> Re
     // Validate correct output type, but we can drop the actual result.
     let _ = get_output_type(script_pubkey)?;
     let spend_cost = BASE_SPEND_COST + WITNESS_INPUT_SIZE + serialize_size(script_pubkey_len);
-    Ok((spend_cost * dust_fee_rate) / 1000)
+    Ok((spend_cost * dust_fee_rate).div_ceil(1000))
 }
 
 fn get_output_type(script_pubkey: &[u8]) -> Result<OutputType> {

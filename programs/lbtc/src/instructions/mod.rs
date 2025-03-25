@@ -26,6 +26,8 @@ pub mod post_mint_signatures;
 pub use post_mint_signatures::*;
 pub mod post_valset_signatures;
 pub use post_valset_signatures::*;
+pub mod change_auth;
+pub use change_auth::*;
 pub mod redeem;
 pub use redeem::*;
 pub mod set_initial_valset;

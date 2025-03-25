@@ -28,33 +28,8 @@ pub struct OperatorSet {
 }
 
 #[event]
-pub struct BasculeAddressChanged {
-    pub address: Pubkey,
-}
-
-#[event]
 pub struct DustFeeRateSet {
     pub rate: u64,
-}
-
-#[event]
-pub struct ChainIdSet {
-    pub chain_id: [u8; 32],
-}
-
-#[event]
-pub struct DepositBtcActionSet {
-    pub action: u32,
-}
-
-#[event]
-pub struct ValsetActionSet {
-    pub action: u32,
-}
-
-#[event]
-pub struct FeeActionSet {
-    pub action: u32,
 }
 
 #[event]
@@ -153,4 +128,9 @@ pub struct OwnershipTransferInitiated {
 #[event]
 pub struct OwnershipTransferred {
     pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct MintAuthorityUpdated {
+    pub new_auth: Pubkey,
 }
