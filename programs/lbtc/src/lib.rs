@@ -172,10 +172,6 @@ pub mod lbtc {
         instructions::change_mint_auth(ctx, new_auth)
     }
 
-    pub fn change_freeze_auth(ctx: Context<ChangeAuth>, new_auth: Pubkey) -> Result<()> {
-        instructions::change_freeze_auth(ctx, new_auth)
-    }
-
     pub fn pause(ctx: Context<Pause>) -> Result<()> {
         instructions::pause(ctx)
     }

@@ -157,7 +157,7 @@ describe("LBTC", () => {
     await fundWallet(t, 25 * LAMPORTS_PER_SOL);
     await fundWallet(recipient, 25 * LAMPORTS_PER_SOL);
 
-    mint = await spl.createMint(provider.connection, admin, tokenAuth, null, 8, mintKeys);
+    mint = await spl.createMint(provider.connection, admin, tokenAuth, admin.publicKey, 8, mintKeys);
 
     [configPDA] = PublicKey.findProgramAddressSync([Buffer.from("lbtc_config")], program.programId);
 
@@ -388,6 +388,37 @@ describe("LBTC", () => {
       await provider.connection.confirmTransaction(tx3);
       const cfg2 = await program.account.config.fetch(configPDA);
       expect(cfg2.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
+    });
+
+    it("changeMintAuth: successful when called by admin", async () => {
+      const tx = await program.methods
+        .changeMintAuth(payer.publicKey)
+        .accounts({
+          payer: admin.publicKey,
+          config: configPDA,
+          mint,
+          currentAuth: tokenAuth,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          tokenAuthority: tokenAuth
+        })
+        .signers([admin])
+        .rpc();
+      await provider.connection.confirmTransaction(tx);
+      const info = await spl.getMint(provider.connection, mint);
+      expect(info.mintAuthority.toBase58()).to.be.equal(payer.publicKey.toBase58());
+
+      // Revert to tokenauth to facilitate further testing
+      const tx2 = await spl.setAuthority(
+        provider.connection,
+        payer,
+        mint,
+        payer,
+        spl.AuthorityType.MintTokens,
+        tokenAuth
+      );
+      await provider.connection.confirmTransaction(tx2);
+      const info2 = await spl.getMint(provider.connection, mint);
+      expect(info2.mintAuthority.toBase58()).to.be.equal(tokenAuth.toBase58());
     });
   });
 
@@ -630,23 +661,6 @@ describe("LBTC", () => {
           program.methods
             .addPauser(payer.publicKey)
             .accounts({ payer: payer.publicKey, config: configPDA })
-            .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith("An address constraint was violated");
-      });
-
-      it("changeFreezeAuth: rejects when called by not admin", async () => {
-        await expect(
-          program.methods
-            .changeFreezeAuth(payer.publicKey)
-            .accounts({
-              payer: payer.publicKey,
-              config: configPDA,
-              mint,
-              currentAuth: tokenAuth,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              tokenAuthority: tokenAuth
-            })
             .signers([payer])
             .rpc()
         ).to.be.rejectedWith("An address constraint was violated");
