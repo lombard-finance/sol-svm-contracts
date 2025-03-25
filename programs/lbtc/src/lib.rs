@@ -180,7 +180,7 @@ pub mod lbtc {
         instructions::pause(ctx)
     }
 
-    pub fn unpause(ctx: Context<Admin>) -> Result<()> {
+    pub fn unpause(ctx: Context<Pause>) -> Result<()> {
         instructions::unpause(ctx)
     }
 }
