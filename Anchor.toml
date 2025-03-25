@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-lbtc = "5WFmz89q5RzSezsDQNCWoCJTEdYgne5u26kJPCyWvCEx"
+lbtc = "DBhJbGuCmvwbwq74o1wDVqGfzeiGUtwh8t9shkWLT1HU"
 
 [registry]
 url = "https://api.apr.dev"

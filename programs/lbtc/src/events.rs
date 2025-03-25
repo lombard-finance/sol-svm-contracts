@@ -134,8 +134,3 @@ pub struct OwnershipTransferred {
 pub struct MintAuthorityUpdated {
     pub new_auth: Pubkey,
 }
-
-#[event]
-pub struct FreezeAuthorityUpdated {
-    pub new_auth: Pubkey,
-}
