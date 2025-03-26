@@ -1,8 +1,9 @@
 {
     "admin": "6MKjyWZnkSMitJYAixvJzqhJiVsjTA3hYHX8aP9qNioj",
-    "treasury": "9DoAYaZP6TYNqrvGhNyAhxr45sdSvECZpysyc2FdEqrJ",
-    "LBTC_program": "DBhJbGuCmvwbwq74o1wDVqGfzeiGUtwh8t9shkWLT1HU",
-    "LBTC_config": "3Xz32B9XZFmmjHo2N4kAsTQEcU8b4jNsfb3FY8BbkrdX",
-    "LBTC_token": "1bTci7xTrSPYgieyUWjjCLaVG9y3HczUiP9eySJjSDY",
+    "treasury": "ByHNGi4zPJw5StyWZoLQJ9n2wT12oupJF2pTSNKMnnAZ",
+    "LBTC_program": "HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA",
+    "LBTC_config": "7zE8kYbdyroBGbBGZh5KPtrdd4Mut3ifmAcLRDuhAwes",
+    "LBTC_token": "1btcyoWK7d99iosES4eXQGhhooCscKGigV5wHfvzueX",
+    "LBTC_token_auth": "3kePsLfdniJhti2MKKeqN6swpAhUfpwiZJadc3eKC3Jm",
     "bascule": "1111111111111111111111111111111111111111111"
 }
