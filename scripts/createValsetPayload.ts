@@ -42,7 +42,7 @@ const height = new anchor.BN(process.argv[5]);
     console.log("Creating payload PDA for valset payload:", payloadPDA.toBase58());
 
     const tx = await program.methods
-      .createValsetPayload(payloadHash, epoch, weightThreshold, height)
+      .createValsetPayload(epoch, weightThreshold, height)
       .accounts({
         payer: payer,
         config: configPDA,

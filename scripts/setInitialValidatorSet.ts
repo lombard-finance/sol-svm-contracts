@@ -39,7 +39,7 @@ const valsetPayload = Buffer.from(process.argv[2], "hex");
     console.log("Creating payload PDA for valset payload:", payloadPDA.toBase58());
 
     const tx = await program.methods
-      .setInitialValset(payloadHash)
+      .setInitialValset()
       .accounts({
         payer,
         config: configPDA,
