@@ -14,6 +14,11 @@ const programId = new PublicKey(process.env.PROGRAM_ID);
 
 const program = new anchor.Program(require("../target/idl/lbtc.json"), provider) as anchor.Program<Lbtc>;
 
+if (!program.programId.equals(programId)) {
+  console.error("the program id in the idl does not match the program id passed as env variable")
+  process.exit(1)
+}
+
 const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
 
 (async () => {
