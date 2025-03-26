@@ -1,7 +1,7 @@
 //! Minting functionality from a notarized payload where Lombard pays for the transaction fee, in
 //! return for a small rebate in LBTC.
 use crate::{
-    constants::FEE_PAYLOAD_LEN,
+    constants::{CONFIG_SEED, FEE_PAYLOAD_LEN},
     errors::LBTCError,
     events::MintProofConsumed,
     state::{Config, MintPayload},
@@ -14,6 +14,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 #[instruction(mint_payload_hash: [u8; 32])]
 pub struct MintWithFee<'info> {
     pub payer: Signer<'info>,
+    #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     /// CHECK: This will be verified by the token authority on recipient.
@@ -40,6 +41,11 @@ pub struct MintWithFee<'info> {
     /// CHECK: We constrain this to config-set bascule.
     #[account(constraint = bascule.key() == config.bascule)]
     pub bascule: UncheckedAccount<'info>,
+    /// CHECK: This is validated in Bascule.
+    pub bascule_data: UncheckedAccount<'info>,
+    /// CHECK: This is validated in Bascule.
+    pub deposit: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn mint_with_fee(
@@ -61,10 +67,14 @@ pub fn mint_with_fee(
 
     let amount = validation::post_validate_mint(
         &ctx.accounts.config,
+        ctx.bumps.config,
         &ctx.accounts.recipient,
         &ctx.accounts.payload.payload,
         ctx.accounts.payload.weight,
         &ctx.accounts.bascule,
+        &ctx.accounts.bascule_data,
+        &ctx.accounts.deposit,
+        &ctx.accounts.system_program,
     )?;
 
     let fee = validation::validate_fee(

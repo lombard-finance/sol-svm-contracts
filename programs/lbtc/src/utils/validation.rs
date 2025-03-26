@@ -2,6 +2,10 @@ use super::decoder;
 use crate::{constants, errors::LBTCError, state::Config};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
+use bascule::{
+    cpi::{accounts::Validator, validate_withdrawal},
+    to_deposit_id,
+};
 use solana_ed25519_verify::verify_signature;
 
 pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
@@ -18,11 +22,15 @@ pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
 }
 
 pub fn post_validate_mint<'info>(
-    config: &Account<'_, Config>,
+    config: &Account<'info, Config>,
+    config_bump: u8,
     recipient: &InterfaceAccount<'_, TokenAccount>,
     mint_payload: &[u8],
     weight: u64,
-    _bascule: &UncheckedAccount<'info>,
+    bascule: &UncheckedAccount<'info>,
+    bascule_data: &UncheckedAccount<'info>,
+    deposit: &UncheckedAccount<'info>,
+    system_program: &Program<'info, System>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
     require!(
@@ -35,11 +43,32 @@ pub fn post_validate_mint<'info>(
         LBTCError::NotEnoughSignatures
     );
 
+    // We use the LBTC config as the signer.
+    let signer_seeds: &[&[&[u8]]] = &[&[constants::CONFIG_SEED, &[config_bump]]];
     // Confirm deposit against bascule, if using.
     if config.bascule_enabled {
-        // TODO
-        // This is empty for now, while Bascule is being implemented as a Solana program.
-        todo!();
+        validate_withdrawal(
+            CpiContext::new_with_signer(
+                bascule.to_account_info(),
+                Validator {
+                    validator: config.to_account_info(),
+                    bascule_data: bascule_data.to_account_info(),
+                    deposit: deposit.to_account_info(),
+                    system_program: system_program.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            to_deposit_id(
+                mint_action.recipient,
+                mint_action.amount,
+                mint_action.txid,
+                mint_action.vout,
+            ),
+            mint_action.recipient,
+            mint_action.amount,
+            mint_action.txid,
+            mint_action.vout,
+        )?;
     }
 
     Ok(mint_action.amount)

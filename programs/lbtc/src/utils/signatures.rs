@@ -1,6 +1,6 @@
 //! This module implements the validation of Lombard Ledger Consortium signatures.
 use crate::constants::VALIDATOR_PUBKEY_SIZE;
-use solana_program::secp256k1_recover::secp256k1_recover;
+use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 
 // Simply performs public key recovery on a signature and hash, and checks if it matches the given
 // validator.
