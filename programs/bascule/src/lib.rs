@@ -5,7 +5,7 @@ pub mod events;
 pub mod instructions;
 pub mod state;
 
-declare_id!("At7x8PtHWsJrLFLFRf6VY3eBmtCwsTFEBeKU2CzKvtvs");
+declare_id!("EpjQWMXj6xgR2ijhJG1pmZpKmHM9is8vk8ATTfdVFtq7");
 
 use crate::state::DepositId;
 pub use instructions::validator::to_deposit_id;

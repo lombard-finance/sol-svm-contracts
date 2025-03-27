@@ -59,11 +59,11 @@ export class DepositId {
 }
 
 export function delayMs(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export async function assertError(p: Promise<unknown>, code?: string): Promise<Error> {
-  const err = await p.then((_) => undefined).catch((e) => e);
+  const err = await p.then(_ => undefined).catch(e => e);
   expect(err).to.exist;
   console.log("Got error, as expected", err.toString());
   if (code) {
@@ -85,7 +85,7 @@ export class TestSetup {
             pauser: new anchor.Wallet(Keypair.generate()),
             reporter: new anchor.Wallet(Keypair.generate()),
             validator: new anchor.Wallet(Keypair.generate()),
-            other: new anchor.Wallet(Keypair.generate()),
+            other: new anchor.Wallet(Keypair.generate())
           }
         : acc;
     [this.basculePda] = PublicKey.findProgramAddressSync([Buffer.from("bascule")], program.programId);
@@ -194,14 +194,15 @@ export class TestSetup {
   }
 
   /**
-   * Validate deposit withdrawal using the using the designated 'validator' account.
+   * Validate deposit withdrawal (by default the using the designated 'validator' account as both 'validator' and 'payer').
    */
-  async validateWithdrawal(d: DepositId, w?: anchor.Wallet) {
-    w ??= this.acc.validator;
+  async validateWithdrawal(d: DepositId, validator?: anchor.Wallet, payer?: anchor.Wallet) {
+    validator ??= this.acc.validator;
+    payer ??= validator ?? this.acc.validator;
     return await this.program.methods
       .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-      .accounts({ validator: w.publicKey })
-      .signers([w.payer])
+      .accounts({ validator: validator.publicKey, payer: payer.publicKey })
+      .signers([validator.payer, payer.payer])
       .rpc(rpcOpts);
   }
 
@@ -259,6 +260,6 @@ export function promiseWithResolvers<T>(): PromiseWithResolvers<T> {
     // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
     resolve,
     // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
-    reject,
+    reject
   };
 }

@@ -1506,8 +1506,6 @@ describe("LBTC", () => {
               bascule: payer.publicKey,
               basculeData: configPDA, // dummy value
               deposit: configPDA, // dummy value
-              basculeData: configPDA, // dummy value
-              deposit: configPDA, // dummy value
               systemProgram: SystemProgram.programId
             })
             .rpc()
@@ -1526,7 +1524,10 @@ describe("LBTC", () => {
               mintAuthority: payer.publicKey,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .rpc()
         ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
@@ -1750,7 +1751,10 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: configPDA, // dummy value
+              deposit: configPDA, // dummy value
+              systemProgram: SystemProgram.programId
             })
             .signers([claimer])
             .rpc()

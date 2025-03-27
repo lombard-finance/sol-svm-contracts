@@ -23,8 +23,6 @@ use anchor_lang::solana_program::keccak::hash;
 pub struct Validator<'info> {
     /// The system account signing this instruction
     #[account(
-        // pays for the 'Deposit' account creation if the account does not already exist
-        mut,
         // CHECK: the signer is allowlisted in 'bascule_data.withdrawal_validators'
         constraint = bascule_data.withdrawal_validators.contains(&validator.key()) @ BasculeError::ENotValidator,
         // CHECK: the program is not paused
@@ -32,27 +30,31 @@ pub struct Validator<'info> {
         // CHECK: deposit id integrity
         constraint = deposit_id == to_deposit_id(recipient, amount, tx_id, tx_vout) @ BasculeError::EInvalidDepositId,
     )]
-    pub validator: Signer<'info>,
+    validator: Signer<'info>,
+
+    /// Pays for the 'Deposit' account creation if the account does not already exist; can be any account
+    #[account(mut)]
+    payer: Signer<'info>,
 
     /// The program state
     #[account(mut, seeds = [BASCULE_SEED], bump = bascule_data.bump)]
-    pub bascule_data: Account<'info, BasculeData>,
+    bascule_data: Account<'info, BasculeData>,
 
     /// The deposit account
     #[account(
         // create the account if it doesn't already exist
         init_if_needed,
-        // the validator pays for the account if it doesn't already exist
-        payer = validator,
+        // the payer pays for the account if it doesn't already exist
+        payer = payer,
         // the PDA of the account: string "deposit" + the deposit id bytes
         seeds = [DEPOSIT_SEED, deposit_id.as_ref()], bump,
         // the fixed space for the account
         space = 8 + Deposit::INIT_SPACE,
     )]
-    pub deposit: Account<'info, Deposit>,
+    deposit: Account<'info, Deposit>,
 
     // The system program (needed for the 'init_if_needed' constraint of the 'deposit' account)
-    pub system_program: Program<'info, System>,
+    system_program: Program<'info, System>,
 }
 
 /// Validate a withdrawal if the amount is above the threshold.

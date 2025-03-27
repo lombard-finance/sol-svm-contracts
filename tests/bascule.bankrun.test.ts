@@ -19,7 +19,7 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   delayMs,
-  rpcOpts,
+  rpcOpts
 } from "./util";
 import * as util from "./util";
 
@@ -54,15 +54,15 @@ describe("bascule", () => {
     const context = await startAnchor(
       ".",
       [],
-      [pauser, reporter, validator, other].map((w) => {
+      [pauser, reporter, validator, other].map(w => {
         return {
           address: w.publicKey,
           info: {
             lamports: 1_000_000_000, // 1 SOL equivalent
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
-            executable: false,
-          },
+            executable: false
+          }
         };
       })
     );
@@ -73,7 +73,7 @@ describe("bascule", () => {
       pauser,
       reporter,
       validator,
-      other,
+      other
     });
 
     // call initialize
@@ -151,7 +151,7 @@ describe("bascule", () => {
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
-    expect(await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())).to.eq(1);
+    expect(await ts.fetchData().then(bd => bd.validateThreshold.toNumber())).to.eq(1);
   });
 
   // Checks:
@@ -191,13 +191,13 @@ describe("bascule", () => {
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.true;
+    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.true;
     await program.methods
       .unpause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.false;
+    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.false;
   });
 
   // Checks:
@@ -239,7 +239,7 @@ describe("bascule", () => {
   // - reporting the same deposit multiple times is allowed
   // - reporting a deposit id of a wrong length is outright denied
   it("report", async () => {
-    const depositId = [...Array(32)].map((_) => 0);
+    const depositId = [...Array(32)].map(_ => 0);
 
     // grant reporter
     await program.methods
@@ -304,7 +304,7 @@ describe("bascule", () => {
       await assertError(
         program.methods
           .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-          .accounts({ validator: v.publicKey })
+          .accounts({ validator: v.publicKey, payer: v.publicKey })
           .signers([v.payer])
           .rpc(rpcOpts),
         ENotValidator
@@ -326,7 +326,7 @@ describe("bascule", () => {
       await assertError(
         program.methods
           .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-          .accounts({ validator: validator.publicKey })
+          .accounts({ validator: validator.publicKey, payer: validator.publicKey })
           .signers([validator.payer])
           .rpc(rpcOpts),
         "EWithdrawalFailedValidation"
@@ -347,7 +347,7 @@ describe("bascule", () => {
     for (const v of validators) {
       const rpc = program.methods
         .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-        .accounts({ validator: v.publicKey })
+        .accounts({ validator: v.publicKey, payer: v.publicKey })
         .signers([v.payer])
         .rpc(rpcOpts);
       if (v == admin) {
@@ -373,12 +373,51 @@ describe("bascule", () => {
     }
   });
 
+  for (const reportFirst of [true, false]) {
+    it(`validate with different payer (report first: ${reportFirst})`, async () => {
+      // grant 'reporter' to the default reporter
+      await ts.grantReporter(ts.acc.reporter.publicKey);
+
+      const d = DepositId.randomForAmount(10);
+
+      // set the threshold to be higher than the deposit amount
+      await ts.setThreshold(d.amount.toNumber() + 1);
+
+      // optionally report the deposit
+      if (reportFirst) {
+        await ts.reportDeposit(d);
+        await ts.expectReported(d);
+      }
+
+      // grant 'validator' to a new (unfunded) wallet
+      const unfundedValidator = new anchor.Wallet(Keypair.generate());
+      await ts.grantValidator(unfundedValidator.publicKey);
+
+      const validateRpc = ts.validateWithdrawal(d, unfundedValidator, unfundedValidator);
+      if (reportFirst) {
+        // paying with the unfunded wallet should work, because the deposit account
+        // already exists, so no payment is needed
+        await validateRpc;
+      } else {
+        // paying with the unfunded wallet should not work, because the deposit account
+        // does not exist and needs to be created, which requires payment
+        const err = await assertError(validateRpc);
+        expect(err).to.be.instanceOf(SendTransactionError);
+        expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/insufficient lamports 0/);
+
+        // but paying with a separate (funded) wallet should work
+        await ts.validateWithdrawal(d, unfundedValidator, ts.acc.other);
+        await ts.expectWithdrawn(d);
+      }
+    });
+  }
+
   // Checks:
   // - when validating a withdrawal below the threshold
   //   - first time works (irrespective of whether or not the deposit was previously reported)
   //   - the second time fails with 'EAlreadyWithdrawn'
   for (const reportFirst of [true, false]) {
-    it(`validate below threshold (previously reported: ${reportFirst})`, async () => {
+    it(`validate below threshold (report first: ${reportFirst})`, async () => {
       await ts.grantPermissions();
 
       // set threshold

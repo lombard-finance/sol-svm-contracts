@@ -14,7 +14,7 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   TestSetup,
-  promiseWithResolvers,
+  promiseWithResolvers
 } from "./util";
 
 describe("bascule", () => {
@@ -69,7 +69,7 @@ describe("bascule", () => {
       }
 
       // double check the bascule data was updated
-      expect(await ts.fetchData().then((d) => d.validateThreshold.toNumber())).to.eq(50);
+      expect(await ts.fetchData().then(d => d.validateThreshold.toNumber())).to.eq(50);
 
       // validating d10 is allowed because below threshold, but it emits an event
       const evNotValidated = promiseWithResolvers<anchor.IdlEvents<Bascule>["withdrawalNotValidated"]>();

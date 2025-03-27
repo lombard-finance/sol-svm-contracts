@@ -13,6 +13,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: [u8; 32])]
 pub struct MintWithFee<'info> {
+    #[account(mut)]
     pub payer: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
@@ -44,6 +45,7 @@ pub struct MintWithFee<'info> {
     /// CHECK: This is validated in Bascule.
     pub bascule_data: UncheckedAccount<'info>,
     /// CHECK: This is validated in Bascule.
+    #[account(mut)]
     pub deposit: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -66,6 +68,7 @@ pub fn mint_with_fee(
     require!(!ctx.accounts.payload.minted, LBTCError::MintPayloadUsed);
 
     let amount = validation::post_validate_mint(
+        &ctx.accounts.payer,
         &ctx.accounts.config,
         ctx.bumps.config,
         &ctx.accounts.recipient,

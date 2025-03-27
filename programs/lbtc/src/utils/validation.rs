@@ -22,6 +22,7 @@ pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
 }
 
 pub fn post_validate_mint<'info>(
+    payer: &Signer<'info>,
     config: &Account<'info, Config>,
     config_bump: u8,
     recipient: &InterfaceAccount<'_, TokenAccount>,
@@ -51,6 +52,7 @@ pub fn post_validate_mint<'info>(
             CpiContext::new_with_signer(
                 bascule.to_account_info(),
                 Validator {
+                    payer: payer.to_account_info(),
                     validator: config.to_account_info(),
                     bascule_data: bascule_data.to_account_info(),
                     deposit: deposit.to_account_info(),
