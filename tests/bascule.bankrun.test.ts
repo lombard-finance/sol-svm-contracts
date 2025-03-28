@@ -98,7 +98,7 @@ describe("bascule", () => {
       console.log("calling init again with wallet", w.publicKey.toBase58());
       const err = await assertError(callInit(w));
       expect(err).to.be.instanceOf(SendTransactionError);
-      expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/^Allocate: account Address.* already in use$/);
+      expect(((err as SendTransactionError)?.transactionLogs ?? [])[3]).to.match(/^Allocate: account Address.* already in use$/);
     }
   });
 

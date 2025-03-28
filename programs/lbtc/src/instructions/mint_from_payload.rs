@@ -8,6 +8,10 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use bascule::{
+    program::Bascule,
+    state::{BasculeData, Deposit, BASCULE_SEED},
+};
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: [u8; 32])]
@@ -33,15 +37,13 @@ pub struct MintFromPayload<'info> {
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
-    /// CHECK: We constrain this to config-set bascule.
     #[account(constraint = bascule.key() == config.bascule)]
-    pub bascule: UncheckedAccount<'info>,
-    /// CHECK: This is validated in Bascule.
-    pub bascule_data: UncheckedAccount<'info>,
-    /// CHECK: This is validated in Bascule.
+    pub bascule: Option<Program<'info, Bascule>>,
+    #[account(mut, seeds = [BASCULE_SEED], bump = bascule_data.bump)]
+    pub bascule_data: Option<Account<'info, BasculeData>>,
     #[account(mut)]
-    pub deposit: UncheckedAccount<'info>,
-    pub system_program: Program<'info, System>,
+    pub deposit: Option<Account<'info, Deposit>>,
+    pub system_program: Option<Program<'info, System>>,
 }
 
 pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 32]) -> Result<()> {
