@@ -1357,7 +1357,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("NotEnoughSignatures");
@@ -1393,7 +1393,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("NotEnoughSignatures");
@@ -1502,7 +1502,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("Mismatch between mint payload and passed account");
@@ -1523,7 +1523,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
@@ -1543,10 +1543,10 @@ describe("LBTC", () => {
             mintAuthority: tokenAuth,
             tokenAuthority: tokenAuth,
             payload: mintPayloadPDA,
-              bascule: null,
-              basculeData: null,
-              deposit: null,
-              systemProgram: null,
+            bascule: null,
+            basculeData: null,
+            deposit: null,
+            systemProgram: null
           })
           .rpc();
         await provider.connection.confirmTransaction(tx);
@@ -1584,7 +1584,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("Mint payload already used");
@@ -1644,7 +1644,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -1675,7 +1675,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([payer])
             .rpc()
@@ -1700,7 +1700,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -1725,7 +1725,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -1750,7 +1750,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -1785,7 +1785,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -1861,10 +1861,10 @@ describe("LBTC", () => {
                 tokenAuthority: tokenAuth,
                 treasury: treasury,
                 payload: mintPayloadPDA2,
-              bascule: null,
-              basculeData: null,
-              deposit: null,
-              systemProgram: null,
+                bascule: null,
+                basculeData: null,
+                deposit: null,
+                systemProgram: null
               })
               .signers([claimer])
               .rpc()
@@ -1896,10 +1896,10 @@ describe("LBTC", () => {
             tokenAuthority: tokenAuth,
             treasury: treasury,
             payload: mintPayloadPDA2,
-              bascule: null,
-              basculeData: null,
-              deposit: null,
-              systemProgram: null,
+            bascule: null,
+            basculeData: null,
+            deposit: null,
+            systemProgram: null
           })
           .signers([claimer])
           .rpc();
@@ -1946,7 +1946,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()
@@ -2002,7 +2002,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .rpc()
         ).to.be.rejectedWith("LBTC contract is paused");
@@ -2026,7 +2026,7 @@ describe("LBTC", () => {
               bascule: null,
               basculeData: null,
               deposit: null,
-              systemProgram: null,
+              systemProgram: null
             })
             .signers([claimer])
             .rpc()

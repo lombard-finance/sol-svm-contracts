@@ -67,7 +67,10 @@ pub fn post_validate_mint<'info>(
                         .as_ref()
                         .expect("deposit should be passed if bascule is enabled")
                         .to_account_info(),
-                    system_program: system_program.as_ref().expect("system program should be passed if bascule is enabled").to_account_info(),
+                    system_program: system_program
+                        .as_ref()
+                        .expect("system program should be passed if bascule is enabled")
+                        .to_account_info(),
                 },
                 signer_seeds,
             ),
