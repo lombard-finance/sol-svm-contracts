@@ -21,7 +21,7 @@ use anchor_lang::solana_program::keccak::hash;
     tx_vout: u32
 )]
 pub struct Validator<'info> {
-    /// The system account signing this instruction
+    /// The account signing this instruction
     #[account(
         // CHECK: the signer is allowlisted in 'bascule_data.withdrawal_validators'
         constraint = bascule_data.withdrawal_validators.contains(&validator.key()) @ BasculeError::ENotValidator,

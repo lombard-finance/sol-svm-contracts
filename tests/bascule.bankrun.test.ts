@@ -407,8 +407,10 @@ describe("bascule", () => {
 
         // but paying with a separate (funded) wallet should work
         await ts.validateWithdrawal(d, unfundedValidator, ts.acc.other);
-        await ts.expectWithdrawn(d);
       }
+
+      // either way, the deposit should be marked as 'withdrawn' by now
+      await ts.expectWithdrawn(d);
     });
   }
 

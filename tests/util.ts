@@ -198,7 +198,7 @@ export class TestSetup {
    */
   async validateWithdrawal(d: DepositId, validator?: anchor.Wallet, payer?: anchor.Wallet) {
     validator ??= this.acc.validator;
-    payer ??= validator ?? this.acc.validator;
+    payer ??= validator;
     return await this.program.methods
       .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
       .accounts({ validator: validator.publicKey, payer: payer.publicKey })
