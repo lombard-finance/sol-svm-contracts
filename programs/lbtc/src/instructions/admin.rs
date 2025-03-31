@@ -3,9 +3,8 @@ use crate::{
     constants,
     errors::LBTCError,
     events::{
-        BasculeChanged, BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved,
-        DustFeeRateSet, OperatorSet, OwnershipTransferInitiated, PauserAdded, PauserRemoved,
-        WithdrawalsEnabled,
+        BasculeEnabled, BurnCommissionSet, ClaimerAdded, ClaimerRemoved, DustFeeRateSet,
+        OperatorSet, OwnershipTransferInitiated, PauserAdded, PauserRemoved, WithdrawalsEnabled,
     },
     state::Config,
 };
@@ -105,12 +104,6 @@ pub fn remove_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
         LBTCError::PauserNotFound
     );
     emit!(PauserRemoved { pauser });
-    Ok(())
-}
-
-pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
-    ctx.accounts.config.bascule = bascule;
-    emit!(BasculeChanged { address: bascule });
     Ok(())
 }
 

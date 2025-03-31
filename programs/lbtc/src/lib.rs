@@ -11,7 +11,7 @@ use constants::VALIDATOR_PUBKEY_SIZE;
 use constants::{FEE_PAYLOAD_LEN, MINT_PAYLOAD_LEN};
 use instructions::*;
 
-declare_id!("79cscM6J9Af24TGGWcXyDf56fDLoodkyXdVy4R9aZ6C6");
+declare_id!("HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA");
 
 #[program]
 pub mod lbtc {
@@ -146,10 +146,6 @@ pub mod lbtc {
 
     pub fn set_treasury(ctx: Context<SetTreasury>) -> Result<()> {
         instructions::set_treasury(ctx)
-    }
-
-    pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
-        instructions::set_bascule(ctx, bascule)
     }
 
     pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {

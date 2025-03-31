@@ -240,17 +240,6 @@ describe("LBTC", () => {
       expect(cfg.treasury.toBase58() == treasury.toBase58());
     });
 
-    it("setBascule: successful by admin", async () => {
-      const tx = await program.methods
-        .setBascule(payer.publicKey)
-        .accounts({ payer: admin.publicKey, config: configPDA })
-        .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
-      const cfg = await program.account.config.fetch(configPDA);
-      expect(cfg.bascule.toBase58() == payer.publicKey.toBase58());
-    });
-
     //Claimer is a role which can perform autoclaim
     it("addClaimer: successful by admin", async () => {
       const tx = await program.methods
@@ -633,16 +622,6 @@ describe("LBTC", () => {
           program.methods
             .setTreasury()
             .accounts({ payer: payer.publicKey, config: configPDA, treasury })
-            .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith("An address constraint was violated");
-      });
-
-      it("setBascule: rejects when called by not admin", async () => {
-        await expect(
-          program.methods
-            .setBascule(payer.publicKey)
-            .accounts({ payer: payer.publicKey, config: configPDA })
             .signers([payer])
             .rpc()
         ).to.be.rejectedWith("An address constraint was violated");

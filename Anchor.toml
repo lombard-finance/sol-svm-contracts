@@ -7,14 +7,14 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-bascule = "At7x8PtHWsJrLFLFRf6VY3eBmtCwsTFEBeKU2CzKvtvs"
-lbtc = "DBhJbGuCmvwbwq74o1wDVqGfzeiGUtwh8t9shkWLT1HU"
+bascule = "EpjQWMXj6xgR2ijhJG1pmZpKmHM9is8vk8ATTfdVFtq7"
+lbtc = "HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
@@ -22,4 +22,5 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [test]
 startup_wait = 10000
+shutdown_wait = 2000
 upgradeable = true

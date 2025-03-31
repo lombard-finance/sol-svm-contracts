@@ -37,7 +37,6 @@ pub struct MintFromPayload<'info> {
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
-    #[account(constraint = bascule.key() == config.bascule)]
     pub bascule: Option<Program<'info, Bascule>>,
     #[account(mut, seeds = [BASCULE_SEED], bump = bascule_data.bump)]
     pub bascule_data: Option<Account<'info, BasculeData>>,

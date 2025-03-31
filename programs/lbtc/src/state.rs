@@ -27,7 +27,6 @@ pub struct Config {
     pub withdrawals_enabled: bool,
     pub dust_fee_rate: u64,
     pub bascule_enabled: bool,
-    pub bascule: Pubkey,
 
     // Global pause
     pub paused: bool,
