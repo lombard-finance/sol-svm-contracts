@@ -22,12 +22,13 @@ use anchor_lang::solana_program::keccak::hash;
 )]
 pub struct Validator<'info> {
     /// The account signing this instruction
+    /// ASSERT:
+    /// - the signer is allowlisted in 'bascule_data.withdrawal_validators'
+    /// - the program is not paused
+    /// - deposit_id is derived from the rest of the arguments
     #[account(
-        // CHECK: the signer is allowlisted in 'bascule_data.withdrawal_validators'
         constraint = bascule_data.withdrawal_validators.contains(&validator.key()) @ BasculeError::ENotValidator,
-        // CHECK: the program is not paused
         constraint = !bascule_data.is_paused @ BasculeError::EPaused,
-        // CHECK: deposit id integrity
         constraint = deposit_id == to_deposit_id(recipient, amount, tx_id, tx_vout) @ BasculeError::EInvalidDepositId,
     )]
     validator: Signer<'info>,

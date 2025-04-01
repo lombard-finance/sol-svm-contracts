@@ -38,3 +38,28 @@ pub struct WithdrawalValidated {
     pub deposit_id: DepositId,
     pub amount: u64,
 }
+
+/// Event emitted when 'admin' role is granted
+#[event]
+pub struct AdminGranted {
+    /// The current admin (who executed the change)
+    pub current_deployer: Pubkey,
+    /// The new admin
+    pub new_admin: Pubkey,
+}
+
+/// Event emitted when admin transfer is initiate
+#[event]
+pub struct AdminTransferInitiated {
+    /// The current admin
+    pub current_admin: Pubkey,
+    /// The new admin (who still has to accept the transfer)
+    pub pending_admin: Pubkey,
+}
+
+/// Event emitted when admin transfer is accepted
+#[event]
+pub struct AdminTransferAccepted {
+    /// The new admin who has just accept the transfer
+    pub new_admin: Pubkey,
+}

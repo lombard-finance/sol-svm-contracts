@@ -25,6 +25,21 @@ pub mod bascule {
         instructions::update_validate_threshold(ctx, new_threshold)
     }
 
+    /// Start the admin transfer process
+    pub fn transfer_admin_init(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+        instructions::transfer_admin_init(ctx, new_admin)
+    }
+
+    /// Accept the previously initiated admin transfer process
+    pub fn transfer_admin_accept(ctx: Context<PendingAdmin>) -> Result<()> {
+        instructions::transfer_admin_accept(ctx)
+    }
+
+    /// Authorize an admin (unauthorizing any previously authorized admin)
+    pub fn grant_admin(ctx: Context<Deployer>, admin: Pubkey) -> Result<()> {
+        instructions::grant_admin(ctx, admin)
+    }
+
     /// Authorize a pauser (unauthorizing any previously authorized pauser)
     pub fn grant_pauser(ctx: Context<Admin>, pauser: Pubkey) -> Result<()> {
         instructions::grant_pauser(ctx, pauser)

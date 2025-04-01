@@ -8,7 +8,7 @@ skip-lint = false
 
 [programs.localnet]
 bascule = "EpjQWMXj6xgR2ijhJG1pmZpKmHM9is8vk8ATTfdVFtq7"
-lbtc = "HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA"
+lbtc = "AZcLahWQE2kYFnM6VNhii4Fic3sCpv2RjSg6ekWYhXqS"
 
 [registry]
 url = "https://api.apr.dev"

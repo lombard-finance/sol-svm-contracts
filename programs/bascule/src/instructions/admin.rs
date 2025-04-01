@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     errors::BasculeError,
-    events::UpdateValidateThreshold,
+    events::{AdminTransferInitiated, UpdateValidateThreshold},
     state::{BasculeData, BASCULE_SEED, MAX_VALIDATORS},
 };
 
@@ -15,7 +15,8 @@ use crate::{
 #[derive(Accounts)]
 pub struct Admin<'info> {
     /// The system account paying for this instruction
-    /// CHECK: equals to 'bascule_data.admin'
+    /// ASSERT:
+    /// - the account address equals to 'bascule_data.admin'
     #[account(address = bascule_data.admin @ BasculeError::ENotAdmin)]
     admin: Signer<'info>,
 
@@ -114,10 +115,35 @@ pub fn add_withdrawal_validator(ctx: Context<Admin>, validator: Pubkey) -> Resul
 pub fn remove_withdrawal_validator(ctx: Context<Admin>, validator: Pubkey) -> Result<()> {
     let allowlist = &mut ctx.accounts.bascule_data.withdrawal_validators;
 
-    // nothing to do if already allowlisted
+    // remove the first occurrence of `validator` in `withdrawal_validators`
+    // NOTE: we ensure `withdrawal_validators` never contains any
+    //       duplicates, so using `if` instead of `while` suffices
     if let Some(idx) = allowlist.iter().position(|v| v == &validator) {
         allowlist.swap_remove(idx);
     }
 
+    Ok(())
+}
+
+/// Starts the admin transfer process by offering the 'admin' role to a new wallet.
+///
+/// Requires:
+/// - the signer has [Admin] permissions (errors with [BasculeError::ENotAdmin])
+///
+/// Effects:
+/// - sets [BasculeData::pending_admin] to `new_admin`
+///
+/// Emits:
+/// - [AdminTransferInitiated]
+//
+// NOTE: reasons we have this in addition to `grant_admin`:
+//  - if the contract is upgradeable, this let's us change admin without enabling the most sensitive (deployer) key
+//  - we may want to make the contract final (non-upgradeable) in which case `grant_admin` will not be possible to invoke
+pub fn transfer_admin_init(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> {
+    ctx.accounts.bascule_data.pending_admin = new_admin;
+    emit!(AdminTransferInitiated {
+        current_admin: ctx.accounts.admin.key(),
+        pending_admin: new_admin
+    });
     Ok(())
 }

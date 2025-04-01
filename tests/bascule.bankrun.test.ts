@@ -15,14 +15,14 @@ import {
   ENotPauser,
   ENotReporter,
   ENotValidator,
+  ENotPendingAdmin,
   EPaused,
   EWithdrawalFailedValidation,
   assertError,
   delayMs,
-  rpcOpts
+  rpcOpts,
 } from "./util";
 import * as util from "./util";
-
 import BASCULE_IDL from "./../target/idl/bascule.json";
 
 describe("bascule", () => {
@@ -31,8 +31,13 @@ describe("bascule", () => {
   let ts: util.TestSetup;
 
   // Helper that calls the 'initialize' method using the default wallet
-  const callInit = (wallet: anchor.Wallet) =>
-    program.methods.initialize().accounts({ payer: wallet.publicKey }).signers([wallet.payer]).rpc(rpcOpts);
+  const callInit = async (wallet: anchor.Wallet) =>
+    program.methods
+      .initialize()
+      // bankrun can only deploy non-upgradeable programs, hence the program data is null
+      .accounts({ payer: wallet.publicKey, programData: null })
+      .signers([wallet.payer])
+      .rpc(rpcOpts);
 
   // Waits until the blockhash changes
   const untilNextBlockHash = async () => {
@@ -54,26 +59,28 @@ describe("bascule", () => {
     const context = await startAnchor(
       ".",
       [],
-      [pauser, reporter, validator, other].map(w => {
+      [pauser, reporter, validator, other].map((w) => {
         return {
           address: w.publicKey,
           info: {
             lamports: 1_000_000_000, // 1 SOL equivalent
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
-            executable: false
-          }
+            executable: false,
+          },
         };
       })
     );
     provider = new BankrunProvider(context);
     program = new Program<Bascule>(BASCULE_IDL as Bascule, provider);
+    const deployer = new anchor.Wallet(provider.context.payer);
     ts = new util.TestSetup(program, {
-      admin: new anchor.Wallet(provider.context.payer),
+      deployer,
+      admin: deployer,
       pauser,
       reporter,
       validator,
-      other
+      other,
     });
 
     // call initialize
@@ -98,9 +105,7 @@ describe("bascule", () => {
       console.log("calling init again with wallet", w.publicKey.toBase58());
       const err = await assertError(callInit(w));
       expect(err).to.be.instanceOf(SendTransactionError);
-      expect(((err as SendTransactionError)?.transactionLogs ?? [])[3]).to.match(
-        /^Allocate: account Address.* already in use$/
-      );
+      expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/^Allocate: account Address.* already in use$/);
     }
   });
 
@@ -153,7 +158,46 @@ describe("bascule", () => {
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
-    expect(await ts.fetchData().then(bd => bd.validateThreshold.toNumber())).to.eq(1);
+    expect(await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())).to.eq(1);
+  });
+
+  // Checks:
+  // - admin can transfer admin to a new wallet
+  it("transfer admin", async () => {
+    const newAdmin = ts.acc.other;
+
+    // only admin can start the transfer
+    for (const w of [ts.acc.pauser, ts.acc.other]) {
+      await assertError(ts.transferAdminInit(newAdmin.publicKey, w), ENotAdmin);
+    }
+
+    // now do it for real
+    await ts.transferAdminInit(newAdmin.publicKey, ts.acc.admin);
+
+    // the current admin is still the admin
+    {
+      const bd = await ts.fetchData();
+      expect(bd.admin.toBase58()).to.eq(ts.acc.admin.publicKey.toBase58());
+    }
+    await assertError(ts.setThreshold(100, newAdmin), ENotAdmin);
+
+    // only the pending admin can complete the transfer
+    for (const w of [ts.acc.admin, ts.acc.pauser]) {
+      await assertError(ts.transferAdminAccept(w), ENotPendingAdmin);
+    }
+    await ts.transferAdminAccept(newAdmin);
+
+    // check that the new admin is indeed the admin
+    {
+      const bd = await ts.fetchData();
+      expect(bd.admin.toBase58()).to.eq(newAdmin.publicKey.toBase58());
+    }
+    await assertError(ts.setThreshold(100, ts.acc.admin), ENotAdmin);
+    await ts.setThreshold(101, newAdmin);
+    {
+      const bd = await ts.fetchData();
+      expect(bd.validateThreshold.toNumber()).to.eq(101);
+    }
   });
 
   // Checks:
@@ -193,13 +237,13 @@ describe("bascule", () => {
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.true;
+    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.true;
     await program.methods
       .unpause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
       .rpc(rpcOpts);
-    expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.false;
+    expect(await ts.fetchData().then((bd) => bd.isPaused)).to.be.false;
   });
 
   // Checks:
@@ -241,7 +285,7 @@ describe("bascule", () => {
   // - reporting the same deposit multiple times is allowed
   // - reporting a deposit id of a wrong length is outright denied
   it("report", async () => {
-    const depositId = [...Array(32)].map(_ => 0);
+    const depositId = [...Array(32)].map((_) => 0);
 
     // grant reporter
     await program.methods
