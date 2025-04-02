@@ -11,7 +11,7 @@ use constants::VALIDATOR_PUBKEY_SIZE;
 use constants::{FEE_PAYLOAD_LEN, MINT_PAYLOAD_LEN};
 use instructions::*;
 
-declare_id!("DBhJbGuCmvwbwq74o1wDVqGfzeiGUtwh8t9shkWLT1HU");
+declare_id!("HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA");
 
 #[program]
 pub mod lbtc {

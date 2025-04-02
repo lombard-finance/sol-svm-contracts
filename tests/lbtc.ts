@@ -1526,10 +1526,12 @@ describe("LBTC", () => {
               mintAuthority: payer.publicKey,
               tokenAuthority: tokenAuth,
               payload: mintPayloadPDA,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: payer.publicKey,
+              deposit: payer.publicKey
             })
             .rpc()
-        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
+        ).to.be.rejectedWith("owner does not match");
       });
 
       it("mintFromPayload: successful", async () => {
@@ -1750,11 +1752,13 @@ describe("LBTC", () => {
               tokenAuthority: tokenAuth,
               treasury: treasury,
               payload: mintPayloadPDA2,
-              bascule: payer.publicKey
+              bascule: payer.publicKey,
+              basculeData: payer.publicKey,
+              deposit: payer.publicKey
             })
             .signers([claimer])
             .rpc()
-        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
+        ).to.be.rejectedWith("owner does not match");
       });
 
       it("mintWithFee: rejects when amount < fee", async () => {
