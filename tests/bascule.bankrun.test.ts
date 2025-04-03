@@ -41,10 +41,14 @@ describe("bascule", () => {
 
   // Waits until the blockhash changes
   const untilNextBlockHash = async () => {
-    const bh0 = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
+    const bh0 = await provider.context.banksClient.getLatestBlockhash(
+      rpcOpts.commitment
+    );
     for (let i = 0; i < 10; i++) {
       await delayMs(50);
-      const bh1 = await provider.context.banksClient.getLatestBlockhash(rpcOpts.commitment);
+      const bh1 = await provider.context.banksClient.getLatestBlockhash(
+        rpcOpts.commitment
+      );
       if (bh1?.[0] !== bh0?.[0]) return;
     }
     throw new Error("Blockhash didn't change");
@@ -105,7 +109,9 @@ describe("bascule", () => {
       console.log("calling init again with wallet", w.publicKey.toBase58());
       const err = await assertError(callInit(w));
       expect(err).to.be.instanceOf(SendTransactionError);
-      expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/^Allocate: account Address.* already in use$/);
+      expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(
+        /^Allocate: account Address.* already in use$/
+      );
     }
   });
 
@@ -148,17 +154,27 @@ describe("bascule", () => {
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
       .rpc(rpcOpts);
-    await program.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
+    await program.methods
+      .pause()
+      .accounts({ pauser: pauser.publicKey })
+      .signers([pauser.payer])
+      .rpc(rpcOpts);
 
     // not allowed even by admin while paused
     await assertError(ts.setThreshold(newThreshold), EPaused);
 
     // unpause and try again
-    await program.methods.unpause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
+    await program.methods
+      .unpause()
+      .accounts({ pauser: pauser.publicKey })
+      .signers([pauser.payer])
+      .rpc(rpcOpts);
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
-    expect(await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())).to.eq(1);
+    expect(
+      await ts.fetchData().then((bd) => bd.validateThreshold.toNumber())
+    ).to.eq(1);
   });
 
   // Checks:
@@ -223,11 +239,19 @@ describe("bascule", () => {
 
     // the admin cannot pause/unpause
     await assertError(
-      program.methods.pause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
+      program.methods
+        .pause()
+        .accounts({ pauser: ts.acc.admin.publicKey })
+        .signers([ts.acc.admin.payer])
+        .rpc(rpcOpts),
       ENotPauser
     );
     await assertError(
-      program.methods.unpause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
+      program.methods
+        .unpause()
+        .accounts({ pauser: ts.acc.admin.publicKey })
+        .signers([ts.acc.admin.payer])
+        .rpc(rpcOpts),
       ENotPauser
     );
 
@@ -320,7 +344,10 @@ describe("bascule", () => {
         [Buffer.from("deposit"), Buffer.from(depositId)],
         program.programId
       );
-      const deposit = await program.account.deposit.fetch(depositPda, rpcOpts.commitment);
+      const deposit = await program.account.deposit.fetch(
+        depositPda,
+        rpcOpts.commitment
+      );
       expect(deposit.bump).to.eq(bump);
       expect(deposit.state.reported).to.exist;
       expect(deposit.state.withdrawn).to.be.undefined;
@@ -349,7 +376,13 @@ describe("bascule", () => {
     for (const v of validators) {
       await assertError(
         program.methods
-          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
+          .validateWithdrawal(
+            d.depositId,
+            d.recipient,
+            d.amount,
+            [...d.txId],
+            d.txVout
+          )
           .accounts({ validator: v.publicKey, payer: v.publicKey })
           .signers([v.payer])
           .rpc(rpcOpts),
@@ -371,8 +404,17 @@ describe("bascule", () => {
     for (const validator of validators) {
       await assertError(
         program.methods
-          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-          .accounts({ validator: validator.publicKey, payer: validator.publicKey })
+          .validateWithdrawal(
+            d.depositId,
+            d.recipient,
+            d.amount,
+            [...d.txId],
+            d.txVout
+          )
+          .accounts({
+            validator: validator.publicKey,
+            payer: validator.publicKey,
+          })
           .signers([validator.payer])
           .rpc(rpcOpts),
         "EWithdrawalFailedValidation"
@@ -392,7 +434,13 @@ describe("bascule", () => {
     // admin is not allowed to validate but validator is
     for (const v of validators) {
       const rpc = program.methods
-        .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
+        .validateWithdrawal(
+          d.depositId,
+          d.recipient,
+          d.amount,
+          [...d.txId],
+          d.txVout
+        )
         .accounts({ validator: v.publicKey, payer: v.publicKey })
         .signers([v.payer])
         .rpc(rpcOpts);
@@ -439,7 +487,11 @@ describe("bascule", () => {
       const unfundedValidator = new anchor.Wallet(Keypair.generate());
       await ts.grantValidator(unfundedValidator.publicKey);
 
-      const validateRpc = ts.validateWithdrawal(d, unfundedValidator, unfundedValidator);
+      const validateRpc = ts.validateWithdrawal(
+        d,
+        unfundedValidator,
+        unfundedValidator
+      );
       if (reportFirst) {
         // paying with the unfunded wallet should work, because the deposit account
         // already exists, so no payment is needed
@@ -449,7 +501,9 @@ describe("bascule", () => {
         // does not exist and needs to be created, which requires payment
         const err = await assertError(validateRpc);
         expect(err).to.be.instanceOf(SendTransactionError);
-        expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(/insufficient lamports 0/);
+        expect(((err as SendTransactionError)?.logs ?? [])[3]).to.match(
+          /insufficient lamports 0/
+        );
 
         // but paying with a separate (funded) wallet should work
         await ts.validateWithdrawal(d, unfundedValidator, ts.acc.other);
@@ -518,7 +572,10 @@ describe("bascule", () => {
       } else {
         await assertError(rpc, EWithdrawalFailedValidation);
         // trying to validate again fails again
-        await assertError(ts.validateWithdrawal(depositId), EWithdrawalFailedValidation);
+        await assertError(
+          ts.validateWithdrawal(depositId),
+          EWithdrawalFailedValidation
+        );
         // reporting can still be done
         await ts.reportDeposit(depositId);
         // and then validation works too

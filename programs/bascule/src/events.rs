@@ -39,15 +39,6 @@ pub struct WithdrawalValidated {
     pub amount: u64,
 }
 
-/// Event emitted when 'admin' role is granted
-#[event]
-pub struct AdminGranted {
-    /// The current admin (who executed the change)
-    pub current_deployer: Pubkey,
-    /// The new admin
-    pub new_admin: Pubkey,
-}
-
 /// Event emitted when admin transfer is initiate
 #[event]
 pub struct AdminTransferInitiated {

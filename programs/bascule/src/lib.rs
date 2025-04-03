@@ -5,10 +5,9 @@ pub mod events;
 pub mod instructions;
 pub mod state;
 
-declare_id!("EpjQWMXj6xgR2ijhJG1pmZpKmHM9is8vk8ATTfdVFtq7");
+declare_id!("E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn");
 
 use crate::state::DepositId;
-pub use instructions::validator::to_deposit_id;
 use instructions::*;
 
 #[program]
@@ -33,11 +32,6 @@ pub mod bascule {
     /// Accept the previously initiated admin transfer process
     pub fn transfer_admin_accept(ctx: Context<PendingAdmin>) -> Result<()> {
         instructions::transfer_admin_accept(ctx)
-    }
-
-    /// Authorize an admin (unauthorizing any previously authorized admin)
-    pub fn grant_admin(ctx: Context<Deployer>, admin: Pubkey) -> Result<()> {
-        instructions::grant_admin(ctx, admin)
     }
 
     /// Authorize a pauser (unauthorizing any previously authorized pauser)
