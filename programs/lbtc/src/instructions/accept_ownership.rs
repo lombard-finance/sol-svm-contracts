@@ -1,12 +1,12 @@
 //! Functionality to accept an ownership transfer.
-use crate::{events::OwnershipTransferred, state::Config};
+use crate::{constants, events::OwnershipTransferred, state::Config};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct AcceptOwnership<'info> {
     #[account(address = config.pending_admin)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
 }
 

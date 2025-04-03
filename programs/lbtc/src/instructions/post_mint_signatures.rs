@@ -1,5 +1,6 @@
 //! Functionality to post signatures for a posted mint payload.
 use crate::{
+    constants::CONFIG_SEED,
     errors::LBTCError,
     events::SignaturesAdded,
     state::{Config, MintPayload},
@@ -10,6 +11,7 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: [u8; 32])]
 pub struct PostMintSignatures<'info> {
+    #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,

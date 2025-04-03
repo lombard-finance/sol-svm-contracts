@@ -1,5 +1,5 @@
 //! Functionality to set treasury address.
-use crate::{events::TreasuryChanged, state::Config};
+use crate::{constants, events::TreasuryChanged, state::Config};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
@@ -7,7 +7,7 @@ use anchor_spl::token_interface::TokenAccount;
 pub struct SetTreasury<'info> {
     #[account(address = config.admin)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(
         token::mint = config.mint,

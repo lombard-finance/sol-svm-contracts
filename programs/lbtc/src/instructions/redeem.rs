@@ -20,7 +20,7 @@ pub struct Redeem<'info> {
         token::token_program = token_program,
     )]
     pub holder: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
     #[account(mut, address = config.mint)]

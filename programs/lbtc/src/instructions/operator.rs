@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 pub struct Operator<'info> {
     #[account(address = config.operator)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
 }
 

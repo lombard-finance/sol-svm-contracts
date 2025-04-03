@@ -8,8 +8,8 @@ pub mod state;
 declare_id!("At7x8PtHWsJrLFLFRf6VY3eBmtCwsTFEBeKU2CzKvtvs");
 
 use crate::state::DepositId;
-use instructions::*;
 pub use instructions::validator::to_deposit_id;
+use instructions::*;
 
 #[program]
 pub mod bascule {

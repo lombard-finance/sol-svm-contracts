@@ -14,7 +14,7 @@ use anchor_lang::prelude::*;
 pub struct Admin<'info> {
     #[account(address = config.admin)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
 }
 

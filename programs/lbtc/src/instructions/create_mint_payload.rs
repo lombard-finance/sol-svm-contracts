@@ -1,6 +1,6 @@
 //! Instruction to post a mint payload against which signatures can be posted.
 use crate::{
-    constants::MINT_PAYLOAD_LEN,
+    constants::{CONFIG_SEED, MINT_PAYLOAD_LEN},
     errors::LBTCError,
     events::MintPayloadPosted,
     state::{Config, MintPayload},
@@ -14,6 +14,7 @@ use anchor_lang::solana_program::hash::hash as sha256;
 pub struct CreateMintPayload<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(
         init,
