@@ -30,7 +30,7 @@ const weights = process.argv[4].split(",").map(w => new anchor.BN(w));
     console.log("Creating metadata PDA for valset payload:", metadataPDA.toBase58());
 
     const tx = await program.methods
-      .postMetadataForValsetPayload(payloadHash, validators, weights)
+      .postMetadataForValsetPayload(validators, weights)
       .accounts({
         payer: payer,
         metadata: metadataPDA

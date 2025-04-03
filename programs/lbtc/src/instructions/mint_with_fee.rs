@@ -101,6 +101,7 @@ pub fn mint_with_fee(
         fee,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.mint_authority.to_account_info(),
+        ctx.accounts.token_authority.to_account_info(),
         ctx.bumps.token_authority,
     )?;
     utils::execute_mint(
@@ -109,6 +110,7 @@ pub fn mint_with_fee(
         amount - fee,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.mint_authority.to_account_info(),
+        ctx.accounts.token_authority.to_account_info(),
         ctx.bumps.token_authority,
     )
 }

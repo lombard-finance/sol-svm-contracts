@@ -1505,7 +1505,7 @@ describe("LBTC", () => {
               systemProgram: null
             })
             .rpc()
-        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
+        ).to.be.rejectedWith("owner does not match");
       });
 
       it("mintFromPayload: successful", async () => {
@@ -1733,7 +1733,7 @@ describe("LBTC", () => {
             })
             .signers([claimer])
             .rpc()
-        ).to.be.rejectedWith("Cross-program invocation with unauthorized signer or writable account");
+        ).to.be.rejectedWith("owner does not match");
       });
 
       it("mintWithFee: rejects when amount < fee", async () => {

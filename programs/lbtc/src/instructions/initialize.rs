@@ -1,4 +1,4 @@
-//! Initializes the LBTC program, simply setting the admin key.
+//! Initializes the LBTC program, setting all initial values.
 use crate::{constants, errors::LBTCError, state::Config};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::bpf_loader_upgradeable;

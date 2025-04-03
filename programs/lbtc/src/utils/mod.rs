@@ -13,21 +13,23 @@ pub fn execute_mint<'info>(
     amount: u64,
     mint: AccountInfo<'info>,
     authority: AccountInfo<'info>,
+    token_auth: AccountInfo<'info>,
     bump: u8,
 ) -> Result<()> {
     let token_authority_sig: &[&[&[u8]]] = &[&[crate::constants::TOKEN_AUTHORITY_SEED, &[bump]]];
-    token_interface::mint_to(
-        CpiContext::new_with_signer(
-            token_program,
-            token_interface::MintTo {
-                mint,
-                to,
-                authority,
-            },
-            token_authority_sig,
-        ),
+    let ix = spl_token_2022::instruction::mint_to(
+        &token_program.key(),
+        &mint.key(),
+        &to.key(),
+        &authority.key(),
+        &[&token_auth.key()],
         amount,
-    )
+    )?;
+    Ok(solana_program::program::invoke_signed(
+        &ix,
+        &[to, mint, authority, token_auth],
+        token_authority_sig,
+    )?)
 }
 
 pub fn execute_burn<'info>(

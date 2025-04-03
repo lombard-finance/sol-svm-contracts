@@ -72,6 +72,7 @@ pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 
         amount,
         ctx.accounts.mint.to_account_info(),
         ctx.accounts.mint_authority.to_account_info(),
+        ctx.accounts.token_authority.to_account_info(),
         ctx.bumps.token_authority,
     )
 }

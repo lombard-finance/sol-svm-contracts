@@ -16,7 +16,9 @@
     "mintWithFee": "ts-node -T scripts/mintWithFee.ts",
     "setTreasury": "ts-node -T scripts/setTreasury.ts",
     "enableWithdrawals": "ts-node -T scripts/enableWithdrawals.ts",
-    "redeem": "ts-node -T scripts/redeem.ts"
+    "redeem": "ts-node -T scripts/redeem.ts",
+    "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
+    "acceptOwnership": "ts-node -T scripts/acceptOwnership.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.0",
