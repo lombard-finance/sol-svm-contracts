@@ -9,6 +9,7 @@ use anchor_spl::token_interface::{set_authority, Mint, SetAuthority, TokenInterf
 pub struct ChangeAuth<'info> {
     #[account(address = config.admin)]
     pub payer: Signer<'info>,
+    #[account(seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(mut, address = config.mint)]
     pub mint: InterfaceAccount<'info, Mint>,

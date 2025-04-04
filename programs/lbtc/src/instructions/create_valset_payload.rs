@@ -14,6 +14,7 @@ use anchor_lang::solana_program::hash::hash as sha256;
 pub struct CreateValset<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(mut, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,

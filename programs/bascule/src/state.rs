@@ -34,15 +34,13 @@ pub struct BasculeData {
     ///
     /// This account can grant other capabilities and update most of the properties of this data account.
     /// Whoever calls the "Initialize" instruction becomes the admin; afterwards, the admin cannot be changed.
-    ///
-    /// Note that this account can be different from the "upgrade authority" account (i.e., the account that
-    /// deployed the program). In fact, it is not possible to programmatically constrain this to be the same
-    /// as the upgrade authority (other than hardcoding the address). In practice, whichever account is
-    /// used to deploy the program will most likely be used immediately after to initialize the program as well.
     //
     // NOTE: in EVM and SUI bascule this is called "owner"; here we call it "admin"
     //       to disambiguate from the Solana-defined account owner.
     pub admin: Pubkey,
+
+    /// The pending admin (which needs to explicitly accept before becoming the new admin).
+    pub pending_admin: Pubkey,
 
     /// The account that has the "pauser" capability.
     /// This account is allowed to pause and unpause the program.
@@ -54,6 +52,8 @@ pub struct BasculeData {
     pub deposit_reporter: Pubkey,
 
     /// The accounts that are allowed to validate withdrawals.
+    /// INVARIANT:
+    /// - this vector contains no duplicates
     #[max_len(MAX_VALIDATORS)]
     pub withdrawal_validators: Vec<Pubkey>,
 

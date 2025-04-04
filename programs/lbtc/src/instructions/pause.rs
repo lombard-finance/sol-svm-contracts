@@ -1,11 +1,11 @@
 //! Pauses the program.
-use crate::{errors::LBTCError, events::PauseEnabled, state::Config};
+use crate::{constants::CONFIG_SEED, errors::LBTCError, events::PauseEnabled, state::Config};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct Pause<'info> {
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
 }
 

@@ -1,5 +1,6 @@
 //! Sets the first validator set on the program.
 use crate::{
+    constants,
     errors::LBTCError,
     events::ValidatorSetUpdated,
     state::{Config, Metadata, ValsetPayload},
@@ -10,7 +11,7 @@ use anchor_lang::prelude::*;
 pub struct SetInitialValset<'info> {
     #[account(mut, address = config.admin)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(mut, close = payer, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,

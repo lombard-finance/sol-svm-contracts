@@ -8,10 +8,17 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use bascule::{
+    self,
+    program::Bascule,
+    state::{BasculeData, BASCULE_SEED},
+};
 
 #[derive(Accounts)]
 #[instruction(mint_payload_hash: [u8; 32])]
 pub struct MintFromPayload<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -31,20 +38,19 @@ pub struct MintFromPayload<'info> {
     pub token_authority: UncheckedAccount<'info>,
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
-    /// CHECK: We constrain this to config-set bascule.
-    #[account(constraint = bascule.key() == config.bascule)]
-    pub bascule: UncheckedAccount<'info>,
-    /// CHECK: This is validated in Bascule.
-    pub bascule_data: UncheckedAccount<'info>,
-    /// CHECK: This is validated in Bascule.
-    pub deposit: UncheckedAccount<'info>,
-    pub system_program: Program<'info, System>,
+    pub bascule: Option<Program<'info, Bascule>>,
+    #[account(mut, seeds = [BASCULE_SEED], seeds::program = bascule::ID, bump = bascule_data.bump)]
+    pub bascule_data: Option<Account<'info, BasculeData>>,
+    #[account(mut)]
+    pub deposit: Option<UncheckedAccount<'info>>,
+    pub system_program: Option<Program<'info, System>>,
 }
 
 pub fn mint_from_payload(ctx: Context<MintFromPayload>, mint_payload_hash: [u8; 32]) -> Result<()> {
     require!(!ctx.accounts.config.paused, LBTCError::Paused);
     require!(!ctx.accounts.payload.minted, LBTCError::MintPayloadUsed);
     let amount = validation::post_validate_mint(
+        &ctx.accounts.payer,
         &ctx.accounts.config,
         ctx.bumps.config,
         &ctx.accounts.recipient,

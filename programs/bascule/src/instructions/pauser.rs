@@ -11,7 +11,8 @@ use crate::{
 #[derive(Accounts)]
 pub struct Pauser<'info> {
     /// The system account paying for this instruction
-    /// CHECK: equals to 'bascule_data.pauser'
+    /// ASSERT:
+    /// - the account address equals to 'bascule_data.pauser'
     #[account(address = bascule_data.pauser @ BasculeError::ENotPauser)]
     pauser: Signer<'info>,
 

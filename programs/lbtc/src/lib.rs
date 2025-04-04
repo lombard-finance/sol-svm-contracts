@@ -148,10 +148,6 @@ pub mod lbtc {
         instructions::set_treasury(ctx)
     }
 
-    pub fn set_bascule(ctx: Context<Admin>, bascule: Pubkey) -> Result<()> {
-        instructions::set_bascule(ctx, bascule)
-    }
-
     pub fn add_claimer(ctx: Context<Admin>, claimer: Pubkey) -> Result<()> {
         instructions::add_claimer(ctx, claimer)
     }

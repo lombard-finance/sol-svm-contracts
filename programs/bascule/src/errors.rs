@@ -4,8 +4,14 @@ use anchor_lang::error_code;
 
 #[error_code]
 pub enum BasculeError {
+    #[msg("The initialize method can only be called by the program upgrade authority")]
+    ENotDeployer,
+
     #[msg("This account is not allowed to perform admin operations")]
     ENotAdmin,
+
+    #[msg("This account is not a pending admin")]
+    ENotPendingAdmin,
 
     #[msg("This account is not allowed to report deposits")]
     ENotReporter,

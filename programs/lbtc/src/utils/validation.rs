@@ -4,6 +4,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use bascule::{
     cpi::{accounts::Validator, validate_withdrawal},
+    program::Bascule,
+    state::BasculeData,
     to_deposit_id,
 };
 use solana_ed25519_verify::verify_signature;
@@ -22,15 +24,16 @@ pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
 }
 
 pub fn post_validate_mint<'info>(
+    payer: &Signer<'info>,
     config: &Account<'info, Config>,
     config_bump: u8,
     recipient: &InterfaceAccount<'_, TokenAccount>,
     mint_payload: &[u8],
     weight: u64,
-    bascule: &UncheckedAccount<'info>,
-    bascule_data: &UncheckedAccount<'info>,
-    deposit: &UncheckedAccount<'info>,
-    system_program: &Program<'info, System>,
+    bascule: &Option<Program<'info, Bascule>>,
+    bascule_data: &Option<Account<'info, BasculeData>>,
+    deposit: &Option<UncheckedAccount<'info>>,
+    system_program: &Option<Program<'info, System>>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;
     require!(
@@ -49,12 +52,25 @@ pub fn post_validate_mint<'info>(
     if config.bascule_enabled {
         validate_withdrawal(
             CpiContext::new_with_signer(
-                bascule.to_account_info(),
+                bascule
+                    .as_ref()
+                    .expect("bascule should be passed if bascule is enabled")
+                    .to_account_info(),
                 Validator {
+                    payer: payer.to_account_info(),
                     validator: config.to_account_info(),
-                    bascule_data: bascule_data.to_account_info(),
-                    deposit: deposit.to_account_info(),
-                    system_program: system_program.to_account_info(),
+                    bascule_data: bascule_data
+                        .as_ref()
+                        .expect("bascule data should be passed if bascule is enabled")
+                        .to_account_info(),
+                    deposit: deposit
+                        .as_ref()
+                        .expect("deposit should be passed if bascule is enabled")
+                        .to_account_info(),
+                    system_program: system_program
+                        .as_ref()
+                        .expect("system program should be passed if bascule is enabled")
+                        .to_account_info(),
                 },
                 signer_seeds,
             ),

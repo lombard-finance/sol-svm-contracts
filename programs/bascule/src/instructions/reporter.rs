@@ -13,11 +13,12 @@ use crate::{
 #[instruction(deposit_id: DepositId)]
 pub struct Reporter<'info> {
     /// The system account paying for this instruction
+    /// ASSERT:
+    /// - the signer is the 'bascule_data.reporter'
+    /// - the program is not paused
     #[account(
         mut,
-        // CHECK: the signer is the 'bascule_data.reporter'
         address = bascule_data.deposit_reporter @ BasculeError::ENotReporter,
-        // CHECK: the program is not paused
         constraint = !bascule_data.is_paused @ BasculeError::EPaused
     )]
     reporter: Signer<'info>,

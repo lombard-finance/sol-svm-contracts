@@ -1,5 +1,6 @@
 //! Posts signatures for a given validator set payload.
 use crate::{
+    constants,
     errors::LBTCError,
     events::SignaturesAdded,
     state::{Config, ValsetPayload},
@@ -10,6 +11,7 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 pub struct PostValsetSignatures<'info> {
     pub payer: Signer<'info>,
+    #[account(seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(mut, seeds = [&payload.hash, &payer.key.to_bytes()], bump)]
     pub payload: Account<'info, ValsetPayload>,
