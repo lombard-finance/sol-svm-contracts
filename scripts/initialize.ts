@@ -21,7 +21,7 @@ const mintFee = new anchor.BN(process.argv[4]);
     const payer = provider.wallet.publicKey; // Get wallet address
     const admin = new PublicKey("HzCyQqcAoxAHeqHAWH1RQbfw7GNUzinqSWideGj7ZtEE"); // Replace with admin address
     const mint = new PublicKey("LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY"); // Replace with mint address
-    const treasury = await spl.getAssociatedTokenAddress(mint, admin, true, spl.TOKEN_PROGRAM_ID);
+    const treasury = await spl.createAssociatedTokenAccount(provider.connection, payer, mint, admin);
 
     // Derive PDA for config
     const [configPDA] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);
