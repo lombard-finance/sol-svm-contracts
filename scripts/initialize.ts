@@ -1,4 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
+import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
 
@@ -6,16 +7,21 @@ import { Lbtc } from "../target/types/lbtc";
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 
-const programId = new PublicKey("1omChwHpiCNdRVYYvsRNqktBvJsC7RJptbfaDZnDPuc"); // Your program ID
+const programId = new PublicKey("79cscM6J9Af24TGGWcXyDf56fDLoodkyXdVy4R9aZ6C6"); // Your program ID
 const program = new anchor.Program(require("../target/idl/lbtc.json"), provider) as anchor.Program<Lbtc>;
 
 const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
 
+const burnCommission = new anchor.BN(process.argv[2]);
+const dustFeeRate = new anchor.BN(process.argv[3]);
+const mintFee = new anchor.BN(process.argv[4]);
+
 (async () => {
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
-    const admin = new PublicKey("1oms3mdU4H9qiKrrX5pzc6Lcj42jmDXuuYpiegdBKYy"); // Replace with admin address
-    const mint = new PublicKey("1btcBkoWqDRFupvSp6ujkCnFb3nP5RckTJZ6Y1Sr7Tt"); // Replace with mint address
+    const admin = new PublicKey("HzCyQqcAoxAHeqHAWH1RQbfw7GNUzinqSWideGj7ZtEE"); // Replace with admin address
+    const mint = new PublicKey("LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY"); // Replace with mint address
+    const treasury = await spl.getAssociatedTokenAddress(mint, admin, true, spl.TOKEN_PROGRAM_ID);
 
     // Derive PDA for config
     const [configPDA] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);
@@ -23,9 +29,11 @@ const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
     console.log("Initializing program with config PDA:", configPDA.toBase58());
 
     const tx = await program.methods
-      .initialize(admin, mint)
+      .initialize(admin, burnCommission, dustFeeRate, mintFee)
       .accounts({
-        payer
+        payer,
+        mint,
+        treasury
       })
       .rpc();
 
