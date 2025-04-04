@@ -25,7 +25,7 @@ pub fn execute_mint<'info>(
         &[&token_auth.key()],
         amount,
     )?;
-    Ok(solana_program::program::invoke_signed(
+    Ok(anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[to, mint, authority, token_auth],
         token_authority_sig,
