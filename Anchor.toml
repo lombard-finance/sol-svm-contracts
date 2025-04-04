@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-bascule = "At7x8PtHWsJrLFLFRf6VY3eBmtCwsTFEBeKU2CzKvtvs"
+bascule = "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn"
 lbtc = "HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA"
 
 [registry]
