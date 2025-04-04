@@ -5,7 +5,7 @@ use anchor_spl::token_interface::TokenAccount;
 use bascule::{
     cpi::{accounts::Validator, validate_withdrawal},
     program::Bascule,
-    state::{BasculeData, Deposit},
+    state::BasculeData,
     to_deposit_id,
 };
 use solana_ed25519_verify::verify_signature;
@@ -32,7 +32,7 @@ pub fn post_validate_mint<'info>(
     weight: u64,
     bascule: &Option<Program<'info, Bascule>>,
     bascule_data: &Option<Account<'info, BasculeData>>,
-    deposit: &Option<Account<'info, Deposit>>,
+    deposit: &Option<UncheckedAccount<'info>>,
     system_program: &Option<Program<'info, System>>,
 ) -> Result<u64> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;

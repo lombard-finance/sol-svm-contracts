@@ -10,8 +10,9 @@ use crate::{
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use bascule::{
+    self,
     program::Bascule,
-    state::{BasculeData, Deposit, BASCULE_SEED},
+    state::{BasculeData, BASCULE_SEED},
 };
 
 #[derive(Accounts)]
@@ -44,10 +45,10 @@ pub struct MintWithFee<'info> {
     #[account(mut, seeds = [&mint_payload_hash], bump)]
     pub payload: Account<'info, MintPayload>,
     pub bascule: Option<Program<'info, Bascule>>,
-    #[account(mut, seeds = [BASCULE_SEED], bump = bascule_data.bump)]
+    #[account(mut, seeds = [BASCULE_SEED], seeds::program = bascule::ID, bump = bascule_data.bump)]
     pub bascule_data: Option<Account<'info, BasculeData>>,
     #[account(mut)]
-    pub deposit: Option<Account<'info, Deposit>>,
+    pub deposit: Option<UncheckedAccount<'info>>,
     pub system_program: Option<Program<'info, System>>,
 }
 
