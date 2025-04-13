@@ -18,7 +18,8 @@
     "enableWithdrawals": "ts-node -T scripts/enableWithdrawals.ts",
     "redeem": "ts-node -T scripts/redeem.ts",
     "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
-    "acceptOwnership": "ts-node -T scripts/acceptOwnership.ts"
+    "acceptOwnership": "ts-node -T scripts/acceptOwnership.ts",
+    "changeMintAuth": "ts-node -T scripts/changeMintAuth.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.0",

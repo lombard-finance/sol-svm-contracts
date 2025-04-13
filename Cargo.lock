@@ -887,7 +887,6 @@ dependencies = [
  "anchor-spl",
  "bascule",
  "hex",
- "solana-program",
  "solana_ed25519_verify",
  "spl-token-2022 8.0.0",
 ]
