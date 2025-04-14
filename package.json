@@ -20,7 +20,7 @@
     "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
     "acceptOwnership": "ts-node -T scripts/acceptOwnership.ts",
     "changeMintAuth": "ts-node -T scripts/changeMintAuth.ts",
-    "createMetadata": "ts-node -T scripts/createMetadata.ts"
+    "createTokenMetadata": "ts-node -T scripts/createTokenMetadata.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.0",
