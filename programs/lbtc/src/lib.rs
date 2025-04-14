@@ -175,4 +175,8 @@ pub mod lbtc {
     pub fn unpause(ctx: Context<Pause>) -> Result<()> {
         instructions::unpause(ctx)
     }
+
+    pub fn create_metadata(ctx: Context<CreateMetadata>) -> Result<()> {
+        instructions::create_metadata(ctx)
+    }
 }

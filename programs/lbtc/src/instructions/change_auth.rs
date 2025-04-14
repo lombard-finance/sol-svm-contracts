@@ -2,8 +2,7 @@
 //! XXX USE WITH EXTREME CAUTION
 use crate::{constants, events::MintAuthorityUpdated, state::Config};
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
-use anchor_spl::token_interface::{set_authority, Mint, SetAuthority, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenInterface};
 
 #[derive(Accounts)]
 pub struct ChangeAuth<'info> {
@@ -28,17 +27,22 @@ pub fn change_mint_auth(ctx: Context<ChangeAuth>, new_auth: Pubkey) -> Result<()
         constants::TOKEN_AUTHORITY_SEED,
         &[ctx.bumps.token_authority],
     ]];
-    set_authority(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            SetAuthority {
-                current_authority: ctx.accounts.current_auth.to_account_info(),
-                account_or_mint: ctx.accounts.mint.to_account_info(),
-            },
-            token_authority_sig,
-        ),
-        AuthorityType::MintTokens,
-        Some(new_auth),
+    let ix = spl_token_2022::instruction::set_authority(
+        &ctx.accounts.token_program.key(),
+        &ctx.accounts.mint.key(),
+        Some(&new_auth.key()),
+        spl_token_2022::instruction::AuthorityType::MintTokens,
+        &ctx.accounts.current_auth.key(),
+        &[&ctx.accounts.token_authority.key()],
+    )?;
+    anchor_lang::solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.current_auth.to_account_info(),
+            ctx.accounts.token_authority.to_account_info(),
+        ],
+        token_authority_sig,
     )?;
     emit!(MintAuthorityUpdated { new_auth });
     Ok(())
