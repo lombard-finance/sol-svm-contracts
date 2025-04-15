@@ -14,9 +14,9 @@ pub struct CreateMetadata<'info> {
     #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     pub token_program: Interface<'info, TokenInterface>,
-    /// CHECK: x
+    /// CHECK: The call will fail if the wrong metadata program is passed.
     pub metadata_program: UncheckedAccount<'info>,
-    /// CHECK: x
+    /// CHECK: The call will fail if the metadata PDA is improperly derived.
     #[account(mut)]
     pub metadata_pda: UncheckedAccount<'info>,
     #[account(mut, address = config.mint)]
@@ -28,7 +28,7 @@ pub struct CreateMetadata<'info> {
     #[account(seeds = [crate::constants::TOKEN_AUTHORITY_SEED], bump)]
     pub token_authority: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
-    /// CHECK: x
+    /// CHECK: The call will fail if the wrong sysvar account is passed.
     pub sysvar_instructions: UncheckedAccount<'info>,
 }
 
@@ -36,11 +36,11 @@ pub fn create_metadata(ctx: Context<CreateMetadata>) -> Result<()> {
     let args = CreateV1InstructionArgs {
         name: "Lombard Staked BTC".to_string(),
         symbol: "LBTC".to_string(),
-        uri: "https://raw.githubusercontent.com/lombard-finance/sol-svm-contracts/refs/heads/main/.assets/metadata.json"
+        uri: "https://raw.githubusercontent.com/lombard-finance/sol-svm-contracts/refs/heads/main/.assets/lbtc.json"
             .to_string(),
         seller_fee_basis_points: 0,
         primary_sale_happened: false,
-        is_mutable: true,
+        is_mutable: true, // Ensure updatability of metadata in the future
         token_standard: TokenStandard::Fungible,
         collection: None,
         uses: None,
