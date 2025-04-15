@@ -34,9 +34,9 @@ pub struct CreateMetadata<'info> {
 
 pub fn create_metadata(ctx: Context<CreateMetadata>) -> Result<()> {
     let args = CreateV1InstructionArgs {
-        name: "Lombard Staked Bitcoin".to_string(),
+        name: "Lombard Staked BTC".to_string(),
         symbol: "LBTC".to_string(),
-        uri: "https://raw.githubusercontent.com/cjtf0991/metadata/refs/heads/main/metadata.json"
+        uri: "https://raw.githubusercontent.com/lombard-finance/sol-svm-contracts/refs/heads/main/.assets/metadata.json"
             .to_string(),
         seller_fee_basis_points: 0,
         primary_sale_happened: false,
