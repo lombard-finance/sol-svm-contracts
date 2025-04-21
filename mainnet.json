@@ -5,5 +5,9 @@
     "LBTC_config": "5Ls2ezQpvUmthZqqtUftTbfehWaDM7EDqrcTq9esiMr1",
     "LBTC_token": "LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY",
     "LBTC_token_auth": "EGhKeCZ1xgaxmkigfeZLRPCARaFsJzBeVWcSKGvQJcXq",
-    "bascule": "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn"
+    "bascule": "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn",
+    "LZ_oft_adapter": "7QkBVz37mjevzKYJDcVy6xKDG1hUewWgj51Dehgcu5sM",
+    "LZ_oft_store": "CQeKmXxoGog57U5jPyYz7YAo8AuLUdoDqxGTXtMPkMuc",
+    "LZ_escrow": "6nc7pBpN82EeKFbcqRt7xVV2h8FNQGdiVnTb2TQvyv99",
+    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK"
 }
