@@ -14,6 +14,7 @@
     "initialize": "ts-node -T scripts/initialize.ts",
     "mintFromPayload": "ts-node -T scripts/mintFromPayload.ts",
     "mintWithFee": "ts-node -T scripts/mintWithFee.ts",
+    "pause": "ts-node -T scripts/pause.ts",
     "postMetadata": "ts-node -T scripts/postMetadata.ts",
     "postMintSignatures": "ts-node -T scripts/postMintSignatures.ts",
     "postValsetSignatures": "ts-node -T scripts/postValsetSignatures.ts",
@@ -21,7 +22,8 @@
     "setInitialValidatorSet": "ts-node -T scripts/setInitialValidatorSet.ts",
     "setNextValidatorSet": "ts-node -T scripts/setNextValidatorSet.ts",
     "setTreasury": "ts-node -T scripts/setTreasury.ts",
-    "transferOwnership": "ts-node -T scripts/transferOwnership.ts"
+    "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
+    "unpause": "ts-node -T scripts/unpause.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.0",
