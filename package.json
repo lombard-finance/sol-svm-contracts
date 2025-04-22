@@ -9,6 +9,8 @@
     "createMintPayload": "ts-node -T scripts/createMintPayload.ts",
     "createTokenMetadata": "ts-node -T scripts/createTokenMetadata.ts",
     "createValsetPayload": "ts-node -T scripts/createValsetPayload.ts",
+    "disableBascule": "ts-node -T scripts/disableBascule.ts",
+    "disableWithdrawals": "ts-node -T scripts/disableWithdrawals.ts",
     "enableBascule": "ts-node -T scripts/enableBascule.ts",
     "enableWithdrawals": "ts-node -T scripts/enableWithdrawals.ts",
     "initialize": "ts-node -T scripts/initialize.ts",
