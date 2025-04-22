@@ -2,43 +2,74 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
-import { sha256 } from "js-sha256";
+import { getBase58EncodedTxBytes, getConfigPDA, getTokenAuthority } from "./utils";
 
-// const provider = new anchor.AnchorProvider(new Connection("https://api.devnet.solana.com"), new anchor.Wallet(new Keypair))
+// Provide instructions.
+if (process.argv.indexOf("--help") > -1) {
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn changeMintAuth <authority>
+
+    Updates the mint authority of the LBTC token to be <authority>.
+    WARNING: This can brick the LBTC minting functionality. Use with extreme caution.`);
+  process.exit(0);
+}
+
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 
-const programId = new PublicKey("bardQVSt6HdZVAafMcSvk3WNHEMf3Sn16Zh6kKkw9jE"); // Your program ID
-const mint = new PublicKey("1ompWcGTYv3w4TGT7NLGTC7cHG7S3ZCSGQrYsz84Zgk"); // Replace with mint address
+// Check for program ID match.
+if (!process.env.PROGRAM_ID) {
+  console.error("no program Id set");
+  process.exit(1);
+}
+const programId = new PublicKey(process.env.PROGRAM_ID);
 const program = new anchor.Program(require("../target/idl/lbtc.json"), provider) as anchor.Program<Lbtc>;
-const multisig = new PublicKey("C42NaT4xHchgJsNmxjH5ccLjUQ2gcLtxRk5MYqwqutCF");
 
-const CONFIG_SEED = Buffer.from("lbtc_config"); // Seed for PDA derivation
+if (!program.programId.equals(programId)) {
+  console.error("the program id in the idl does not match the program id passed as env variable");
+  process.exit(1);
+}
+
+// If we have a populate flag at the end of the call, we return the bytes.
+let populate = process.argv.at(-1) === "--populate";
+
+const authority = new PublicKey(process.argv[2]);
 
 (async () => {
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
-    const tokenAuth = PublicKey.findProgramAddressSync([Buffer.from("token_authority")], program.programId)[0];
+
+    // Derive PDA for token authority
+    const tokenAuthority = getTokenAuthority(programId);
+    console.log("Using token authority PDA:", tokenAuthority.toBase58());
 
     // Derive PDA for config
-    const [configPDA] = PublicKey.findProgramAddressSync([CONFIG_SEED], programId);
+    const configPDA = getConfigPDA(programId);
+    console.log("Using config PDA:", configPDA.toBase58());
 
-    console.log("Initializing program with config PDA:", configPDA.toBase58());
+    // Retrieve LBTC mint
+    const cfg = await program.account.config.fetch(configPDA);
+    const mint = cfg.mint;
 
-    const tx = await program.methods
-      .changeMintAuth(multisig)
-      .accounts({
-        payer,
-        config: configPDA,
-        tokenProgram: spl.TOKEN_PROGRAM_ID,
-        mint: mint,
-        tokenAuthority: tokenAuth,
-        currentAuth: tokenAuth
-      })
-      .rpc();
+    // Get current authority
+    // Hardcoded on base SPL token
+    const mintAccount = await spl.getMint(provider.connection, mint, undefined, spl.TOKEN_PROGRAM_ID);
+    const currentAuth = mintAccount.mintAuthority;
 
-    console.log("Transaction Signature:", tx);
+    const tx = await program.methods.changeMintAuth(authority).accounts({
+      payer,
+      config: configPDA,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+      mint,
+      tokenAuthority,
+      currentAuth
+    });
+
+    if (populate) {
+      console.log("Transaction bytes:", await getBase58EncodedTxBytes(await tx.instruction(), provider.connection));
+    } else {
+      console.log("Transaction Signature:", await tx.rpc());
+    }
   } catch (err) {
-    console.error("Error initializing program:", err);
+    console.error("Error changing mint authority:", err);
   }
 })();

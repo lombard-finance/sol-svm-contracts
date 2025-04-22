@@ -63,14 +63,11 @@ export class DepositId {
 }
 
 export function delayMs(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function assertError(
-  p: Promise<unknown>,
-  code?: string
-): Promise<Error> {
-  const err = await p.then((_) => undefined).catch((e) => e);
+export async function assertError(p: Promise<unknown>, code?: string): Promise<Error> {
+  const err = await p.then(_ => undefined).catch(e => e);
   expect(err).to.exist;
   console.log("Got error, as expected", err.toString());
   if (code) {
@@ -84,10 +81,7 @@ export class TestSetup {
   readonly acc: TestAccounts;
   readonly basculePda: PublicKey;
 
-  constructor(
-    readonly program: anchor.Program<Bascule>,
-    acc: TestAccounts | anchor.Wallet
-  ) {
+  constructor(readonly program: anchor.Program<Bascule>, acc: TestAccounts | anchor.Wallet) {
     this.acc =
       acc instanceof anchor.Wallet
         ? {
@@ -96,13 +90,10 @@ export class TestSetup {
             pauser: new anchor.Wallet(Keypair.generate()),
             reporter: new anchor.Wallet(Keypair.generate()),
             validator: new anchor.Wallet(Keypair.generate()),
-            other: new anchor.Wallet(Keypair.generate()),
+            other: new anchor.Wallet(Keypair.generate())
           }
         : acc;
-    [this.basculePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("bascule")],
-      program.programId
-    );
+    [this.basculePda] = PublicKey.findProgramAddressSync([Buffer.from("bascule")], program.programId);
   }
 
   get provider() {
@@ -117,14 +108,11 @@ export class TestSetup {
       this.acc.pauser,
       this.acc.reporter,
       this.acc.validator,
-      this.acc.other,
+      this.acc.other
     ];
     console.log(`Funding ${wallets.length} wallets`);
     for (const w of wallets) {
-      const tx = await this.provider.connection.requestAirdrop(
-        w.publicKey,
-        10_000_000_000
-      );
+      const tx = await this.provider.connection.requestAirdrop(w.publicKey, 10_000_000_000);
       await this.provider.connection.confirmTransaction(tx);
     }
   }
@@ -136,7 +124,7 @@ export class TestSetup {
       .initialize()
       .accounts({
         payer: payer.publicKey,
-        programData: findInitialProgramAddress(this.program.programId),
+        programData: findInitialProgramAddress(this.program.programId)
       })
       .signers([payer.payer])
       .rpc(rpcOpts);
@@ -175,11 +163,7 @@ export class TestSetup {
   async grantPauser(pauser: PublicKey, w?: anchor.Wallet) {
     console.log("grant pauser to", pauser.toBase58());
     w ??= this.acc.admin;
-    await this.program.methods
-      .grantPauser(pauser)
-      .accounts({ admin: w.publicKey })
-      .signers([w.payer])
-      .rpc(rpcOpts);
+    await this.program.methods.grantPauser(pauser).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
@@ -188,11 +172,7 @@ export class TestSetup {
   async grantReporter(reporter: PublicKey, w?: anchor.Wallet) {
     console.log("grant reporter to", reporter.toBase58());
     w ??= this.acc.admin;
-    await this.program.methods
-      .grantReporter(reporter)
-      .accounts({ admin: w.publicKey })
-      .signers([w.payer])
-      .rpc(rpcOpts);
+    await this.program.methods.grantReporter(reporter).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
@@ -241,11 +221,7 @@ export class TestSetup {
    */
   async pause(w?: anchor.Wallet) {
     w ??= this.acc.pauser;
-    return await this.program.methods
-      .pause()
-      .accounts({ pauser: w.publicKey })
-      .signers([w.payer])
-      .rpc(rpcOpts);
+    return await this.program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
@@ -253,11 +229,7 @@ export class TestSetup {
    */
   async unpause(w?: anchor.Wallet) {
     w ??= this.acc.pauser;
-    return await this.program.methods
-      .unpause()
-      .accounts({ pauser: w.publicKey })
-      .signers([w.payer])
-      .rpc(rpcOpts);
+    return await this.program.methods.unpause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
   }
 
   /**
@@ -266,9 +238,7 @@ export class TestSetup {
   async reportDeposit(depositId: number[] | DepositId, w?: anchor.Wallet) {
     w ??= this.acc.reporter;
     return await this.program.methods
-      .reportDeposit(
-        depositId instanceof DepositId ? depositId.depositId : depositId
-      )
+      .reportDeposit(depositId instanceof DepositId ? depositId.depositId : depositId)
       .accounts({ reporter: w.publicKey })
       .signers([w.payer])
       .rpc(rpcOpts);
@@ -277,21 +247,11 @@ export class TestSetup {
   /**
    * Validate deposit withdrawal (by default the using the designated 'validator' account as both 'validator' and 'payer').
    */
-  async validateWithdrawal(
-    d: DepositId,
-    validator?: anchor.Wallet,
-    payer?: anchor.Wallet
-  ) {
+  async validateWithdrawal(d: DepositId, validator?: anchor.Wallet, payer?: anchor.Wallet) {
     validator ??= this.acc.validator;
     payer ??= validator;
     return await this.program.methods
-      .validateWithdrawal(
-        d.depositId,
-        d.recipient,
-        d.amount,
-        [...d.txId],
-        d.txVout
-      )
+      .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
       .accounts({ validator: validator.publicKey, payer: payer.publicKey })
       .signers([validator.payer, payer.payer])
       .rpc(rpcOpts);
@@ -301,10 +261,7 @@ export class TestSetup {
    * Fetch the current 'BasculeData' account
    */
   async fetchData() {
-    return await this.program.account.basculeData.fetch(
-      this.basculePda,
-      rpcOpts.commitment
-    );
+    return await this.program.account.basculeData.fetch(this.basculePda, rpcOpts.commitment);
   }
 
   /**
@@ -315,10 +272,7 @@ export class TestSetup {
       [Buffer.from("deposit"), Buffer.from(d.depositId)],
       this.program.programId
     );
-    return await this.program.account.deposit.fetch(
-      depositPda,
-      rpcOpts.commitment
-    );
+    return await this.program.account.deposit.fetch(depositPda, rpcOpts.commitment);
   }
 
   async expectReported(d: DepositId) {
@@ -357,6 +311,6 @@ export function promiseWithResolvers<T>(): PromiseWithResolvers<T> {
     // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
     resolve,
     // @ts-expect-error TypeScript doesn't know that the promise constructor callback is called immediately, so this value is populated
-    reject,
+    reject
   };
 }

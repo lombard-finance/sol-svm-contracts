@@ -1,15 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
-import { sha256 } from "js-sha256";
-import { getBase58EncodedTxBytes, getMetadataPDA } from "./utils";
+import { getBase58EncodedTxBytes, getConfigPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn postMetadata <valset_payload> <validators> <weights>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn enableBascule
 
-    Adds validators and weights to a <valset_payload>.
-    Note that <validators> and <weights> are expected to be comma-separated.`);
+    Enables the bascule checks for minting instructions.`);
   process.exit(0);
 }
 
@@ -32,23 +30,17 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const valsetPayload = Buffer.from(process.argv[2], "hex");
-const validators = process.argv[3].split(",").map(v => Buffer.from(v, "hex"));
-const weights = process.argv[4].split(",").map(w => new anchor.BN(w));
-
 (async () => {
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
 
-    const payloadHash = Buffer.from(sha256(valsetPayload), "hex");
+    // Derive PDA for config
+    const configPDA = getConfigPDA(programId);
+    console.log("Using config PDA:", configPDA.toBase58());
 
-    // Derive PDA for metadata
-    const metadataPDA = getMetadataPDA(payloadHash, payer, programId);
-    console.log("Creating metadata PDA:", metadataPDA.toBase58());
-
-    const tx = await program.methods.postMetadataForValsetPayload(validators, weights).accounts({
+    const tx = await program.methods.enableBascule().accounts({
       payer,
-      metadata: metadataPDA
+      config: configPDA
     });
 
     if (populate) {
@@ -57,6 +49,6 @@ const weights = process.argv[4].split(",").map(w => new anchor.BN(w));
       console.log("Transaction Signature:", await tx.rpc());
     }
   } catch (err) {
-    console.error("Error posting metadata:", err);
+    console.error("Error enabling bascule:", err);
   }
 })();

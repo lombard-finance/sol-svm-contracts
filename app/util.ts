@@ -19,8 +19,5 @@ export function solanaConnection(network: string): sol.Connection {
 
 /** Returns the program data address of the program before it is initialized. */
 export function findInitialProgramAddress(programId: sol.PublicKey) {
-  return sol.PublicKey.findProgramAddressSync(
-    [programId.toBuffer()],
-    BPF_UPGRADE_LOADER_ID
-  )[0];
+  return sol.PublicKey.findProgramAddressSync([programId.toBuffer()], BPF_UPGRADE_LOADER_ID)[0];
 }
