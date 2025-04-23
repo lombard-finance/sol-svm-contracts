@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, ComputeBudgetProgram } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
 import { sha256 } from "js-sha256";
 import { getBase58EncodedTxBytes, getConfigPDA, getValsetPayloadPDA } from "./utils";
@@ -50,11 +50,17 @@ const indices = process.argv[4].split(",").map(i => new anchor.BN(i));
     const payloadPDA = getValsetPayloadPDA(payloadHash, payer, programId);
     console.log("Creating payload PDA for valset payload:", payloadPDA.toBase58());
 
-    const tx = await program.methods.postValsetSignatures(payloadHash, signatures, indices).accounts({
-      payer,
-      config: configPDA,
-      payload: payloadPDA
+    const limitInstruction = ComputeBudgetProgram.setComputeUnitLimit({
+      units: 800_000
     });
+    const tx = await program.methods
+      .postValsetSignatures(signatures, indices)
+      .accounts({
+        payer,
+        config: configPDA,
+        payload: payloadPDA
+      })
+      .preInstructions([limitInstruction]);
 
     if (populate) {
       console.log("Transaction bytes:", await getBase58EncodedTxBytes(await tx.instruction(), provider.connection));

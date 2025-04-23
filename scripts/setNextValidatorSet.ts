@@ -50,8 +50,9 @@ const valsetPayload = Buffer.from(process.argv[2], "hex");
     // Derive PDA for payload
     const payloadPDA = getValsetPayloadPDA(payloadHash, payer, programId);
     console.log("Creating payload PDA for valset payload:", payloadPDA.toBase58());
+    console.log(await program.account.valsetPayload.fetch(payloadPDA));
 
-    const tx = await program.methods.setNextValset(payloadHash).accounts({
+    const tx = await program.methods.setNextValset().accounts({
       payer,
       config: configPDA,
       metadata: metadataPDA,
