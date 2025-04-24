@@ -1,0 +1,8 @@
+.assets
+.github
+.idea
+ankr
+docs
+node_modules
+target
+test-ledger
