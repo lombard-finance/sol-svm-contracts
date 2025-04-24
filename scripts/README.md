@@ -52,4 +52,4 @@ Here you will be given the full payload and the signatures blob, as well as the 
 ethabi decode params -t 'bytes[]' <SIGNATURES>
 ```
 
-This will print an array of comma-separated signatures. The last thing left to do is to write the indicis, which you can do with `0,1,2,...`.
+This will print an array of comma-separated signatures. The last thing left to do is to write the indicis, which you can do with `0,1,2,...`
