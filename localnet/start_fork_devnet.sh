@@ -1,0 +1,12 @@
+#!/bin/bash
+
+solana-test-validator \
+--mint "$DEPLOYER" \
+--url "$RPC" \
+--clone-upgradeable-program HEY7PCJe3GB27UWdopuYb1xDbB5SNtTcYPxRjntvfBSA \
+--maybe-clone 7Pus5u9UhBjBLkNMTbHdDBdpqH5JLnjmwGFTw2D7eiMa GVKRF9Woh1mPiudzh7d6FoDmhxdc5BxFbFdwK8jKw58L \
+ 74AYR1KpkXw3RYHia4KDGSGqNjGgEDWjLtdEvAgHcLu2 HaFaZeZo7wVUjshWVX7AcnzyP1azc7djQuYzEEAjBvQd \
+ 9AnmKvGU3Yp2nPTAHfi7EsX2ULnkxMubQWB8Snyx5QCD BCUQ9da2RnUbLVFVqdMT5nFcL4ky9zRS4XseF1GmrWen \
+ 3ta4f2scQZUcRNn9sWq5B6kJniVkKtfmJGMa21HrhoaL GnLTD7RCJLnpFXfb396HUmsVDrFjfYQ12t4DMSYWNLEH \
+ 6tTU5Zu8bdcm5oLePJbathm28vqkDFi6LVwP1Zhhrrj5 25YniyXh3PAVkeJVAdRCnFT5KGZ46bMH13ymRFXiWVTH \
+ 1btcyoWK7d99iosES4eXQGhhooCscKGigV5wHfvzueX 7zE8kYbdyroBGbBGZh5KPtrdd4Mut3ifmAcLRDuhAwes ByHNGi4zPJw5StyWZoLQJ9n2wT12oupJF2pTSNKMnnAZ GfYV1f1bR9vy41mSyQ8quxYbds121kijSBj5A3nG8oDQ
