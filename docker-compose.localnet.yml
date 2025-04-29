@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  solana-validator:
+    container_name: solana-validator
+    hostname: solana-validator
+    image: solana-validator
+    volumes:
+      - ./localnet:/contracts/localnet
+      - ./target:/contracts/target
+    environment:
+      - DEPLOYER=Cgi3TVUK5to37NVhGCeeFLCEJbRxaCpgjKinoWxAbGEd
+      - RPC=https://mockserver:1080/solana_devnet/
+    ports:
+      - "8899:8899"
+      - "8900:8900"
+    command:
+      - /contracts/localnet/start_fork_devnet.sh
+    networks:
+      - ledger_localnet
+
+networks:
+  ledger_localnet:
+    external: true
