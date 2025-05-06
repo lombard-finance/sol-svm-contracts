@@ -4,6 +4,7 @@
     "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "acceptOwnership": "ts-node -T scripts/acceptOwnership.ts",
+    "addPauser": "ts-node -T scripts/addPauser.ts",
     "changeMintAuth": "ts-node -T scripts/changeMintAuth.ts",
     "createMetadata": "ts-node -T scripts/createMetadata.ts",
     "createMintPayload": "ts-node -T scripts/createMintPayload.ts",
