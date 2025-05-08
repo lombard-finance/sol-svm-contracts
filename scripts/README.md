@@ -30,6 +30,14 @@ To be:
 const payer = new PublicKey("<MULTISIG_PK>");
 ```
 
+## Valset update ordering
+
+- createMetadata
+- postMetadata
+- createValsetPayload
+- postValsetSignatures
+- setNextValidatorSet
+
 ## Posting validator set signatures
 
 When posting validator set signatures, you will need some extra tooling to do it properly. Install `ethabi`: https://github.com/rust-ethereum/ethabi
@@ -52,4 +60,4 @@ Here you will be given the full payload and the signatures blob, as well as the 
 ethabi decode params -t 'bytes[]' <SIGNATURES>
 ```
 
-This will print an array of comma-separated signatures. The last thing left to do is to write the indicis, which you can do with `0,1,2,...`
+This will print an array of comma-separated signatures. The last thing left to do is to write the indices, which you can do with `0,1,2,...`
