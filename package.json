@@ -30,7 +30,7 @@
     "getConfig": "ts-node -T scripts/getConfig.ts"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "0.31.0",
+    "@coral-xyz/anchor": "0.31.1",
     "@solana/spl-governance": "^0.3.28",
     "@solana/spl-token": "^0.4.12",
     "anchor-bankrun": "^0.5.0",

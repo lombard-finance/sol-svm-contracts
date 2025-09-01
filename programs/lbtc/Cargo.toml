@@ -21,6 +21,8 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = "0.31.0"
 anchor-spl = "0.31.0"
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
 bascule = { path = "../bascule", features = ["cpi"] }
 mpl-token-metadata = "5.1.0" 
 solana_ed25519_verify = { git = "https://github.com/lombard-finance/solana_ed25519_verify", branch = "update-deps" }
