@@ -2,6 +2,7 @@ pub(crate) mod actions;
 pub(crate) mod bitcoin_utils;
 pub(crate) mod decoder;
 pub(crate) mod signatures;
+pub(crate) mod solana_ed25519_verify;
 pub(crate) mod validation;
 
 use anchor_lang::prelude::*;
