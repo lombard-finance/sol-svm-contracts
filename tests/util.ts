@@ -30,16 +30,20 @@ export interface TestAccounts {
 /** Deconstructed deposit id */
 export class DepositId {
   readonly depositId: number[];
+  readonly recipient: PublicKey;
+  readonly amount: anchor.BN;
+  readonly txId: Uint8Array;
+  readonly txVout: number;
 
   constructor(
     /** Solana recipient wallet */
-    readonly recipient: PublicKey,
+    recipient: PublicKey,
     /** Transaction amount in SAT (64-bit unsigned int) */
-    readonly amount: anchor.BN,
+    amount: anchor.BN,
     /** Bitcoin transaction id (32 bytes) */
-    readonly txId: Uint8Array,
+    txId: Uint8Array,
     /** Bitcoin transaction output index (32-bit unsigned int) */
-    readonly txVout: number
+    txVout: number
   ) {
     // CODESYNC(solana-deposit-id)
     // fixed-bytes32(0x00) || 0x03, 0x53, 0x4f, 0x4c || recipient || amount (BE) || txId || txVout (BE)
@@ -51,6 +55,10 @@ export class DepositId {
     bytes.push(...txId);
     bytes.push(...new anchor.BN(txVout).toArray("be", 4)); // u32 value
     this.depositId = [...keccak_256(new Uint8Array(bytes))];
+    this.recipient = recipient;
+    this.amount = amount;
+    this.txId = txId;
+    this.txVout = txVout;
   }
 
   /** Creates a {@link DepositId} for a given amount and everything else random */
@@ -80,8 +88,10 @@ export async function assertError(p: Promise<unknown>, code?: string): Promise<E
 export class TestSetup {
   readonly acc: TestAccounts;
   readonly basculePda: PublicKey;
+  readonly program: anchor.Program<Bascule>;
 
-  constructor(readonly program: anchor.Program<Bascule>, acc: TestAccounts | anchor.Wallet) {
+  constructor(program: anchor.Program<Bascule>, acc: TestAccounts | anchor.Wallet) {
+    this.program = program;
     this.acc =
       acc instanceof anchor.Wallet
         ? {
