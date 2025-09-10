@@ -18,7 +18,7 @@ ENV CARGO_TARGET_DIR=/contracts/target
 
 # Anchor version manager
 RUN cargo install --git https://github.com/coral-xyz/anchor avm --force
-RUN avm install 0.31.0
+RUN avm install 0.31.1
 
 # Solana
 RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.0/install)"
@@ -27,7 +27,7 @@ RUN solana config set --url http://0.0.0.0:8899
 RUN solana config set --ws ws://0.0.0.0:8900
 
 # Node
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 RUN npm install --global yarn
@@ -40,10 +40,11 @@ RUN update-ca-certificates
 # Project
 WORKDIR /contracts
 COPY . /contracts
+RUN rm -rf localnet/ target/
 COPY localnet/id.json /root/.config/solana/
 
-RUN cargo update
 RUN yarn -i
+RUN cargo update
 
 EXPOSE 8899 8900
 
