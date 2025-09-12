@@ -29,11 +29,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Anchor Test
-        uses: metadaoproject/anchor-test@v2
+        uses: metadaoproject/anchor-test@v2.2
         with:
           node-version: "20.11.0"
           solana-cli-version: "2.1.0"
-          anchor-version: "0.31.0"
+          anchor-version: "0.31.1"
 
   fmt:
     if: github.event.pull_request.draft == false
