@@ -5,6 +5,7 @@ mod events;
 pub mod instructions;
 pub(crate) mod state;
 pub(crate) mod utils;
+pub mod security;
 
 use anchor_lang::prelude::*;
 use constants::VALIDATOR_PUBKEY_SIZE;
