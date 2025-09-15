@@ -1,5 +1,5 @@
 use super::decoder;
-use crate::{constants, errors::LBTCError, state::Config};
+use crate::{constants, errors::LBTCError, state::Config, utils::solana_ed25519_verify::verify_signature};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use bascule::{
@@ -8,7 +8,6 @@ use bascule::{
     state::BasculeData,
     to_deposit_id,
 };
-use solana_ed25519_verify::verify_signature;
 
 pub fn pre_validate_mint<'info>(mint_payload: &[u8]) -> Result<()> {
     let mint_action = decoder::decode_mint_action(&mint_payload)?;

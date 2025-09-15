@@ -128,7 +128,7 @@ pub fn to_deposit_id(recipient: Pubkey, amount: u64, tx_id: [u8; 32], tx_vout: u
     hash_data.extend([0x03, 0x53, 0x4f, 0x4c]);
 
     // Transaction details
-    hash_data.extend(recipient.as_array());
+    hash_data.extend(recipient.to_bytes());
     hash_data.extend(amount.to_be_bytes());
     hash_data.extend(tx_id);
     hash_data.extend(tx_vout.to_be_bytes());
