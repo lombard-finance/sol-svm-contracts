@@ -73,3 +73,25 @@ anchor test
 ## Audit
 
 Find the latest audit reports in [docs/audit](https://github.com/lombard-finance/sol-svm-contracts/tree/main/docs/audit)
+
+
+## Verify On-Chain Programs
+
+Create a deterministic build
+
+```bash
+solana-verify build
+```
+
+get hash of built binary with
+
+```bash
+solana-verify get-executable-hash target/deploy/bascule.so
+solana-verify get-executable-hash target/deploy/lbtc.so
+```
+
+compare with hash from chain
+
+```bash
+solana-verify get-program-hash <program-address>
+```
