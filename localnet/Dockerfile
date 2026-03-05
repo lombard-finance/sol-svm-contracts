@@ -37,14 +37,11 @@ ADD https://raw.githubusercontent.com/mock-server/mockserver/refs/heads/master/m
     /usr/local/share/ca-certificates/mockserver-cert.crt
 RUN update-ca-certificates
 
-# Project
 WORKDIR /contracts
-COPY . /contracts
-RUN rm -rf localnet/ target/
-COPY localnet/id.json /root/.config/solana/
 
+#node
+COPY package.json /contracts/
 RUN yarn -i
-RUN cargo update
 
 EXPOSE 8899 8900
 

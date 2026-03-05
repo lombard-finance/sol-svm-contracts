@@ -13,7 +13,13 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-BN.prototype.bigInt = function (): bigint {
+declare module "@coral-xyz/anchor" {
+  interface BN {
+    toBigInt(): bigint;
+  }
+}
+
+BN.prototype.toBigInt = function (): bigint {
   return BigInt(this.toString(10));
 };
 

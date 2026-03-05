@@ -1,0 +1,32 @@
+[package]
+name = "asset_router"
+version = "0.1.0"
+description = "The asset router contract providing token management in the Ledger v2 design."
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "asset_router"
+
+[features]
+default = ["mainnet"]
+mainnet = []
+devnet = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-spl = "0.31.1"
+bascule = { path = "../bascule", features = ["cpi"] }
+consortium = { path = "../consortium", features = ["cpi"] }
+mailbox = { path = "../mailbox", features = ["cpi"] }
+spl-token-2022 = { version = "6.0.0", features = ["no-entrypoint"] }
+solana-security-txt = "1.1.1"
+
+[dev-dependencies]
+hex = "0.4.3"
+solana-sdk = "2.1.0"

@@ -5,11 +5,12 @@ import { Keypair, PublicKey } from "@solana/web3.js";
 import { keccak256, sha256, ethers } from "ethers";
 import { ConsortiumUtility } from "./consortium_utilities";
 import { Consortium } from "../target/types/consortium";
+import { ZERO_BUFFER32 } from "./asset_router_utilities";
 
 const consortium = anchor.workspace.Consortium as Program<Consortium>;
 const mailbox = anchor.workspace.Mailbox as Program<Mailbox>;
 
-const MESSAGE_V1_SELECTOR = "e288fb4a";
+export const MESSAGE_V1_SELECTOR = "e288fb4a";
 
 export class MailboxUtilities {
   consortiumUtility: ConsortiumUtility;
@@ -24,13 +25,13 @@ export class MailboxUtilities {
     this.treasury = treasury;
   }
 
-  async initialize(lchainId: Buffer) {
+  async initialize() {
     const defaultMaxPayloadSize = 1000;
     const feePerByte = new BN(1000);
     const tx = await mailbox.methods
-      .initialize(this.admin.publicKey, consortium.programId, this.treasury, defaultMaxPayloadSize, feePerByte, Array.from(Uint8Array.from(lchainId)))
+      .initialize(this.admin.publicKey, consortium.programId, this.treasury, defaultMaxPayloadSize, feePerByte)
       .accounts({
-        deployer: consortium.provider.wallet.publicKey,
+        deployer: consortium.provider.wallet.publicKey
       })
       .signers([Keypair.fromSecretKey(consortium.provider.wallet.payer.secretKey)])
       .rpc();
@@ -39,10 +40,12 @@ export class MailboxUtilities {
 
   async enableInboundMessagePath(foreignMailboxAddress: Buffer, foreignLchainId: Buffer) {
     const tx = await mailbox.methods
-      .enableInboundMessagePath(Array.from(Uint8Array.from(foreignMailboxAddress)), Array.from(Uint8Array.from(foreignLchainId)))
+      .enableInboundMessagePath(
+        Array.from(Uint8Array.from(foreignLchainId)),
+        Array.from(Uint8Array.from(foreignMailboxAddress))
+      )
       .accounts({
         admin: this.admin.publicKey,
-        inboundMessagePath: this.getInboundMessagePathPDA(foreignMailboxAddress, foreignLchainId),
       })
       .signers([this.admin])
       .rpc();
@@ -54,7 +57,6 @@ export class MailboxUtilities {
       .enableOutboundMessagePath(Array.from(Uint8Array.from(targetChainId)))
       .accounts({
         admin: this.admin.publicKey,
-        outboundMessagePath: this.getOutboundMessagePathPDA(targetChainId),
       })
       .signers([this.admin])
       .rpc();
@@ -62,13 +64,17 @@ export class MailboxUtilities {
   }
 
   getOutboundMessagePathPDA(targetChainId: Buffer) {
-    const outboundMessagePath = Buffer.from(keccak256((Buffer.concat([mailbox.programId.toBuffer(), this.selfChainId, targetChainId]))).slice(2), "hex");
-    return PublicKey.findProgramAddressSync([Buffer.from("outbound_message_path"), outboundMessagePath], mailbox.programId)[0];
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("outbound_message_path"), targetChainId],
+      mailbox.programId
+    )[0];
   }
 
-  getInboundMessagePathPDA(foreignMailboxAddress: Buffer, foreignLchainId: Buffer) {
-    const inboundMessagePath = Buffer.from(keccak256((Buffer.concat([foreignMailboxAddress, foreignLchainId, this.selfChainId]))).slice(2), "hex");
-    return PublicKey.findProgramAddressSync([Buffer.from("inbound_message_path"), inboundMessagePath], mailbox.programId)[0];
+  getInboundMessagePathPDA(foreignLchainId: Buffer) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("inbound_message_path"), foreignLchainId],
+      mailbox.programId
+    )[0];
   }
 
   getSenderConfigPDA(sender: PublicKey) {
@@ -79,7 +85,7 @@ export class MailboxUtilities {
     const tx = await mailbox.methods
       .setSenderConfig(sender, maxPayload, feeDisabled)
       .accounts({
-        admin: this.admin.publicKey,
+        admin: this.admin.publicKey
       })
       .signers([this.admin])
       .rpc();
@@ -87,7 +93,7 @@ export class MailboxUtilities {
   }
 
   async deliverMessage(fromMailboxAddress: Buffer, fromLchainId: Buffer, payer: Keypair, message: Buffer) {
-    await this.consortiumUtility.createAndFinalizeSession(consortium, payer, message);
+    await this.consortiumUtility.createAndFinalizeSession(payer, message);
     const payloadHash = Buffer.from(sha256(message).slice(2), "hex");
     const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
     const sessionPayloadPDA = PublicKey.findProgramAddressSync(
@@ -98,7 +104,7 @@ export class MailboxUtilities {
       .postSessionPayload(payloadHashBytes, message, message.length)
       .accounts({
         payer: payer.publicKey,
-        sessionPayload: sessionPayloadPDA,
+        sessionPayload: sessionPayloadPDA
       })
       .signers([payer])
       .rpc();
@@ -108,9 +114,9 @@ export class MailboxUtilities {
       .deliverMessage(payloadHashBytes)
       .accounts({
         deliverer: payer.publicKey,
-        inboundMessagePath: this.getInboundMessagePathPDA(fromMailboxAddress, fromLchainId),
+        inboundMessagePath: this.getInboundMessagePathPDA(fromLchainId),
         consortiumPayload: sessionPayloadPDA,
-        consortiumValidatedPayload: this.consortiumUtility.getValidatedPayloadPDA(consortium, payloadHash),
+        consortiumValidatedPayload: this.consortiumUtility.getValidatedPayloadPDA(payloadHash)
       })
       .signers([payer])
       .rpc();
@@ -131,18 +137,103 @@ export class MailboxUtilities {
 }
 
 export function messageV1(
-	messagePathIdentifier: Buffer,
-	nonce: number,
-	sender: Buffer,
-	recipient: Buffer,
-	destinationCaller: Buffer,
-	body: Buffer,
+  messagePathIdentifier: Buffer,
+  nonce: number,
+  sender: Buffer,
+  recipient: Buffer,
+  destinationCaller: Buffer,
+  body: Buffer
 ): Buffer {
-	return Buffer.concat([
-		Buffer.from(MESSAGE_V1_SELECTOR, "hex"),
-		Buffer.from(ethers.AbiCoder.defaultAbiCoder().encode(
-			["bytes32", "uint256", "bytes32", "bytes32", "bytes32", "bytes"],
-			[messagePathIdentifier, nonce, sender, recipient, destinationCaller, body]
-		).slice(2), "hex")
-	]);
+  return Buffer.concat([
+    Buffer.from(MESSAGE_V1_SELECTOR, "hex"),
+    Buffer.from(
+      ethers.AbiCoder.defaultAbiCoder()
+        .encode(
+          ["bytes32", "uint256", "bytes32", "bytes32", "bytes32", "bytes"],
+          [messagePathIdentifier, nonce, sender, recipient, destinationCaller, body]
+        )
+        .slice(2),
+      "hex"
+    )
+  ]);
+}
+
+export class MessageV1 {
+  selector: string;
+  pathIdentifier: Buffer;
+  nonce: Number;
+  sender: Buffer;
+  recipient: Buffer;
+  destinationCaller: Buffer;
+  body: Buffer;
+
+  constructor(
+    pathIdentifier: Buffer,
+    nonce: Number,
+    sender: Buffer,
+    recipient: Buffer,
+    body: Buffer,
+    destinationCaller: Buffer = ZERO_BUFFER32,
+    selector: string = MESSAGE_V1_SELECTOR
+  ) {
+    this.selector = selector;
+    this.pathIdentifier = pathIdentifier;
+    this.nonce = nonce;
+    this.sender = sender;
+    this.recipient = recipient;
+    this.destinationCaller = destinationCaller;
+    this.body = body;
+  }
+
+  toBuffer(): Buffer {
+    return Buffer.concat([
+      Buffer.from(this.selector, "hex"),
+      Buffer.from(
+        ethers.AbiCoder.defaultAbiCoder()
+          .encode(
+            ["bytes32", "uint256", "bytes32", "bytes32", "bytes32", "bytes"],
+            [this.pathIdentifier, this.nonce, this.sender, this.recipient, this.destinationCaller, this.body]
+          )
+          .slice(2),
+        "hex"
+      )
+    ]);
+  }
+
+  toBytes(): number[] {
+    return Array.from(this.toBuffer());
+  }
+
+  toHash(): Buffer {
+    return Buffer.from(sha256(this.toBuffer()).slice(2), "hex");
+  }
+
+  toHashBytes(): number[] {
+    return Array.from(this.toHash());
+  }
+
+  sessionPayloadPDA(payer: Keypair): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("session_payload"), payer.publicKey.toBuffer(), this.toHash()],
+      consortium.programId
+    )[0];
+  }
+
+  messageInfoPDA(): PublicKey {
+    return PublicKey.findProgramAddressSync([Buffer.from("message"), this.toHash()], mailbox.programId)[0];
+  }
+
+  receiverConfigPDA(): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("mailbox_receiver_config")],
+      new PublicKey(Uint8Array.from(this.recipient))
+    )[0];
+  }
+
+  receiverMessageHandledPDA(): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("message_handled"), this.toHash()],
+      new PublicKey(Uint8Array.from(this.recipient))
+    )[0];
+  }
 }

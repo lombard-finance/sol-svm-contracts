@@ -3,13 +3,15 @@ import { keccak_256 } from "@noble/hashes/sha3";
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
-import { Consortium as ConsortiumProgram } from "../target/types/consortium";
+import { Consortium, Consortium as ConsortiumProgram } from "../target/types/consortium";
 import { ethers, sha256 } from "ethers";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+
+const DEPOSIT_V1_SELECTOR = "ce25e7c2";
 
 /**
  * Interface for a secp256k1 keypair
@@ -32,12 +34,14 @@ export interface Signature {
  * Consortium class for managing keypairs and signing operations
  */
 export class ConsortiumUtility {
-	private keypairs: Secp256k1Keypair[] = [];
+  private readonly consortium: Program<Consortium>;
+  private readonly keypairs: Secp256k1Keypair[] = [];
+  epoch : Number;
+  height : Number;
 
-	constructor(initialKeypairs?: Secp256k1Keypair[]) {
-		if (initialKeypairs) {
-			this.keypairs = [...initialKeypairs];
-		}
+	constructor(consortium : Program<Consortium>, initialKeypairs: Secp256k1Keypair[] = []) {
+    this.keypairs = initialKeypairs;
+    this.consortium = consortium;
 	}
 
 	/**
@@ -188,8 +192,8 @@ export class ConsortiumUtility {
 	/**
 	 * Clear all keypairs from the consortium
 	 */
-	clear(): void {
-		this.keypairs = [];
+	clearKeypairs(): void {
+		this.keypairs.length = 0;
 	}
 
 	/**
@@ -205,24 +209,25 @@ export class ConsortiumUtility {
 	}
 
 	/**
-	 * Create a valset payload for the consortium program
-	 * @param epoch The epoch number
-	 * @param weightThreshold The weight threshold for consensus
-	 * @param height The block height
-	 * @returns The valset payload as a Buffer
-	 */
-	createValSetPayload(epoch: number = 1, weightThreshold: number = 1, height: number = 1): Buffer {
-		if (this.keypairs.length === 0) {
+   * Create a valset payload for the consortium program
+   * @param epoch The epoch number
+   * @param weightThreshold The weight threshold for consensus
+   * @param height The block height
+   * @param keypairs
+   * @returns The valset payload as a Buffer
+   */
+	createValSetPayload(epoch: number = 1, weightThreshold: number = 1, height: number = 1, keypairs : Secp256k1Keypair[] = this.keypairs): Buffer {
+		if (keypairs.length === 0) {
 			throw new Error("Cannot create valset payload: Consortium has no keypairs");
 		}
 
 		// Prepare validators data (64-byte public keys)
-		const validators = this.keypairs.map(keypair => 
+		const validators = keypairs.map(keypair =>
 			`0x${Buffer.from(keypair.publicKey).toString('hex')}`
 		);
 		
 		// Prepare weights (each validator has weight 1)
-		const weights = this.keypairs.map(() => 1);
+		const weights = keypairs.map(() => 1);
 		
 		// Define the ABI types for the tuple (uint256, bytes[], uint256[], uint256, uint256)
 		const abiTypes = [
@@ -252,7 +257,6 @@ export class ConsortiumUtility {
 
 	/**
 	 * Initialize the consortium program and set the initial validator set
-	 * @param program The consortium program instance
 	 * @param admin The admin keypair for the consortium
 	 * @param epoch Optional epoch number (defaults to 1)
 	 * @param weightThreshold Optional weight threshold (defaults to 1)
@@ -261,13 +265,14 @@ export class ConsortiumUtility {
 	 * @returns Object containing both transaction signatures
 	 */
 	async initializeConsortiumProgram(
-		program: Program<ConsortiumProgram>,
 		admin: Keypair,
 		epoch: number = 1,
-		weightThreshold: number = 1,
+		weightThreshold: number = this.keypairs.length - 1,
 		height: number = 1,
 		deployerWallet?: anchor.Wallet
 	): Promise<{ initializeTx: string; setValSetTx: string }> {
+    const program = this.consortium;
+
 		// Use provider wallet if no deployer specified
 		const deployer = deployerWallet || program.provider.wallet;
 
@@ -279,10 +284,7 @@ export class ConsortiumUtility {
 					deployer: deployer.publicKey,
 				})
 				.signers([deployer.payer])
-				.rpc();
-
-			// Confirm the initialization transaction
-			await program.provider.connection.confirmTransaction(initializeTx);
+				.rpc({commitment: "confirmed"});
 			
 			// Step 2: Set the initial validator set
 			const valsetPayload = this.createValSetPayload(epoch, weightThreshold, height);
@@ -293,13 +295,10 @@ export class ConsortiumUtility {
 					admin: admin.publicKey,
 				})
 				.signers([admin])
-				.rpc();
-
-			// Confirm the valset transaction
-			await program.provider.connection.confirmTransaction(setValSetTx);
+        .rpc({commitment: "confirmed"});
 
 			// Fetch the config account and check its fields
-			const configPDA = this.getConsortiumConfigPDA(program);
+			const configPDA = this.getConsortiumConfigPDA();
 			const config = await program.account.config.fetch(configPDA);
 
 			if (!config) {
@@ -324,24 +323,63 @@ export class ConsortiumUtility {
 		}
 	}
 
+  async updateValset(valsetPayload : Buffer, payer : Keypair) {
+
+    const valsetPayloadLength = valsetPayload.length;
+    const valsetPayloadHash = sha256(valsetPayload).slice(2);
+    const valsetPayloadHashBytes = Array.from(Buffer.from(valsetPayloadHash, "hex"));
+
+    const { validatedPayloadPDA } = await this.createAndFinalizeSession(payer, valsetPayload);
+
+    const sessionPayloadPDA = PublicKey.findProgramAddressSync(
+      [Buffer.from("session_payload"), payer.publicKey.toBuffer(), Buffer.from(valsetPayloadHash, "hex")],
+      this.consortium.programId
+    )[0];
+
+    const chunkMaxSize = 512;
+    for (let i = 0; i < valsetPayloadLength; i+=chunkMaxSize) {
+      const chunk = valsetPayload.subarray(i, Math.min(i+chunkMaxSize, valsetPayloadLength));
+      await this.consortium.methods
+        .postSessionPayload(valsetPayloadHashBytes, chunk, valsetPayloadLength)
+        .accounts({
+          payer: payer.publicKey,
+          sessionPayload: sessionPayloadPDA,
+        })
+        .signers([payer])
+        .rpc({commitment: "confirmed"});
+    }
+
+    await this.consortium.methods
+      .updateValset(valsetPayloadHashBytes)
+      .accounts({
+        payer: payer.publicKey,
+        validatedPayload: validatedPayloadPDA,
+        sessionPayload: sessionPayloadPDA,
+      })
+      .signers([payer])
+      .rpc({commitment: "confirmed"});
+  }
+
 	async createAndFinalizeSession(
-		program: Program<ConsortiumProgram>,
 		payer: Keypair,
-		payload: Uint8Array
-	): Promise<{ createSessionTx: string; postSessionSignaturesTx: string; finalizeSessionTx: string; }> {
+		payload: Buffer
+	): Promise<{ validatedPayloadPDA: PublicKey; sessionPDA : PublicKey  }> {
+
 		const payloadSignatures = this.signPayload(payload);
 		const payloadHash = Buffer.from(sha256(payload).slice(2), "hex");
 		const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
-		const sessionPDA = PublicKey.findProgramAddressSync(
+
+    const sessionPDA = PublicKey.findProgramAddressSync(
 			[Buffer.from("session"), payer.publicKey.toBuffer(), payloadHash],
-			program.programId
-		)[0];
-		const validatedPayloadPDA = PublicKey.findProgramAddressSync(
-			[Buffer.from("validated_payload"), payloadHash],
-			program.programId
+      this.consortium.programId
 		)[0];
 
-		const createSessionTx = await program.methods
+    const validatedPayloadPDA = PublicKey.findProgramAddressSync(
+			[Buffer.from("validated_payload"), payloadHash],
+      this.consortium.programId
+		)[0];
+
+		await this.consortium.methods
 			.createSession(payloadHashBytes)
 			.accounts({
 				payer: payer.publicKey,
@@ -349,19 +387,24 @@ export class ConsortiumUtility {
 				validatedPayload: validatedPayloadPDA,
 			})
 			.signers([payer])
-			.rpc();
-		await program.provider.connection.confirmTransaction(createSessionTx);
+			.rpc({commitment: "confirmed"});
 
-		const postSessionSignaturesTx = await program.methods
-			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), [new BN(0), new BN(1), new BN(2)])
+    const indices = [];
+    for (let i = 0; i < payloadSignatures.length; i++) {
+      console.log(Buffer.concat([payloadSignatures[i].r, payloadSignatures[i].s]).toString('hex'));
+      indices.push(new BN(i));
+    }
+
+		await this.consortium.methods
+			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), indices)
 			.accounts({
 				payer: payer.publicKey,
 				session: sessionPDA,
 			})
 			.signers([payer])
-			.rpc();
-		await program.provider.connection.confirmTransaction(postSessionSignaturesTx);
-		const finalizeSessionTx = await program.methods
+      .rpc({commitment: "confirmed"});
+
+		await this.consortium.methods
 			.finalizeSession(payloadHashBytes)
 			.accounts({
 				payer: payer.publicKey,
@@ -369,47 +412,49 @@ export class ConsortiumUtility {
 				validatedPayload: validatedPayloadPDA,
 			})
 			.signers([payer])
-			.rpc();
-		await program.provider.connection.confirmTransaction(finalizeSessionTx);
+      .rpc({commitment: "confirmed"});
 
 		return {
-			createSessionTx,
-			postSessionSignaturesTx,
-			finalizeSessionTx,
+      validatedPayloadPDA,
+      sessionPDA
 		};
+	}
+
+	getValidatedPayloadPDA(payloadHash: Buffer): PublicKey {
+		return PublicKey.findProgramAddressSync(
+			[Buffer.from("validated_payload"), payloadHash],
+      this.consortium.programId
+		)[0];
 	}
 
 	/**
 	 * Get the consortium config PDA
-	 * @param program The consortium program instance
 	 * @returns The config PDA public key
 	 */
-	getConsortiumConfigPDA(program: Program<ConsortiumProgram>): PublicKey {
+	getConsortiumConfigPDA(): PublicKey {
 		const [configPDA] = PublicKey.findProgramAddressSync(
-			[Buffer.from("consortium_config")], 
-			program.programId
+			[Buffer.from("consortium_config")],
+      this.consortium.programId
 		);
 		return configPDA;
 	}
 
 	/**
 	 * Fetch the consortium config account
-	 * @param program The consortium program instance
 	 * @returns The consortium config account data
 	 */
-	async fetchConsortiumConfig(program: Program<ConsortiumProgram>): Promise<any> {
-		const configPDA = this.getConsortiumConfigPDA(program);
-		return await program.account.config.fetch(configPDA);
+	async fetchConsortiumConfig(): Promise<any> {
+		const configPDA = this.getConsortiumConfigPDA();
+		return await this.consortium.account.config.fetch(configPDA);
 	}
 
 	/**
 	 * Check if the consortium program is initialized
-	 * @param program The consortium program instance
 	 * @returns True if initialized, false otherwise
 	 */
-	async isConsortiumInitialized(program: Program<ConsortiumProgram>): Promise<boolean> {
+	async isConsortiumInitialized(): Promise<boolean> {
 		try {
-			await this.fetchConsortiumConfig(program);
+			await this.fetchConsortiumConfig();
 			return true;
 		} catch (error) {
 			return false;
@@ -418,12 +463,11 @@ export class ConsortiumUtility {
 
 	/**
 	 * Check if the consortium has a validator set configured
-	 * @param program The consortium program instance
 	 * @returns True if validator set is configured, false otherwise
 	 */
-	async hasValidatorSet(program: Program<ConsortiumProgram>): Promise<boolean> {
+	async hasValidatorSet(): Promise<boolean> {
 		try {
-			const config = await this.fetchConsortiumConfig(program);
+			const config = await this.fetchConsortiumConfig();
 			return config.currentEpoch > 0;
 		} catch (error) {
 			return false;
@@ -432,21 +476,20 @@ export class ConsortiumUtility {
 
 	/**
 	 * Get the current validator set from the consortium program
-	 * @param program The consortium program instance
 	 * @returns Object containing validator set information
 	 */
-	async getValidatorSet(program: Program<ConsortiumProgram>): Promise<{
+	async getValidatorSet(): Promise<{
 		epoch: number;
 		validators: Uint8Array[];
 		weights: number[];
 		weightThreshold: number;
 	}> {
-		const config = await this.fetchConsortiumConfig(program);
+		const config = await this.fetchConsortiumConfig();
 		return {
-			epoch: config.currentEpoch,
+			epoch: config.currentEpoch.toNumber(),
 			validators: config.currentValidators,
-			weights: config.currentWeights.map((w: any) => Number(w)),
-			weightThreshold: config.currentWeightThreshold
+			weights: config.currentWeights.map((w: any) => w.toNumber()),
+			weightThreshold: config.currentWeightThreshold.toNumber(),
 		};
 	}
 }
@@ -574,4 +617,56 @@ export function publicKeyToBytes(publicKey: Uint8Array): Uint8Array {
   }
 }
 
+export class PayloadDepositV1 {
+	chainId: Buffer;
+	recipient: PublicKey;
+	amount: bigint;
+	txId: Buffer;
+	vout: number;
+	tokenAddress: PublicKey;
+	
+	constructor(chainId: Buffer, recipient: PublicKey, amount: bigint, txId: Buffer, vout: number, tokenAddress: PublicKey) {
+	  this.chainId = chainId;
+	  this.recipient = recipient;
+	  this.amount = amount;
+	  this.txId = txId;
+	  this.vout = vout;
+	  this.tokenAddress = tokenAddress;
+	}
+  
+	toBuffer(): Buffer {
+	  return Buffer.concat([
+		Buffer.from(DEPOSIT_V1_SELECTOR, "hex"),
+		Buffer.from(ethers.AbiCoder.defaultAbiCoder().encode(
+		  ["bytes32", "bytes32", "uint256", "bytes32", "uint32", "bytes32"],
+		  [this.chainId, this.recipient.toBuffer(), this.amount, this.txId, this.vout, this.tokenAddress.toBuffer()]
+		).slice(2), "hex")
+	  ]);
+	}
+  
+	toBytes(): number[] {
+	  return Array.from(Uint8Array.from(this.toBuffer()));
+	}
+  
+	toHash(): Buffer {
+	  return Buffer.from(sha256(this.toBuffer()).slice(2), "hex");
+	}
+  
+	toHashBytes(): number[] {
+	  return Array.from(Uint8Array.from(this.toHash()));
+	}
+}
 
+export function randomNumber(length : number) : number {
+  if (length <= 0) {
+    return 0;
+  }
+
+  const min = 10 ** (length - 1);
+  const max = 10 ** length - 1;
+
+  const range = max - min + 1;
+  const rand = Math.floor(Math.random() * range);
+
+  return min + rand;
+}

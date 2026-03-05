@@ -3,8 +3,9 @@ import { expect } from "chai";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Keypair } from "@solana/web3.js";
-import { Consortium as ConsortiumProgram } from "../target/types/consortium";
+import { Consortium, Consortium as ConsortiumProgram } from "../target/types/consortium";
 import { ConsortiumUtility } from "./consortium_utilities";
+import { fundWallet } from "./asset_router_utilities";
 
 
 /**
@@ -70,7 +71,7 @@ describe("Consortium Utilities", () => {
       let payload: Uint8Array;
   
       beforeEach(() => {
-        consortium = new ConsortiumUtility();
+        consortium = new ConsortiumUtility(null);
         payload = new TextEncoder().encode("Consortium Test Payload");
       });
   
@@ -136,7 +137,7 @@ describe("Consortium Utilities", () => {
         consortium.generateAndAddKeypairs(5);
         expect(consortium.getKeypairCount()).to.equal(5);
         
-        consortium.clear();
+        consortium.clearKeypairs();
         expect(consortium.getKeypairCount()).to.equal(0);
       });
   
@@ -152,22 +153,27 @@ describe("Consortium Utilities", () => {
   
     describe("Consortium program initialization", () => {
       let provider: anchor.AnchorProvider;
-      let program: Program<ConsortiumProgram>;
+      let program: Program<Consortium>;
       let consortium: ConsortiumUtility;
-      let adminKeypair: Keypair;
-  
+      const admin = Keypair.generate();
+      const payer = Keypair.generate();
+
       before(async () => {
+        // Sometimes fails with program not deployed
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
         provider = anchor.AnchorProvider.env();
         anchor.setProvider(provider);
-        program = anchor.workspace.Consortium as Program<ConsortiumProgram>;
-        
-        consortium = new ConsortiumUtility();
+        program = anchor.workspace.Consortium as Program<Consortium>;
+
+        consortium = new ConsortiumUtility(program);
         consortium.generateAndAddKeypairs(3);
-        adminKeypair = Keypair.generate();
+
+        await fundWallet(payer, 25);
       });
   
       it("should initialize consortium program successfully", async () => {
-        const result = await consortium.initializeConsortiumProgram(program, adminKeypair);
+        const result = await consortium.initializeConsortiumProgram(payer);
         
         expect(result).to.have.property('initializeTx');
         expect(result).to.have.property('setValSetTx');
@@ -176,21 +182,21 @@ describe("Consortium Utilities", () => {
       });
   
       it("should have correct admin in config after initialization", async () => {
-        const config = await consortium.fetchConsortiumConfig(program);
-        expect(config.admin.toBase58()).to.equal(adminKeypair.publicKey.toBase58());
+        const config = await consortium.fetchConsortiumConfig();
+        expect(config.admin.toBase58()).to.equal(payer.publicKey.toBase58());
       });
   
       it("should have validator set configured after initialization", async () => {
-        const hasValSet = await consortium.hasValidatorSet(program);
+        const hasValSet = await consortium.hasValidatorSet();
         expect(hasValSet).to.be.true;
       });
   
       it("should have correct validator set data", async () => {
-        const valSet = await consortium.getValidatorSet(program);
+        const valSet = await consortium.getValidatorSet();
         
         expect(valSet.epoch.toString()).to.equal(1n.toString());
         expect(valSet.validators).to.have.length(3);
-        expect(valSet.weightThreshold.toString()).to.equal(1n.toString());
+        expect(valSet.weightThreshold).to.equal(2);
         expect(valSet.weights).to.have.length(3);
         valSet.weights.forEach(weight => {
           expect(weight.toString()).to.equal(1n.toString());
@@ -198,15 +204,40 @@ describe("Consortium Utilities", () => {
       });
   
       it("should have matching public keys in validator set", async () => {
-        const valSet = await consortium.getValidatorSet(program);
+        const valSet = await consortium.getValidatorSet();
         const ourPublicKeys = consortium.getPublicKeysAsBytes();
         
         expect(ourPublicKeys).to.have.length(valSet.validators.length);
       });
   
       it("should detect if consortium is initialized", async () => {
-        const isInitialized = await consortium.isConsortiumInitialized(program);
+        const isInitialized = await consortium.isConsortiumInitialized();
         expect(isInitialized).to.be.true;
+      });
+
+      it("update valset with 1 more validator", async () => {
+        // const newValset = generateSecp256k1Keypairs(3);
+        const newValset = consortium.getKeypairs().slice();
+        const newValidator = generateSecp256k1Keypairs(1)[0];
+        newValset.push(newValidator);
+        const newEpoch = 2;
+        const newWeight = consortium.getKeypairCount() - 1;
+        const newHeight = 1000;
+        const newValsetPayload = consortium.createValSetPayload(newEpoch, newWeight, newHeight, newValset);
+
+        await consortium.updateValset(newValsetPayload, payer);
+        consortium.clearKeypairs();
+        consortium.addKeypair(newValidator);
+
+        const valsetState = await consortium.getValidatorSet();
+
+        expect(valsetState.epoch).to.equal(newEpoch);
+        expect(valsetState.validators).to.have.length(newValset.length);
+        expect(valsetState.weightThreshold).to.equal(newWeight);
+        expect(valsetState.weights).to.have.length(newValset.length);
+        valsetState.weights.forEach(weight => {
+          expect(weight).to.equal(1);
+        });
       });
     });
   });
