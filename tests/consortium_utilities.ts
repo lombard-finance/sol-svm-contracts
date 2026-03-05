@@ -1,7 +1,7 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { Consortium as ConsortiumProgram } from "../target/types/consortium";
 import { ethers, sha256 } from "ethers";
@@ -322,6 +322,61 @@ export class ConsortiumUtility {
 		} catch (error) {
 			throw new Error(`Failed to initialize consortium program: ${error.message}`);
 		}
+	}
+
+	async createAndFinalizeSession(
+		program: Program<ConsortiumProgram>,
+		payer: Keypair,
+		payload: Uint8Array
+	): Promise<{ createSessionTx: string; postSessionSignaturesTx: string; finalizeSessionTx: string; }> {
+		const payloadSignatures = this.signPayload(payload);
+		const payloadHash = Buffer.from(sha256(payload).slice(2), "hex");
+		const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
+		const sessionPDA = PublicKey.findProgramAddressSync(
+			[Buffer.from("session"), payer.publicKey.toBuffer(), payloadHash],
+			program.programId
+		)[0];
+		const validatedPayloadPDA = PublicKey.findProgramAddressSync(
+			[Buffer.from("validated_payload"), payloadHash],
+			program.programId
+		)[0];
+
+		const createSessionTx = await program.methods
+			.createSession(payloadHashBytes)
+			.accounts({
+				payer: payer.publicKey,
+				session: sessionPDA,
+				validatedPayload: validatedPayloadPDA,
+			})
+			.signers([payer])
+			.rpc();
+		await program.provider.connection.confirmTransaction(createSessionTx);
+
+		const postSessionSignaturesTx = await program.methods
+			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), [new BN(0), new BN(1), new BN(2)])
+			.accounts({
+				payer: payer.publicKey,
+				session: sessionPDA,
+			})
+			.signers([payer])
+			.rpc();
+		await program.provider.connection.confirmTransaction(postSessionSignaturesTx);
+		const finalizeSessionTx = await program.methods
+			.finalizeSession(payloadHashBytes)
+			.accounts({
+				payer: payer.publicKey,
+				session: sessionPDA,
+				validatedPayload: validatedPayloadPDA,
+			})
+			.signers([payer])
+			.rpc();
+		await program.provider.connection.confirmTransaction(finalizeSessionTx);
+
+		return {
+			createSessionTx,
+			postSessionSignaturesTx,
+			finalizeSessionTx,
+		};
 	}
 
 	/**

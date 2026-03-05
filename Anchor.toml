@@ -10,6 +10,8 @@ skip-lint = false
 bascule = "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn"
 consortium = "2Zp4V3e64T5zNggMe75UdVPPBYxCvL9kFyd2LkJByjTj"
 lbtc = "LomP48F7bLbKyMRHHsDVt7wuHaUQvQnVVspjcbfuAek"
+mailbox = "3TfSFMuw31Je57m5Wcd9ZopGzjrHLHkjh292aEwXvm3h"
+mailbox_receiver = "CEL52cw8nR3woiKqm1ETzifdQqECwD3DBkLiAuQrrY43"
 
 [registry]
 url = "https://api.apr.dev"
