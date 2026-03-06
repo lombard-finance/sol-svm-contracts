@@ -43,7 +43,7 @@ pub fn initialize(
     config.paused = false;
     config.consortium = consortium;
     config.treasury = treasury;
-    config.global_nonce = 0;
+    config.global_nonce = 1; // Lombard ledger requires all nonces to be greater than 0
     config.default_max_payload_size = default_max_payload_size;
     config.fee_per_byte = fee_per_byte;
     Ok(())
