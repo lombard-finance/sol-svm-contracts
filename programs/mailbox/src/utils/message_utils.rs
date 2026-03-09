@@ -1,11 +1,13 @@
 use std::io::{prelude::*, BufReader};
 
 use anchor_lang::prelude::{borsh, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::solana_program::hash::hash  as sha256;
 use anchor_lang::solana_program::keccak::hash as keccak256;
 
 use crate::errors::MailboxError;
 
 pub const PAYLOAD_SELECTOR_LENGTH: usize = 4;
+pub const PAYLOAD_MIN_SIZE: usize = PAYLOAD_SELECTOR_LENGTH + 32 * 5;
 pub const MESSAGE_V1_SELECTOR: [u8; PAYLOAD_SELECTOR_LENGTH] = [0xe2, 0x88, 0xfb, 0x4a];
 
 pub fn message_path_identifier(
@@ -102,6 +104,56 @@ impl MessageV1 {
 
         Ok(message_v1)
     }
+
+    pub fn to_session_payload(&self) -> Vec<u8> {
+        let mut message = Vec::with_capacity(PAYLOAD_MIN_SIZE);
+
+        message.extend_from_slice(&MESSAGE_V1_SELECTOR);
+        message.extend_from_slice(&self.message_path_identifier);
+        let mut nonce_bytes = [0u8; 32];
+        nonce_bytes[24..].copy_from_slice(&self.nonce.to_be_bytes());
+        message.extend_from_slice(&nonce_bytes);
+        message.extend_from_slice(&self.sender);
+        message.extend_from_slice(&self.recipient);
+        match self.destination_caller {
+            Some(dst_caller) => {
+                message.extend_from_slice(&dst_caller);
+            }
+            None => {
+                message.extend_from_slice(&[0u8; 32]);
+            }
+        }
+        // Fist put the offset
+        let mut offset_bytes = [0u8; 32];
+        let offset: u64 = 192; // 32 * 6
+        offset_bytes[24..].copy_from_slice(&offset.to_be_bytes());
+        message.extend_from_slice(&offset_bytes);
+        // Next put the length of the body
+        let mut size_bytes = [0u8; 32];
+        size_bytes[24..].copy_from_slice(&self.body.len().to_be_bytes());
+        message.extend_from_slice(&size_bytes);
+        // Next add the body
+        message.extend_from_slice(&self.body); // ToDO: add padding to 
+        // Lastly put some padding if necessary
+        let padding_len = (32 - self.body.len() % 32) % 32;
+        if padding_len > 0 {
+            for _ in 0..padding_len {
+                message.push(0);
+            }
+        }
+
+        message
+    }
+
+    pub fn calculate_payload_hash(&self) -> [u8; 32] {
+        sha256(&self.to_session_payload()).to_bytes()
+    } 
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct SendResult {
+    pub nonce: u64,
+    pub payload_hash: [u8; 32],
 }
 
 #[cfg(test)]

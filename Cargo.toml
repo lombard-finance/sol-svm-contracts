@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "dependencies/ccip/crates/*",
+    "dependencies/ccip/programs/*"
 ]
 resolver = "2"
 

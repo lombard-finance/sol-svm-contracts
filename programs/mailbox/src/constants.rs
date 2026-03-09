@@ -22,3 +22,4 @@ pub const ACCOUNT_ROLES_SEED: &[u8] = b"account_roles";
 
 pub const MAX_PAYLOAD_SIZE: u32 = 1024 * 1024; // 1MB
 pub const DEFAULT_FEE_PER_BYTE: u64 = 1000; // lamports per byte
+pub const FEE_ADJUSTMET_BASE: u64 = 10000;

@@ -11,6 +11,7 @@ pub mod utils;
 use instructions::*;
 
 use crate::state::AccountRole;
+use crate::utils::message_utils::SendResult;
 
 declare_id!("3TfSFMuw31Je57m5Wcd9ZopGzjrHLHkjh292aEwXvm3h");
 
@@ -83,8 +84,9 @@ pub mod mailbox {
         message_body: Vec<u8>,
         recipient: [u8; 32],
         destination_caller: Option<[u8; 32]>,
-    ) -> Result<()> {
-        instructions::send_message(ctx, message_body, recipient, destination_caller)
+        fee_override: u64,
+    ) -> Result<SendResult> {
+        instructions::send_message(ctx, message_body, recipient, destination_caller, fee_override)
     }
 
     pub fn deliver_message(ctx: Context<DeliverMessage>, payload_hash: [u8; 32]) -> Result<()> {
@@ -94,7 +96,7 @@ pub mod mailbox {
     pub fn handle_message<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
         payload_hash: [u8; 32],
-    ) -> Result<()> {
+    ) -> Result<Vec<u8>> {
         instructions::handle_message(ctx, payload_hash)
     }
 

@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::solana_program::program::{get_return_data, invoke_signed};
 
 use crate::constants::{CONFIG_SEED, MESSAGE_SEED};
 use crate::errors::MailboxError;
@@ -29,7 +30,7 @@ pub struct HandleMessage<'info> {
 pub fn handle_message<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
     payload_hash: [u8; 32],
-) -> Result<()> {
+) -> Result<Vec<u8>> {
     let message_info = &mut ctx.accounts.message_info;
 
     if let Some(destination_caller) = message_info.message.destination_caller {
@@ -70,7 +71,7 @@ pub fn handle_message<'a, 'b, 'c, 'info>(
         data: utils::cpi::gmp_receive_instr_data(payload_hash),
     };
 
-    anchor_lang::solana_program::program::invoke_signed(
+    invoke_signed(
         &instruction,
         &account_infos,
         &[&[MESSAGE_SEED, &payload_hash[..], &[ctx.bumps.message_info]]],
@@ -78,8 +79,10 @@ pub fn handle_message<'a, 'b, 'c, 'info>(
 
     emit!(crate::events::MessageHandled { payload_hash });
 
+    let (_, result_data) = get_return_data().unwrap();
+
     // todo: we could resize the message info account to save on-chain space and only
     // store the handled status discarding the message body
 
-    Ok(())
+    Ok(result_data)
 }

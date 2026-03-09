@@ -2,9 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::system_instruction::transfer;
 
-use crate::constants::{CONFIG_SEED, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
+use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
 use crate::state::{Config, OutboundMessage, OutboundMessagePath, SenderConfig};
+use crate::utils::message_utils::SendResult;
 
 #[derive(Accounts)]
 #[instruction(message_body: Vec<u8>)]
@@ -51,14 +52,20 @@ pub fn send_message(
     message_body: Vec<u8>,
     recipient: [u8; 32],
     destination_caller: Option<[u8; 32]>,
-) -> Result<()> {
+    fee_override: u64,
+) -> Result<SendResult> {
     let config = &mut ctx.accounts.config;
     let outbound_message = &mut ctx.accounts.outbound_message;
 
-    let (fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
+    let (mut fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
         Some(sender_config) => (sender_config.fee_disabled, sender_config.max_payload_size),
         None => (false, config.default_max_payload_size),
     };
+    let mut fee_per_byte = config.fee_per_byte;
+    if fee_disabled && fee_override > 0 {
+        fee_per_byte = fee_per_byte * fee_override / FEE_ADJUSTMET_BASE;
+        fee_disabled = false;
+    }
 
     // Check payload size
     require!(
@@ -74,7 +81,7 @@ pub fn send_message(
     outbound_message.0.sender = ctx.accounts.sender_authority.owner.to_bytes();
 
     if !fee_disabled {
-        let fee = outbound_message.accountable_abi_bytes() * config.fee_per_byte;
+        let fee = outbound_message.accountable_abi_bytes() * fee_per_byte;
         msg!("gmp fee: {}", fee);
         if fee != 0 {
             let treasury = match ctx.accounts.treasury.clone() {
@@ -106,5 +113,8 @@ pub fn send_message(
     // Increment global nonce
     config.global_nonce = config.global_nonce.checked_add(1).unwrap();
 
-    Ok(())
+    Ok(SendResult{
+        nonce: config.global_nonce,
+        payload_hash:  outbound_message.0.calculate_payload_hash(),
+    })
 }

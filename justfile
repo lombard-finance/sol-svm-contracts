@@ -7,6 +7,7 @@ build-contracts:
     rm -rf target/*
     docker run --rm \
     -v ./programs:/contracts/programs \
+    -v ./dependencies:/contracts/dependencies \
     -v ./Anchor.toml:/contracts/Anchor.toml \
     -v ./Cargo.lock:/contracts/Cargo.lock \
     -v ./Cargo.toml:/contracts/Cargo.toml \

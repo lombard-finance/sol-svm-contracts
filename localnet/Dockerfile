@@ -21,7 +21,7 @@ RUN cargo install --git https://github.com/coral-xyz/anchor avm --force
 RUN avm install 0.31.1
 
 # Solana
-RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.0/install)"
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.21/install)"
 ENV PATH="/root/.local/share/solana/install/active_release/bin:$PATH"
 RUN solana config set --url http://0.0.0.0:8899
 RUN solana config set --ws ws://0.0.0.0:8900
