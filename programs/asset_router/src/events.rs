@@ -29,6 +29,11 @@ pub struct TreasuryChanged {
 }
 
 #[event]
+pub struct NativeMintChanged {
+    pub address: Pubkey,
+}
+
+#[event]
 pub struct ProgramPaused {
     pub paused: bool,
 }

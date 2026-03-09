@@ -2,6 +2,8 @@ pub mod accept_ownership;
 pub use accept_ownership::*;
 pub mod admin;
 pub use admin::*;
+pub mod change_native_mint;
+pub use change_native_mint::*;
 pub mod deposit;
 pub use deposit::*;
 pub mod grant_account_role;

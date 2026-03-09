@@ -158,6 +158,10 @@ pub mod asset_router {
         )
     }
 
+    pub fn change_native_mint(ctx: Context<ChangeNativeToken>, native_mint: Pubkey) -> Result<()> {
+        instructions::change_native_mint(ctx, native_mint)
+    }
+
     pub fn grant_account_role(
         ctx: Context<GrantAccountRole>,
         account: Pubkey,
