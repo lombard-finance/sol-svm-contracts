@@ -53,6 +53,10 @@ pub mod consortium {
         instructions::set_initial_valset(ctx, payload)
     }
 
+    pub fn set_initial_valset_from_session(ctx: Context<SetInitialValsetFromSession>, payload_hash: [u8; 32]) -> Result<()> {
+        instructions::set_initial_valset_from_session(ctx, payload_hash)
+    }
+
     pub fn accept_ownership(ctx: Context<AcceptOwnership>) -> Result<()> {
         instructions::accept_ownership(ctx)
     }

@@ -55,6 +55,7 @@ pub fn update_valset(ctx: Context<UpdateValset>, payload_hash: [u8; 32]) -> Resu
     ctx.accounts.config.current_validators = update_valset_payload.validators;
     ctx.accounts.config.current_weights = update_valset_payload.weights;
     ctx.accounts.config.current_weight_threshold = update_valset_payload.weight_threshold;
+    ctx.accounts.config.current_height = update_valset_payload.height;
 
     emit!(ValidatorSetUpdated {
         epoch: ctx.accounts.config.current_epoch,

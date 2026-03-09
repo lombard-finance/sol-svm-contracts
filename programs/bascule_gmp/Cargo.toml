@@ -1,0 +1,26 @@
+[package]
+name = "bascule_gmp"
+version = "0.1.0"
+description = "Tracks the state of mint messages (nonce, token, recipient, amount) for GMP"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "bascule_gmp"
+
+[features]
+default = ["devnet"]
+mainnet = []
+devnet = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+solana-security-txt = "1.1.1"
+
+[dev-dependencies]
+hex = "0.4.3"

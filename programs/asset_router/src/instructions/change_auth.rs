@@ -10,6 +10,7 @@ pub struct ChangeAuth<'info> {
     pub payer: Signer<'info>,
     #[account(seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     /// CHECK: We only need the account info and don't need to constrain otherwise. If the wrong
     /// current authority is passed the function call will fail.

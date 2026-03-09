@@ -96,7 +96,7 @@ pub mod mailbox {
     pub fn handle_message<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
         payload_hash: [u8; 32],
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>> {
         instructions::handle_message(ctx, payload_hash)
     }
 

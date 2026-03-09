@@ -30,7 +30,7 @@ pub struct HandleMessage<'info> {
 pub fn handle_message<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
     payload_hash: [u8; 32],
-) -> Result<Vec<u8>> {
+) -> Result<Option<Vec<u8>>> {
     let message_info = &mut ctx.accounts.message_info;
 
     if let Some(destination_caller) = message_info.message.destination_caller {
@@ -79,10 +79,13 @@ pub fn handle_message<'a, 'b, 'c, 'info>(
 
     emit!(crate::events::MessageHandled { payload_hash });
 
-    let (_, result_data) = get_return_data().unwrap();
+    let (_, result_data) = match get_return_data() {
+        Some(res) => res,
+        None => return Ok(None)
+    };
 
     // todo: we could resize the message info account to save on-chain space and only
     // store the handled status discarding the message body
 
-    Ok(result_data)
+    Ok(Some(result_data))
 }

@@ -8,7 +8,7 @@ use crate::{
 };
 
 use mailbox::{
-    constants::FEE_ADJUSTMET_BASE, cpi::{accounts::SendMessage, send_message}, program::Mailbox, state::{OutboundMessage, OutboundMessagePath}
+    constants::FEE_ADJUSTMET_BASE, cpi::{accounts::SendMessage, send_message}, program::Mailbox, state::{OutboundMessagePath}
 };
 
 #[derive(Accounts)]

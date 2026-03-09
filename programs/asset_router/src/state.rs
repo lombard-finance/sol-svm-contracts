@@ -5,20 +5,29 @@ use anchor_lang::prelude::*;
 pub struct Config {
     // Authorities
     pub admin: Pubkey,
+    // The address of the pending admin when a change is in progress
     pub pending_admin: Pubkey,
+    // The address to collect fees
     pub treasury: Pubkey,
 
     // Global pause
     pub paused: bool,
-
+    // The token mint to use for native representation of BTC
     pub native_mint: Pubkey,
-
+    // The reference Lombard security consortium program
+    pub consortium: Pubkey,
+    // The reference mailbox program for sending/receiving messages among Lombard components
     pub mailbox: Pubkey,
+    /// When Some, mint_from_payload makes a CPI to bascule validate_withdrawal before minting.
+    pub bascule: Option<Pubkey>,
+    /// When Some, gmp_receive makes a CPI to bascule_gmp validate_mint before minting.
+    pub bascule_gmp: Option<Pubkey>,
 
-    pub bascule_enabled: bool,
+    // Reference Lombard Chain IDs
 
-    // Reference LChainIds
+    // The Lombard Chain ID of the Lombard Ledger
     pub ledger_lchain_id: [u8; 32],
+    // The Lombard Chain ID of the Bitcoin blockchain
     pub bitcoin_lchain_id: [u8; 32],
 }
 

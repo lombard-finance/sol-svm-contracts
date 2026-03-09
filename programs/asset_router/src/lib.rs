@@ -34,18 +34,11 @@ pub mod asset_router {
 
     pub fn mint_with_fee(
         ctx: Context<MintWithFee>,
-        mint_payload: [u8; DEPOSIT_V1_PAYLOAD_LEN],
         mint_payload_hash: [u8; 32],
         fee_payload: [u8; FEE_PAYLOAD_LEN],
         fee_signature: [u8; 64],
     ) -> Result<()> {
-        instructions::mint_with_fee(
-            ctx,
-            mint_payload,
-            mint_payload_hash,
-            fee_payload,
-            fee_signature,
-        )
+        instructions::mint_with_fee(ctx, mint_payload_hash, fee_payload, fee_signature)
     }
 
     pub fn deposit(
@@ -88,12 +81,12 @@ pub mod asset_router {
         instructions::transfer_ownership(ctx, new_admin)
     }
 
-    pub fn enable_bascule(ctx: Context<Admin>) -> Result<()> {
-        instructions::enable_bascule(ctx)
+    pub fn set_bascule(ctx: Context<Admin>, bascule: Option<Pubkey>) -> Result<()> {
+        instructions::set_bascule(ctx, bascule)
     }
 
-    pub fn disable_bascule(ctx: Context<Admin>) -> Result<()> {
-        instructions::disable_bascule(ctx)
+    pub fn set_bascule_gmp(ctx: Context<Admin>, bascule_gmp: Option<Pubkey>) -> Result<()> {
+        instructions::set_bascule_gmp(ctx, bascule_gmp)
     }
 
     pub fn set_mint_fee(ctx: Context<SetMintFee>, mint_fee: u64) -> Result<()> {

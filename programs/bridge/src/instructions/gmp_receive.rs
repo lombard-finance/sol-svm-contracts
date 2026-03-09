@@ -17,6 +17,7 @@ pub struct GMPReceive<'info> {
     // Checking this account is signer ensures the message legitimately comes from the mailbox program.
     #[account(
         signer,
+        owner = config.mailbox,
         seeds = [MESSAGE_SEED, &payload_hash],
         seeds::program = config.mailbox,
         bump,
@@ -81,6 +82,7 @@ pub struct GMPReceive<'info> {
     )]
     pub remote_token_config: Account<'info, RemoteTokenConfig>,
     #[account(
+        owner = config.mailbox,
         seeds = [INBOUND_MESSAGE_PATH_SEED, &inbound_message_path.source_chain_id],
         seeds::program = config.mailbox,
         constraint = inbound_message_path.identifier == message_info.message.message_path_identifier,

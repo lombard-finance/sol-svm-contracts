@@ -10,10 +10,6 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-BN.prototype.bigInt = function (): bigint {
-  return BigInt(this.toString(10));
-};
-
 describe("Consortium", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -69,7 +65,7 @@ describe("Consortium", () => {
             deployer: payer.publicKey,
           })
           .signers([payer])
-          .rpc()
+          .rpc({commitment: "confirmed"})
       ).to.be.rejectedWith("Unauthorized function call");
     });
 
@@ -78,14 +74,14 @@ describe("Consortium", () => {
         [program.programId.toBuffer()],
         new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
       )[0];
-      const tx = await program.methods
+      await program.methods
         .initialize(admin.publicKey)
         .accounts({
           deployer: provider.wallet.publicKey,
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        .rpc({commitment: "confirmed"});
+      
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
     });
@@ -96,17 +92,17 @@ describe("Consortium", () => {
           .transferOwnership(payer.publicKey)
           .accounts({ payer: payer.publicKey})
           .signers([payer])
-          .rpc()
+          .rpc({commitment: "confirmed"})
       ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("transferOwnership: successful by admin", async () => {
-      const tx = await program.methods
+      await program.methods
         .transferOwnership(payer.publicKey)
         .accounts({ payer: admin.publicKey})
         .signers([admin])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        .rpc({commitment: "confirmed"});
+      
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
       expect(cfg.pendingAdmin.toBase58()).to.be.equal(payer.publicKey.toBase58());
@@ -114,17 +110,17 @@ describe("Consortium", () => {
 
     it("acceptOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods.acceptOwnership().accounts({ payer: user.publicKey}).signers([user]).rpc()
+        program.methods.acceptOwnership().accounts({ payer: user.publicKey}).signers([user]).rpc({commitment: "confirmed"})
       ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("acceptOwnership: successful by pending admin", async () => {
-      const tx = await program.methods
+      await program.methods
         .acceptOwnership()
         .accounts({ payer: payer.publicKey})
         .signers([payer])
-        .rpc();
-      await provider.connection.confirmTransaction(tx);
+        .rpc({commitment: "confirmed"});
+      
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(payer.publicKey.toBase58());
 
@@ -133,13 +129,13 @@ describe("Consortium", () => {
         .transferOwnership(admin.publicKey)
         .accounts({ payer: payer.publicKey})
         .signers([payer])
-        .rpc();
+        .rpc({commitment: "confirmed"});
       await provider.connection.confirmTransaction(tx2);
       const tx3 = await program.methods
         .acceptOwnership()
         .accounts({ payer: admin.publicKey})
         .signers([admin])
-        .rpc();
+        .rpc({commitment: "confirmed"});
       await provider.connection.confirmTransaction(tx3);
       const cfg2 = await program.account.config.fetch(configPDA);
       expect(cfg2.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
@@ -158,6 +154,8 @@ describe("Consortium", () => {
     );
 
     const nextValsetHash = sha256(nextValset);
+    console.log("valsetPayloadHash", nextValsetHash);
+    const nextValsetHashBz = Array.from(Uint8Array.from(Buffer.from(nextValsetHash, "hex")));
 
     const initialValidators = [
       Buffer.from(
@@ -183,18 +181,18 @@ describe("Consortium", () => {
         "hex"
       )
     ];
-    const initialWeights = [1n, 1n];
-    const nextWeights = [1n, 1n, 1n];
+    const initialWeights = [new BN(1), new BN(1)];
+    const nextWeights = [new BN(1), new BN(1), new BN(1)];
 
     const sigs = [
-      Buffer.from(
+      Array.from(Uint8Array.from(Buffer.from(
         "dd9cbefb2570d94d82095766a142e7f3eb115313f364db7c0fa01ac246aca5ff3654b5f6dbcdbfe086c86e5e7ae8e5178986944dafb077303a99e2bd75663c86",
         "hex"
-      ),
-      Buffer.from(
+      ))),
+      Array.from(Uint8Array.from(Buffer.from(
         "7474df436d805d9bce1ae640e7802c88e655496f008f428fd953f623a054d7782841f70a5c4ffa6da53ea661762967eb628b81ad6a8d6321f83fb66884855e3a",
         "hex"
-      )
+      ))),
     ];
 
     // todo: add test with wrong sigs
@@ -219,24 +217,24 @@ describe("Consortium", () => {
               admin: payer.publicKey,
             })
             .signers([payer])
-            .rpc()
+            .rpc({commitment: "confirmed"})
         ).to.be.rejectedWith("An address constraint was violated");
       });
 
       it("setInitialValset: successful by admin", async () => {
-        let tx = await program.methods
+        await program.methods
             .setInitialValset(initialValset)
             .accounts({
                 admin: admin.publicKey,
             })
           .signers([admin])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
+          .rpc({commitment: "confirmed"});
+        
 
         const cfg = await program.account.config.fetch(configPDA);
-        expect(cfg.currentEpoch.bigInt()).to.be.eq(1n);
-        expect(cfg.currentWeights.map(n => n.bigInt())).to.have.deep.members(initialWeights);
-        expect(cfg.currentWeightThreshold.bigInt()).to.be.eq(1n);
+        expect(cfg.currentEpoch.toString()).to.be.eq("1");
+        expect(cfg.currentWeights.map(w => w.toString())).to.have.deep.members(initialWeights.map(w => w.toString()));
+        expect(cfg.currentWeightThreshold.toString()).to.be.eq("1");
         expect(cfg.currentValidators.map(v => Buffer.from(v))).to.have.deep.members(initialValidators);
       });
 
@@ -246,7 +244,7 @@ describe("Consortium", () => {
             .setInitialValset(initialValset)
             .accounts({ admin: admin.publicKey})
             .signers([admin])
-            .rpc()
+            .rpc({commitment: "confirmed"})
         ).to.be.rejectedWith("Validator set already set");
       });
     });
@@ -269,44 +267,44 @@ describe("Consortium", () => {
       )[0];
 
       it("create session", async () => {
-        let tx = await program.methods
-            .createSession(Buffer.from(nextValsetHash, "hex"))
+        await program.methods
+            .createSession(nextValsetHashBz)
             .accounts({
               payer: payer.publicKey,
               session: sessionPDA,
               validatedPayload: validatedPayloadPDA,
             })
             .signers([payer])
-            .rpc();
-        await provider.connection.confirmTransaction(tx);
+            .rpc({commitment: "confirmed"});
+        
         // TODO: check session is created
       });
 
       it("post session signatures", async () => {
-        const tx = await program.methods
-          .postSessionSignatures(Buffer.from(nextValsetHash, "hex"), sigs, [new BN(0), new BN(1)])
+        await program.methods
+          .postSessionSignatures(nextValsetHashBz, sigs, [new BN(0), new BN(1)])
           .accounts({
             payer: payer.publicKey,
             session: sessionPDA
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
+          .rpc({commitment: "confirmed"});
+        
 
         // TODO: check session is signed
       });
 
       it("finalize session", async () => {
-        let tx = await program.methods
-          .finalizeSession(Buffer.from(nextValsetHash, "hex"))
+        await program.methods
+          .finalizeSession(nextValsetHashBz)
           .accounts({
             payer: payer.publicKey,
             session: sessionPDA,
             validatedPayload: validatedPayloadPDA,
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
+          .rpc({commitment: "confirmed"});
+        
       
         // TODO: check session account is closed
         // TODO: check validated payload account is created
@@ -316,45 +314,45 @@ describe("Consortium", () => {
         // split it in two chunks to test chunked submission
         let nextValsetFirstChunk = Buffer.from(nextValset.subarray(0, nextValset.length / 2));
         let nextValsetSecondChunk = Buffer.from(nextValset.subarray(nextValset.length / 2, nextValset.length));
-        let tx = await program.methods
-          .postSessionPayload(Buffer.from(nextValsetHash, "hex"), nextValsetFirstChunk, nextValset.length)
+        await program.methods
+          .postSessionPayload(nextValsetHashBz, nextValsetFirstChunk, nextValset.length)
           .accounts({
             payer: payer.publicKey,
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
-        tx = await program.methods
-          .postSessionPayload(Buffer.from(nextValsetHash, "hex"), nextValsetSecondChunk, nextValset.length)
+          .rpc({commitment: "confirmed"});
+        
+        await program.methods
+          .postSessionPayload(nextValsetHashBz, nextValsetSecondChunk, nextValset.length)
           .accounts({
             payer: payer.publicKey,
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
+          .rpc({commitment: "confirmed"});
       });
 
       it("update valset", async () => {
-        let tx = await program.methods
-          .updateValset(Buffer.from(nextValsetHash, "hex"))
+        await program.methods
+          .updateValset(nextValsetHashBz)
           .accounts({
             payer: payer.publicKey,
             validatedPayload: validatedPayloadPDA,
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc();
-        await provider.connection.confirmTransaction(tx);
+          .rpc({commitment: "confirmed"});
+        
+        const cfg = await program.account.config.fetch(configPDA);
+        expect(cfg.currentEpoch.toString()).to.be.eq("2");
+        expect(cfg.currentWeights.map(w => w.toString())).to.have.deep.members(nextWeights.map(w => w.toString()));
+        expect(cfg.currentWeightThreshold.toString()).to.be.eq("2");
+        expect(cfg.currentValidators.map(v => Buffer.from(v))).to.have.deep.members(nextValidators);
 
         // TODO: check session payload account is closed
-
-        const cfg = await program.account.config.fetch(configPDA);
-        expect(cfg.currentEpoch.bigInt()).to.be.eq(2n);
-        expect(cfg.currentWeights.map(n => n.bigInt())).to.have.deep.members(nextWeights);
-        expect(cfg.currentWeightThreshold.bigInt()).to.be.eq(2n);
-        expect(cfg.currentValidators.map(v => Buffer.from(v))).to.have.deep.members(nextValidators);
+        const sessionPayloadInfo = await provider.connection.getAccountInfo(sessionPayloadPDA);
+        expect(sessionPayloadInfo).to.be.null;
       });
     });
   });

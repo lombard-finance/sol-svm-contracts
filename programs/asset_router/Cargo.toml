@@ -22,6 +22,7 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
 bascule = { path = "../bascule", features = ["cpi"] }
+bascule_gmp = { path = "../bascule_gmp", features = ["cpi"] }
 consortium = { path = "../consortium", features = ["cpi"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
 spl-token-2022 = { version = "6.0.0", features = ["no-entrypoint"] }

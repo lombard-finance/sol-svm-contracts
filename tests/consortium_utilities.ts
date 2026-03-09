@@ -423,7 +423,7 @@ export class ConsortiumUtility {
 	getValidatedPayloadPDA(payloadHash: Buffer): PublicKey {
 		return PublicKey.findProgramAddressSync(
 			[Buffer.from("validated_payload"), payloadHash],
-      this.consortium.programId
+			this.consortium.programId
 		)[0];
 	}
 

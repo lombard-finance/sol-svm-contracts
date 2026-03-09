@@ -4,8 +4,9 @@ use anchor_lang::solana_program::system_instruction::transfer;
 
 use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
-use crate::state::{Config, OutboundMessage, OutboundMessagePath, SenderConfig};
 use crate::utils::message_utils::SendResult;
+use crate::state::{Config, OutboundMessagePath, SenderConfig};
+use crate::utils::message_utils::MessageV1;
 
 #[derive(Accounts)]
 #[instruction(message_body: Vec<u8>)]
@@ -26,14 +27,16 @@ pub struct SendMessage<'info> {
 
     pub outbound_message_path: Account<'info, OutboundMessagePath>,
 
+    /// CHECK: This will hold the GMP message suitable for notarization by consortium to be used as-is
+    /// so the mailbox program handles its data
     #[account(
         init,
         payer = fee_payer,
-        space = 8 + OutboundMessage::size(message_body.len()),
+        space = MessageV1::accountable_abi_bytes(message_body.len()) as usize,
         seeds = [OUTBOUND_MESSAGE, &config.global_nonce.to_be_bytes()],
         bump
     )]
-    pub outbound_message: Account<'info, OutboundMessage>,
+    pub outbound_message: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 
@@ -55,7 +58,7 @@ pub fn send_message(
     fee_override: u64,
 ) -> Result<SendResult> {
     let config = &mut ctx.accounts.config;
-    let outbound_message = &mut ctx.accounts.outbound_message;
+    let outbound_message_account = &mut ctx.accounts.outbound_message;
 
     let (mut fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
         Some(sender_config) => (sender_config.fee_disabled, sender_config.max_payload_size),
@@ -73,15 +76,17 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
-    outbound_message.0.nonce = config.global_nonce;
-    outbound_message.0.body = message_body;
-    outbound_message.0.destination_caller = destination_caller;
-    outbound_message.0.recipient = recipient;
-    outbound_message.0.message_path_identifier = ctx.accounts.outbound_message_path.identifier;
-    outbound_message.0.sender = ctx.accounts.sender_authority.owner.to_bytes();
+    let message = MessageV1 {
+        nonce: config.global_nonce,
+        body: message_body,
+        destination_caller: destination_caller,
+        recipient: recipient,
+        message_path_identifier: ctx.accounts.outbound_message_path.identifier,
+        sender: ctx.accounts.sender_authority.owner.to_bytes(),
+    };
 
     if !fee_disabled {
-        let fee = outbound_message.accountable_abi_bytes() * fee_per_byte;
+        let fee = MessageV1::accountable_abi_bytes(message.body_length()) * fee_per_byte;
         msg!("gmp fee: {}", fee);
         if fee != 0 {
             let treasury = match ctx.accounts.treasury.clone() {
@@ -110,11 +115,16 @@ pub fn send_message(
         nonce: config.global_nonce,
     });
 
+    let (payload_hash, payload) = message.calculate_payload_hash();
+
     // Increment global nonce
     config.global_nonce = config.global_nonce.checked_add(1).unwrap();
 
+    // Write payload to outbound message account
+    outbound_message_account.try_borrow_mut_data()?.copy_from_slice(&payload);
+
     Ok(SendResult{
         nonce: config.global_nonce,
-        payload_hash:  outbound_message.0.calculate_payload_hash(),
+        payload_hash: payload_hash,
     })
 }

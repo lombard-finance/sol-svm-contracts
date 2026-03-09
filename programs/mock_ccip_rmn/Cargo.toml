@@ -9,7 +9,7 @@ crate-type = ["cdylib", "lib"]
 name = "mock_ccip_rmn"
 
 [features]
-default = ["devnet"]
+default = ["mainnet"]
 mainnet = []
 devnet = []
 cpi = ["no-entrypoint"]

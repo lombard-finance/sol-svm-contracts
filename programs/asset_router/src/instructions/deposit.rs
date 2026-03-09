@@ -125,6 +125,7 @@ pub fn deposit(
         deposit_msg.to_gmp_body(),
         BTC_STAKING_MODULE_ADDRESS,
         None,
+        0
     )?;
 
     Ok(())

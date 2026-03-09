@@ -1,7 +1,6 @@
 //! Initializes the LBTC program, setting all initial values.
 use crate::{
     constants,
-    errors::AssetRouterError,
     state::{Config, MessagingAuthority},
 };
 use anchor_lang::prelude::*;
@@ -50,8 +49,10 @@ pub fn initialize(ctx: Context<Initialize>, config: Config) -> Result<()> {
     ctx.accounts.config.paused = false;
     ctx.accounts.config.native_mint = config.native_mint;
     ctx.accounts.config.treasury = config.treasury;
+    ctx.accounts.config.consortium = config.consortium;
     ctx.accounts.config.mailbox = config.mailbox;
-    ctx.accounts.config.bascule_enabled = config.bascule_enabled;
+    ctx.accounts.config.bascule = config.bascule;
+    ctx.accounts.config.bascule_gmp = config.bascule_gmp;
     ctx.accounts.config.ledger_lchain_id = config.ledger_lchain_id;
     ctx.accounts.config.bitcoin_lchain_id = config.bitcoin_lchain_id;
     Ok(())

@@ -9,7 +9,7 @@ crate-type = ["cdylib", "lib"]
 name = "bridge"
 
 [features]
-default = ["devnet"]
+default = ["mainnet"]
 mainnet = []
 devnet = []
 cpi = ["no-entrypoint"]

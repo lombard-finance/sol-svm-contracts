@@ -24,6 +24,7 @@ pub struct PublishRatio<'info> {
     pub oracle: Account<'info, Oracle>,
     /// check that the consortium program has validated the payload
     #[account(
+        owner = config.consortium,
         seeds = [VALIDATED_PAYLOAD_SEED, &sha256(&payload).to_bytes()[..]],
         seeds::program = config.consortium,
         bump

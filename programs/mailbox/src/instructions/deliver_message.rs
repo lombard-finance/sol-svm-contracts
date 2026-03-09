@@ -36,6 +36,7 @@ pub struct DeliverMessage<'info> {
 
     // expects that the deliverer has submitted the full payload to the consortium program
     #[account(
+        owner = config.consortium,
         seeds = [SESSION_PAYLOAD_SEED, &deliverer.key.to_bytes()[..], &payload_hash[..]],
         seeds::program = config.consortium,
         bump
@@ -44,6 +45,7 @@ pub struct DeliverMessage<'info> {
 
     /// check that the consortium program has validated the payload
     #[account(
+        owner = config.consortium,
         seeds = [VALIDATED_PAYLOAD_SEED, &sha256(&consortium_payload.payload).to_bytes()[..]],
         seeds::program = config.consortium,
         bump

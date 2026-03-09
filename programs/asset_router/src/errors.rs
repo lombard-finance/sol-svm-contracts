@@ -73,6 +73,14 @@ pub enum AssetRouterError {
     InvalidMessage,
     #[msg("Invalid signature")]
     InvalidSignature,
+    #[msg("Missing bascule account")]
+    MissingBasculeAccount,
+    #[msg("Invalid bascule program")]
+    InvalidBasculeProgram,
+    #[msg("Invalid bascule deposit account")]
+    InvalidBasculeDeposit,
+    #[msg("Invalid session payload account or payload")]
+    InvalidSessionPayload,
 }
 
 impl From<std::io::Error> for AssetRouterError {

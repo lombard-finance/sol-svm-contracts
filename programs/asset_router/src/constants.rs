@@ -22,11 +22,15 @@ pub const TOKEN_ROUTE_SEED: &[u8] = b"token_route";
 pub const RATIO_SEED: &[u8] = b"ratio";
 pub const MESSAGE_HANDLED_SEED: &[u8] = b"message_handled";
 pub const MESSAGING_AUTHORITY_SEED: &[u8] = b"messaging_authority";
+pub const BASCULE_VALIDATOR_SEED: &[u8] = b"bascule_validator";
 
 // Logic constants
 pub const BTC_DECIMALS: u8 = 8;
 pub const MAX_FEE: u64 = 100000;
-pub const BITCOIN_TOKEN_ADDRESS: [u8; 32] = [0u8; 32];
+pub const BITCOIN_TOKEN_ADDRESS: [u8; 32] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,   
+];
 
 // Ledger constants
 pub const BTC_STAKING_MODULE_ADDRESS: [u8; 32] = [

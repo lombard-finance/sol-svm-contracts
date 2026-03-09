@@ -405,6 +405,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bascule",
+ "bascule_gmp",
  "consortium",
  "hex",
  "mailbox",
@@ -425,6 +426,15 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "primitive-types-solana",
+]
+
+[[package]]
+name = "bascule_gmp"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "hex",
+ "solana-security-txt",
 ]
 
 [[package]]

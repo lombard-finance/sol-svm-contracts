@@ -10,6 +10,7 @@ pub struct GMPReceive<'info> {
     // Checking this account is signer ensures the message legitimately comes from the mailbox program.
     #[account(
         signer,
+        owner = config.mailbox_address,
         seeds = [MESSAGE_SEED, &payload_hash],
         seeds::program = config.mailbox_address,
         bump,

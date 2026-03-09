@@ -151,6 +151,7 @@ pub fn redeem(
         redeem_msg.to_gmp_body(),
         ctx.accounts.token_config.ledger_redeem_handler,
         None,
+        0
     )?;
 
     Ok(())

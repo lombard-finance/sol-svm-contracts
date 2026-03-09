@@ -41,6 +41,17 @@ import {
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
+/** Pass when bascule is disabled so Anchor receives explicit nulls for optional bascule accounts. */
+function withOptionalBasculeNull<T extends Record<string, unknown>>(accounts: T): T & Record<string, unknown> {
+  return {
+    ...accounts,
+    basculeValidator: null,
+    basculeProgram: null,
+    basculeData: null,
+    basculeDeposit: null
+  };
+}
+
 declare module "@coral-xyz/anchor" {
   interface BN {
     toBigInt(): bigint;
@@ -110,7 +121,8 @@ describe("Asset Router", () => {
   const stakedToNativeCommission = new BN(100);
   const nativeToNativeCommission = new BN(100);
   const redeemForBtcMinAmount = new BN(1000);
-  const basculeEnabled = false;
+  const bascule: PublicKey | null = null;
+  const basculeGmp: PublicKey | null = null;
   const redeemTokenRoutePDA = PublicKey.findProgramAddressSync(
     [
       Buffer.from("token_route"),
@@ -228,7 +240,8 @@ describe("Asset Router", () => {
             paused: false,
             nativeMint: nativeMintKeypair.publicKey,
             mailbox: mailboxAddress,
-            basculeEnabled: basculeEnabled,
+            bascule: bascule,
+            basculeGmp: basculeGmp,
             ledgerLchainId: LEDGER_LCHAIN_ID_BZ,
             bitcoinLchainId: BITCOIN_LCHAIN_ID_BZ
           })
@@ -249,7 +262,8 @@ describe("Asset Router", () => {
           paused: false,
           nativeMint: nativeMintKeypair.publicKey,
           mailbox: mailboxAddress,
-          basculeEnabled: basculeEnabled,
+          bascule: bascule,
+          basculeGmp: basculeGmp,
           ledgerLchainId: LEDGER_LCHAIN_ID_BZ,
           bitcoinLchainId: BITCOIN_LCHAIN_ID_BZ
         })
@@ -265,7 +279,8 @@ describe("Asset Router", () => {
       expect(cfg.nativeMint.toBase58()).to.be.eq(nativeMintKeypair.publicKey.toBase58());
       expect(cfg.treasury.toBase58()).to.be.eq(treasury.publicKey.toBase58());
       expect(cfg.mailbox.toBase58()).to.be.eq(mailboxAddress.toBase58());
-      expect(cfg.basculeEnabled).to.be.eq(basculeEnabled);
+      expect(cfg.bascule).to.be.null;
+      expect(cfg.basculeGmp).to.be.null;
       expect(cfg.ledgerLchainId).to.be.deep.eq(LEDGER_LCHAIN_ID_BZ);
       expect(cfg.bitcoinLchainId).to.be.deep.eq(BITCOIN_LCHAIN_ID_BZ);
     });
@@ -710,61 +725,54 @@ describe("Asset Router", () => {
     });
   });
 
-  describe("Bascule", function () {
-    const BasculeEvents = [];
-    const listeners: number[] = [];
-
-    before(async function () {
-      listeners.push(
-        programEventManager.addEventListener("basculeEnabled", e => {
-          console.log(JSON.stringify(e));
-          BasculeEvents.push(e);
-        })
-      );
-    });
-
-    afterEach(async function () {
-      BasculeEvents.length = 0;
-    });
-
-    after(async function () {
-      for (const l of listeners) {
-        await programEventManager.removeEventListener(l);
-      }
-    });
-
-    it("enableBascule rejects when called by not admin", async () => {
+  describe("Bascule integration config", function () {
+    it("setBascule rejects when called by not admin", async () => {
       await expect(
-        program.methods.enableBascule().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc()
+        (program.methods as any)
+          .setBascule(mailboxAddress) // any pubkey
+          .accounts({ payer: pauser.publicKey })
+          .signers([pauser])
+          .rpc()
       ).to.be.rejectedWith("Unauthorized");
     });
 
-    it("enableBascule successful by admin", async () => {
-      await program.methods
-        .enableBascule()
+    it("setBascule successful by admin", async () => {
+      await (program.methods as any)
+        .setBascule(mailboxAddress) // any pubkey
         .accounts({ payer: admin.publicKey })
         .signers([admin])
         .rpc({ commitment: "confirmed" });
 
-      expect(BasculeEvents[0]).to.be.not.undefined;
-      expect(BasculeEvents[0].enabled).to.be.true;
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.bascule?.toBase58()).to.eq(mailboxAddress.toBase58());
     });
 
-    it("disableBascule rejects when called by not admin", async () => {
-      await expect(
-        program.methods.disableBascule().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc()
-      ).to.be.rejectedWith("Unauthorized");
-    });
-
-    it("disableBascule successful by admin", async () => {
-      await program.methods
-        .disableBascule()
+    it("setBasculeGmp successful by admin", async () => {
+      await (program.methods as any)
+        .setBasculeGmp(mailboxAddress) // any pubkey
         .accounts({ payer: admin.publicKey })
         .signers([admin])
         .rpc({ commitment: "confirmed" });
 
-      expect(BasculeEvents[0]).to.be.not.undefined;
-      expect(BasculeEvents[0].enabled).to.be.false;
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.basculeGmp?.toBase58()).to.eq(mailboxAddress.toBase58());
+    });
+
+    it("can clear bascule and basculeGmp", async () => {
+      await (program.methods as any)
+        .setBascule(null)
+        .accounts({ payer: admin.publicKey })
+        .signers([admin])
+        .rpc({ commitment: "confirmed" });
+      await (program.methods as any)
+        .setBasculeGmp(null)
+        .accounts({ payer: admin.publicKey })
+        .signers([admin])
+        .rpc({ commitment: "confirmed" });
+
+      const cfg = await program.account.config.fetch(configPDA);
+      expect(cfg.bascule).to.be.null;
+      expect(cfg.basculeGmp).to.be.null;
     });
   });
 
@@ -967,15 +975,17 @@ describe("Asset Router", () => {
       await expect(
         program.methods
           .mintFromPayload(payload.toBytes(), payload.toHashBytes())
-          .accounts({
-            payer: payer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: validatedPayloadPDA,
-            depositPayloadSpent: depositPayloadSpentPDA
-          })
+          .accounts(
+            withOptionalBasculeNull({
+              payer: payer.publicKey,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: validatedPayloadPDA,
+              depositPayloadSpent: depositPayloadSpentPDA
+            })
+          )
           .signers([payer])
           .rpc()
       ).to.be.rejectedWith("Paused");
@@ -1165,6 +1175,24 @@ describe("Asset Router", () => {
     let ed25519Instruction: TransactionInstruction;
     let validNativeMintPayload: PayloadDepositV1;
     let depositPayloadSpentPDA: PublicKey;
+    let sessionPayloadPDA: PublicKey;
+
+    async function postSessionPayload(poster: Keypair, payload: Buffer): Promise<PublicKey> {
+      const payloadHash = Buffer.from(sha256.array(payload));
+      const pda = PublicKey.findProgramAddressSync(
+        [Buffer.from("session_payload"), poster.publicKey.toBuffer(), payloadHash],
+        consortium.programId
+      )[0];
+      await consortium.methods
+        .postSessionPayload(Array.from(Uint8Array.from(payloadHash)), payload, payload.length)
+        .accounts({
+          payer: poster.publicKey,
+          sessionPayload: pda
+        })
+        .signers([poster])
+        .rpc({ commitment: "confirmed" });
+      return pda;
+    }
 
     before(async () => {
       listeners.push(
@@ -1192,6 +1220,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1337,15 +1366,17 @@ describe("Asset Router", () => {
         await expect(
           program.methods
             .mintFromPayload(Array.from(Uint8Array.from(mintPayload)), Array.from(Uint8Array.from(hash)))
-            .accounts({
-              payer: payer.publicKey,
-              recipient: staker1NativeTA,
-              mint: nativeMintKeypair.publicKey,
-              mintAuthority: tokenAuth,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              consortiumValidatedPayload: validatedPayloadPDA,
-              depositPayloadSpent: depositPayloadSpentPDA
-            })
+            .accounts(
+              withOptionalBasculeNull({
+                payer: payer.publicKey,
+                recipient: staker1NativeTA,
+                mint: nativeMintKeypair.publicKey,
+                mintAuthority: tokenAuth,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                consortiumValidatedPayload: validatedPayloadPDA,
+                depositPayloadSpent: depositPayloadSpentPDA
+              })
+            )
             .signers([payer])
             .rpc()
         ).to.be.rejectedWith(new RegExp(arg.errorMessage));
@@ -1355,15 +1386,17 @@ describe("Asset Router", () => {
     it("successful without fee", async () => {
       await program.methods
         .mintFromPayload(validNativeMintPayload.toBytes(), validNativeMintPayload.toHashBytes())
-        .accounts({
-          payer: payer.publicKey,
-          recipient: staker1NativeTA,
-          mint: nativeMintKeypair.publicKey,
-          mintAuthority: tokenAuth,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-          depositPayloadSpent: depositPayloadSpentPDA
-        })
+        .accounts(
+          withOptionalBasculeNull({
+            payer: payer.publicKey,
+            recipient: staker1NativeTA,
+            mint: nativeMintKeypair.publicKey,
+            mintAuthority: tokenAuth,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+            depositPayloadSpent: depositPayloadSpentPDA
+          })
+        )
         .signers([payer])
         .rpc({ commitment: "confirmed" });
 
@@ -1379,15 +1412,17 @@ describe("Asset Router", () => {
       await expect(
         program.methods
           .mintFromPayload(validNativeMintPayload.toBytes(), validNativeMintPayload.toHashBytes())
-          .accounts({
-            payer: payer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA
-          })
+          .accounts(
+            withOptionalBasculeNull({
+              payer: payer.publicKey,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA
+            })
+          )
           .signers([payer])
           .rpc()
       ).to.be.rejectedWith(
@@ -1420,28 +1455,27 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
       )[0];
 
       await program.methods
-        .mintWithFee(
-          validNativeMintPayload.toBytes(),
-          validNativeMintPayload.toHashBytes(),
-          feePayload,
-          Array.from(feeSignature)
+        .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+        .accounts(
+          withOptionalBasculeNull({
+            payer: claimer.publicKey,
+            sessionPayload: sessionPayloadPDA,
+            recipient: staker1NativeTA,
+            mint: nativeMintKeypair.publicKey,
+            mintAuthority: tokenAuth,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+            depositPayloadSpent: depositPayloadSpentPDA,
+            treasuryTokenAccount: treasuryNativeTA
+          })
         )
-        .accounts({
-          payer: claimer.publicKey,
-          recipient: staker1NativeTA,
-          mint: nativeMintKeypair.publicKey,
-          mintAuthority: tokenAuth,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-          depositPayloadSpent: depositPayloadSpentPDA,
-          treasuryTokenAccount: treasuryNativeTA
-        })
         .preInstructions([ed25519Instruction])
         .signers([claimer])
         .rpc({ commitment: "confirmed" });
@@ -1476,28 +1510,27 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
       )[0];
 
       await program.methods
-        .mintWithFee(
-          validNativeMintPayload.toBytes(),
-          validNativeMintPayload.toHashBytes(),
-          feePayload,
-          Array.from(feeSignature)
+        .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+        .accounts(
+          withOptionalBasculeNull({
+            payer: claimer.publicKey,
+            sessionPayload: sessionPayloadPDA,
+            recipient: staker1NativeTA,
+            mint: nativeMintKeypair.publicKey,
+            mintAuthority: tokenAuth,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+            depositPayloadSpent: depositPayloadSpentPDA,
+            treasuryTokenAccount: treasuryNativeTA
+          })
         )
-        .accounts({
-          payer: claimer.publicKey,
-          recipient: staker1NativeTA,
-          mint: nativeMintKeypair.publicKey,
-          mintAuthority: tokenAuth,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-          depositPayloadSpent: depositPayloadSpentPDA,
-          treasuryTokenAccount: treasuryNativeTA
-        })
         .preInstructions([ed25519Instruction])
         .signers([claimer])
         .rpc({ commitment: "confirmed" });
@@ -1518,6 +1551,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1525,22 +1559,20 @@ describe("Asset Router", () => {
 
       await expect(
         program.methods
-          .mintWithFee(
-            validNativeMintPayload.toBytes(),
-            validNativeMintPayload.toHashBytes(),
-            feePayload,
-            Array.from(feeSignature)
+          .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+          .accounts(
+            withOptionalBasculeNull({
+              payer: claimer.publicKey,
+              sessionPayload: sessionPayloadPDA,
+              recipient: staker2NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA,
+              treasuryTokenAccount: treasuryNativeTA
+            })
           )
-          .accounts({
-            payer: claimer.publicKey,
-            recipient: staker2NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA,
-            treasuryTokenAccount: treasuryNativeTA
-          })
           .preInstructions([ed25519Instruction])
           .signers([claimer])
           .rpc()
@@ -1566,6 +1598,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1573,22 +1606,20 @@ describe("Asset Router", () => {
 
       await expect(
         program.methods
-          .mintWithFee(
-            validNativeMintPayload.toBytes(),
-            validNativeMintPayload.toHashBytes(),
-            feePayload,
-            Array.from(feeSignature)
+          .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+          .accounts(
+            withOptionalBasculeNull({
+              payer: claimer.publicKey,
+              sessionPayload: sessionPayloadPDA,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA,
+              treasuryTokenAccount: treasuryNativeTA
+            })
           )
-          .accounts({
-            payer: claimer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA,
-            treasuryTokenAccount: treasuryNativeTA
-          })
           .preInstructions([ed25519Instruction])
           .signers([claimer])
           .rpc()
@@ -1619,6 +1650,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1626,22 +1658,20 @@ describe("Asset Router", () => {
 
       await expect(
         program.methods
-          .mintWithFee(
-            validNativeMintPayload.toBytes(),
-            validNativeMintPayload.toHashBytes(),
-            Array.from(feePermit.bytes()),
-            Array.from(feeSignature)
+          .mintWithFee(validNativeMintPayload.toHashBytes(), Array.from(feePermit.bytes()), Array.from(feeSignature))
+          .accounts(
+            withOptionalBasculeNull({
+              payer: claimer.publicKey,
+              sessionPayload: sessionPayloadPDA,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA,
+              treasuryTokenAccount: treasuryNativeTA
+            })
           )
-          .accounts({
-            payer: claimer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA,
-            treasuryTokenAccount: treasuryNativeTA
-          })
           .preInstructions([ed25519Instruction])
           .signers([claimer])
           .rpc()
@@ -1673,6 +1703,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1680,22 +1711,20 @@ describe("Asset Router", () => {
 
       await expect(
         program.methods
-          .mintWithFee(
-            validNativeMintPayload.toBytes(),
-            validNativeMintPayload.toHashBytes(),
-            feePayload,
-            Array.from(feeSignature)
+          .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+          .accounts(
+            withOptionalBasculeNull({
+              payer: claimer.publicKey,
+              sessionPayload: sessionPayloadPDA,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA,
+              treasuryTokenAccount: treasuryNativeTA
+            })
           )
-          .accounts({
-            payer: claimer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA,
-            treasuryTokenAccount: treasuryNativeTA
-          })
           .preInstructions([ed25519Instruction])
           .signers([claimer])
           .rpc()
@@ -1712,6 +1741,7 @@ describe("Asset Router", () => {
         nativeMintKeypair.publicKey
       );
       await consortiumUtility.createAndFinalizeSession(payer, validNativeMintPayload.toBuffer());
+      const sessionPayloadPDA = await postSessionPayload(payer, validNativeMintPayload.toBuffer());
       const depositPayloadSpentPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("deposit_payload_spent"), validNativeMintPayload.toHash()],
         program.programId
@@ -1723,22 +1753,20 @@ describe("Asset Router", () => {
 
       await expect(
         program.methods
-          .mintWithFee(
-            validNativeMintPayload.toBytes(),
-            validNativeMintPayload.toHashBytes(),
-            feePayload,
-            Array.from(feeSignature)
+          .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
+          .accounts(
+            withOptionalBasculeNull({
+              payer: claimer.publicKey,
+              sessionPayload: sessionPayloadPDA,
+              recipient: staker1NativeTA,
+              mint: nativeMintKeypair.publicKey,
+              mintAuthority: tokenAuth,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
+              depositPayloadSpent: depositPayloadSpentPDA,
+              treasuryTokenAccount: treasuryNativeTA
+            })
           )
-          .accounts({
-            payer: claimer.publicKey,
-            recipient: staker1NativeTA,
-            mint: nativeMintKeypair.publicKey,
-            mintAuthority: tokenAuth,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            consortiumValidatedPayload: consortiumUtility.getValidatedPayloadPDA(validNativeMintPayload.toHash()),
-            depositPayloadSpent: depositPayloadSpentPDA,
-            treasuryTokenAccount: treasuryNativeTA
-          })
           .preInstructions([ed25519Instruction])
           .signers([claimer])
           .rpc()
@@ -1824,6 +1852,31 @@ describe("Asset Router", () => {
           },
           {
             pubkey: SystemProgram.programId,
+            isWritable: false,
+            isSigner: false
+          },
+          {
+            pubkey: program.programId,
+            isWritable: false,
+            isSigner: false
+          },
+          {
+            pubkey: program.programId,
+            isWritable: false,
+            isSigner: false
+          },
+          {
+            pubkey: program.programId,
+            isWritable: false,
+            isSigner: false
+          },
+          {
+            pubkey: program.programId,
+            isWritable: false,
+            isSigner: false
+          },
+          {
+            pubkey: program.programId,
             isWritable: false,
             isSigner: false
           }
@@ -1912,7 +1965,12 @@ describe("Asset Router", () => {
             pubkey: SystemProgram.programId,
             isWritable: false,
             isSigner: false
-          }
+          },
+          { pubkey: program.programId, isWritable: false, isSigner: false },
+          { pubkey: program.programId, isWritable: false, isSigner: false },
+          { pubkey: program.programId, isWritable: false, isSigner: false },
+          { pubkey: program.programId, isWritable: false, isSigner: false },
+          { pubkey: program.programId, isWritable: false, isSigner: false }
         ])
         .signers([payer])
         .rpc({ commitment: "confirmed" });
@@ -2033,7 +2091,12 @@ describe("Asset Router", () => {
                 pubkey: SystemProgram.programId,
                 isWritable: false,
                 isSigner: false
-              }
+              },
+              { pubkey: program.programId, isWritable: false, isSigner: false },
+              { pubkey: program.programId, isWritable: false, isSigner: false },
+              { pubkey: program.programId, isWritable: false, isSigner: false },
+              { pubkey: program.programId, isWritable: false, isSigner: false },
+              { pubkey: program.programId, isWritable: false, isSigner: false }
             ])
             .signers([payer])
             .rpc()
@@ -2122,7 +2185,12 @@ describe("Asset Router", () => {
               pubkey: SystemProgram.programId,
               isWritable: false,
               isSigner: false
-            }
+            },
+            { pubkey: program.programId, isWritable: false, isSigner: false },
+            { pubkey: program.programId, isWritable: false, isSigner: false },
+            { pubkey: program.programId, isWritable: false, isSigner: false },
+            { pubkey: program.programId, isWritable: false, isSigner: false },
+            { pubkey: program.programId, isWritable: false, isSigner: false }
           ])
           .signers([payer])
           .rpc()

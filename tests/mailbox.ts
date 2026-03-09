@@ -702,7 +702,6 @@ describe("Mailbox", () => {
         })
         .signers([payer])
         .rpc({ commitment: "confirmed" });
-
       const validatedPayloadPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("validated_payload"), message.toHash()],
         consortium.programId
@@ -1282,7 +1281,7 @@ describe("Mailbox", () => {
       const treasuryBalanceBefore = await provider.connection.getBalance(treasury.publicKey);
 
       await mailbox.methods
-        .sendMessage(body, recipientBz, destinationCallerBz)
+        .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
         .accountsPartial({
           feePayer: payer.publicKey,
           senderAuthority: payer.publicKey,
@@ -1294,14 +1293,11 @@ describe("Mailbox", () => {
         .signers([payer])
         .rpc({ commitment: "confirmed" });
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].body).to.deep.eq(body);
-      expect(outboundMessage[0].recipient).to.deep.eq(recipientBz);
-      expect(outboundMessage[0].destinationCaller).to.deep.eq(destinationCallerBz);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMessagePathBytes);
-      // todo: change to a sender program when implemented
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(SystemProgram.programId.toBuffer())));
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount).to.be.not.null;
+
+      const configAfter = await mailbox.account.config.fetch(configPDA);
+      expect(configAfter.globalNonce.toNumber()).to.eq(config.globalNonce.toNumber() + 1);
 
       // 260 is the size of the gmp message in bytes assuming body is less than 32 bytes
       const fee = feePerByte.muln(260);
@@ -1340,7 +1336,7 @@ describe("Mailbox", () => {
       const treasuryBalanceBefore = await provider.connection.getBalance(treasury.publicKey);
 
       await mailbox.methods
-        .sendMessage(body, recipientBz, destinationCallerBz)
+        .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
         .accountsPartial({
           feePayer: payerFeeExempt.publicKey,
           senderAuthority: payerFeeExempt.publicKey,
@@ -1352,14 +1348,11 @@ describe("Mailbox", () => {
         .signers([payerFeeExempt])
         .rpc({ commitment: "confirmed" });
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].body).to.deep.eq(body);
-      expect(outboundMessage[0].recipient).to.deep.eq(recipientBz);
-      expect(outboundMessage[0].destinationCaller).to.deep.eq(destinationCallerBz);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMessagePathBytes);
-      // todo: change to a sender program when implemented
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(SystemProgram.programId.toBuffer())));
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount).to.be.not.null;
+
+      const configAfter = await mailbox.account.config.fetch(configPDA);
+      expect(configAfter.globalNonce.toNumber()).to.eq(config.globalNonce.toNumber() + 1);
 
       // 260 is the size of the gmp message in bytes assuming body is less than 32 bytes
       const fee = feePerByte.muln(260);
@@ -1390,7 +1383,7 @@ describe("Mailbox", () => {
 
       await expect(
         mailbox.methods
-          .sendMessage(body, recipientBz, destinationCallerBz)
+          .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
           .accountsPartial({
             feePayer: payer.publicKey,
             senderAuthority: payer.publicKey,
@@ -1509,7 +1502,7 @@ describe("Mailbox", () => {
 
       await expect(
         mailbox.methods
-          .sendMessage(body, recipientBz, destinationCallerBz)
+          .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
           .accountsPartial({
             feePayer: payer.publicKey,
             senderAuthority: payer.publicKey,

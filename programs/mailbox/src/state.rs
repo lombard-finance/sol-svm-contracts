@@ -66,31 +66,6 @@ impl MessageV1Info {
     }
 }
 
-#[account]
-pub struct OutboundMessage(pub MessageV1);
-
-impl OutboundMessage {
-    pub fn size(body_length: usize) -> usize {
-        MessageV1::size(body_length)
-    }
-
-    /// Returns the number of bytes that are accountable for sending the message.
-    /// This is the amount of bytes when this is encoded in ABI for consortium validation.
-    pub fn accountable_abi_bytes(&self) -> u64 {
-        4 + // payload selector
-        32 + // message path identifier
-        32 + // nonce
-        32 + // sender
-        32 + // recipient
-        32 + // destination caller
-        32 + // body offset
-        32 + // body length
-        self.0.body.len() as u64 / 32 * 32 + // body length in 32 bytes slots
-        // padding of abi that encodes in 32 bytes slots
-        if self.0.body.len() % 32 != 0 { 32 } else { 0 }
-    }
-}
-
 // todo: implement sender specific config
 
 #[account]

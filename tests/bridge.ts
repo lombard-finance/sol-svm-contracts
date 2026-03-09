@@ -78,6 +78,7 @@ describe("Bridge", () => {
   const pauser = Keypair.generate();
   const minter = Keypair.generate();
   const mintKeys = Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
+  const mintKeys2 = Keypair.fromSeed(Uint8Array.from(Array(32).fill(7)));
   const tokenAuth = PublicKey.findProgramAddressSync(
     [Buffer.from("token_authority")],
     bridge.programId
@@ -202,8 +203,10 @@ describe("Bridge", () => {
     await fundWallet(user, 25 * LAMPORTS_PER_SOL);
 
     multisig = await spl.createMultisig(provider.connection, admin, [tokenAuth, minter.publicKey], 1);
-    mint = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys);
-    mint2 = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8);
+    // mint = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys);
+    // mint2 = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8);
+    mint = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys, spl.TOKEN_PROGRAM_ID);
+    mint2 = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys2, spl.TOKEN_2022_PROGRAM_ID);
 
     [localTokenConfigPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("local_token_config"), mint.toBytes()],
@@ -230,9 +233,9 @@ describe("Bridge", () => {
       bridge.programId
     );
 
-    consortiumUtility = new ConsortiumUtility();
+    consortiumUtility = new ConsortiumUtility(consortium);
     consortiumUtility.generateAndAddKeypairs(3);
-    await consortiumUtility.initializeConsortiumProgram(consortium, admin);
+    await consortiumUtility.initializeConsortiumProgram(admin);
 
     mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
 

@@ -26,6 +26,7 @@ pub fn set_initial_valset(ctx: Context<SetInitialValset>, payload: Vec<u8>) -> R
     ctx.accounts.config.current_validators = update_valset_payload.validators;
     ctx.accounts.config.current_weights = update_valset_payload.weights;
     ctx.accounts.config.current_weight_threshold = update_valset_payload.weight_threshold;
+    ctx.accounts.config.current_height = update_valset_payload.height;
 
     emit!(ValidatorSetUpdated {
         epoch: ctx.accounts.config.current_epoch,

@@ -3,12 +3,16 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::hash::hash as sha256;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
+use bascule::{
+    cpi::{accounts::Validator, validate_withdrawal},
+    to_deposit_id,
+};
 use consortium::{constants::VALIDATED_PAYLOAD_SEED, state::ValidatedPayload};
 
 use crate::state::DepositPayloadSpent;
 use crate::utils::consortium_payloads::{DepositV1, DEPOSIT_V1_PAYLOAD_LEN};
 use crate::{
-    constants::{CHAIN_ID, CONFIG_SEED, DEPOSIT_PAYLOAD_SPENT_SEED},
+    constants::{BASCULE_VALIDATOR_SEED, CHAIN_ID, CONFIG_SEED, DEPOSIT_PAYLOAD_SPENT_SEED},
     errors::AssetRouterError,
     events::MintProofConsumed,
     state::Config,
@@ -22,7 +26,6 @@ pub struct MintFromPayload<'info> {
     pub payer: Signer<'info>,
     #[account(
         constraint = !config.paused @ AssetRouterError::Paused,
-        constraint = !config.bascule_enabled @ AssetRouterError::BasculeNotAvailable,
         seeds = [CONFIG_SEED],
         bump
     )]
@@ -47,8 +50,9 @@ pub struct MintFromPayload<'info> {
 
     /// check that the consortium program has validated the payload
     #[account(
+        owner = config.consortium,
         seeds = [VALIDATED_PAYLOAD_SEED, &mint_payload_hash[..]],
-        seeds::program = consortium::ID,
+        seeds::program = config.consortium,
         bump
     )]
     pub consortium_validated_payload: Account<'info, ValidatedPayload>,
@@ -63,6 +67,20 @@ pub struct MintFromPayload<'info> {
     pub deposit_payload_spent: Account<'info, DepositPayloadSpent>,
 
     pub system_program: Program<'info, System>,
+
+    #[account(seeds = [BASCULE_VALIDATOR_SEED], bump)]
+    pub bascule_validator: Option<UncheckedAccount<'info>>,
+    /// When config.bascule is Some, must be the bascule program; otherwise optional.
+    /// CHECK: instruction body constrains it to have correct configured address.
+    pub bascule_program: Option<UncheckedAccount<'info>>,
+    /// When config.bascule is Some, must be bascule's BasculeData PDA; otherwise optional.
+    /// CHECK: bascule validates it
+    #[account(mut)]
+    pub bascule_data: Option<UncheckedAccount<'info>>,
+    /// When config.bascule is Some, must be bascule deposit PDA for this payload; otherwise optional.
+    /// CHECK: bascule validates it
+    #[account(mut)]
+    pub bascule_deposit: Option<UncheckedAccount<'info>>,
 }
 
 pub fn mint_from_payload(
@@ -70,7 +88,7 @@ pub fn mint_from_payload(
     mint_payload: [u8; DEPOSIT_V1_PAYLOAD_LEN],
     mint_payload_hash: [u8; 32],
 ) -> Result<()> {
-    let config = &mut ctx.accounts.config;
+    let config = &ctx.accounts.config;
 
     require!(
         mint_payload_hash == sha256(&mint_payload).to_bytes(),
@@ -94,6 +112,64 @@ pub fn mint_from_payload(
         deposit_payload.recipient == ctx.accounts.recipient.key().to_bytes(),
         AssetRouterError::RecipientMismatch
     );
+
+    // When bascule is configured, validate withdrawal (payload must be reported when above threshold).
+    if let Some(bascule_program_id) = config.bascule {
+        let bascule_program = ctx
+            .accounts
+            .bascule_program
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        require!(
+            bascule_program.key() == bascule_program_id,
+            AssetRouterError::InvalidBasculeProgram
+        );
+        let bascule_data = ctx
+            .accounts
+            .bascule_data
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let bascule_deposit = ctx
+            .accounts
+            .bascule_deposit
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let bascule_validator = ctx
+            .accounts
+            .bascule_validator
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let bascule_validator_bump = ctx
+            .bumps
+            .bascule_validator
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let recipient_pubkey = Pubkey::new_from_array(deposit_payload.recipient);
+        let deposit_id = to_deposit_id(
+            recipient_pubkey,
+            deposit_payload.amount,
+            deposit_payload.txid,
+            deposit_payload.vout,
+        );
+        let signer_seeds: &[&[&[u8]]] = &[&[BASCULE_VALIDATOR_SEED, &[bascule_validator_bump]]];
+        validate_withdrawal(
+            CpiContext::new_with_signer(
+                bascule_program.to_account_info(),
+                Validator {
+                    validator: bascule_validator.to_account_info(),
+                    payer: ctx.accounts.payer.to_account_info(),
+                    bascule_data: bascule_data.to_account_info(),
+                    deposit: bascule_deposit.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            deposit_id,
+            recipient_pubkey,
+            deposit_payload.amount,
+            deposit_payload.txid,
+            deposit_payload.vout,
+        )?;
+    }
 
     emit!(MintProofConsumed {
         recipient: ctx.accounts.recipient.key(),

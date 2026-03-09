@@ -196,7 +196,10 @@ pub fn release_or_mint_tokens<'info>(
     )?;
 
     let response = mailbox_receive_message(&ctx, &release_or_mint.source_pool_data.try_into().unwrap())?;
-    require!(response.amount == parsed_amount, LombardTokenPoolError::AmountMismatch);
+    match response {
+        Some(res) => require!(res.amount == parsed_amount, LombardTokenPoolError::AmountMismatch),
+        None => {}
+    };
 
     emit!(Minted {
         sender: ctx.accounts.authority.key(),
@@ -213,7 +216,7 @@ pub fn release_or_mint_tokens<'info>(
 fn mailbox_receive_message<'info>(
     ctx: &Context<TokenOfframp>,
     payload_hash: &[u8; 32],
-) -> Result<InboundResponse> {
+) -> Result<Option<InboundResponse>> {
     let signer_seeds: &[&[&[u8]]] = &[&[
         POOL_SIGNER_SEED,
         &ctx.accounts.mint.key().to_bytes(),
@@ -254,7 +257,11 @@ fn mailbox_receive_message<'info>(
     cpi_context,
         *payload_hash,
     )?;
-    let result_vec = result.get();
-    let response = InboundResponse::try_from_slice(&result_vec)?;
-    Ok(response)
+    let result_data = result.get();
+    let response = match result_data {
+        Some(result_vec) => InboundResponse::try_from_slice(&result_vec)?,
+        None => return Ok(None)
+    };
+
+    Ok(Some(response))
 }

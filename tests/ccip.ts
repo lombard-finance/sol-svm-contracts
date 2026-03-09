@@ -252,9 +252,9 @@ describe("CCIP Token Pool", () => {
 
 		await fundWallet(tokenPoolSignerPDA, 25 * LAMPORTS_PER_SOL);
 
-		consortiumUtility = new ConsortiumUtility();
+		consortiumUtility = new ConsortiumUtility(consortium);
 		consortiumUtility.generateAndAddKeypairs(3);
-		await consortiumUtility.initializeConsortiumProgram(consortium, admin);
+		await consortiumUtility.initializeConsortiumProgram(admin);
 
 		mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
 

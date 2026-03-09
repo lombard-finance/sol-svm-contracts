@@ -42,6 +42,22 @@ impl MessageV1 {
         4 + body_length; // body length
     }
 
+    /// Returns the number of bytes that are accountable for sending the message.
+    /// This is the amount of bytes when this is encoded in ABI for consortium validation.
+    pub fn accountable_abi_bytes(body_length: usize) -> u64 {
+        4 + // payload selector
+        32 + // message path identifier
+        32 + // nonce
+        32 + // sender
+        32 + // recipient
+        32 + // destination caller
+        32 + // body offset
+        32 + // body length
+        body_length as u64 / 32 * 32 + // body length in 32 bytes slots
+        // padding of abi that encodes in 32 bytes slots
+        if body_length % 32 != 0 { 32 } else { 0 }
+    }
+
     pub fn body_length(&self) -> usize {
         return self.body.len();
     }
@@ -145,8 +161,9 @@ impl MessageV1 {
         message
     }
 
-    pub fn calculate_payload_hash(&self) -> [u8; 32] {
-        sha256(&self.to_session_payload()).to_bytes()
+    pub fn calculate_payload_hash(&self) -> ([u8; 32], Vec<u8>) {
+        let payload = self.to_session_payload();
+        (sha256(&payload).to_bytes(), payload)
     } 
 }
 
@@ -213,5 +230,23 @@ mod tests {
         );
         assert!(message.destination_caller.is_none());
         assert_eq!(message.body, hex::decode("54455354").unwrap());
+    }
+
+    #[test]
+    fn test_message_v1_to_from_session_payload() {
+        let payload_hex = "e288fb4a019a0987851ce24a3fae474d3be39c2a3245c13421d41e978453f1f80452cbc100000000000000000000000000000000000000000000000000000000000000020000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc000000000000000000000000b2db398dc13ffb1e07306f96ae359de5f265eff1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000";
+        let payload_bz = hex::decode(payload_hex).unwrap();
+        let message = MessageV1::from_session_payload(&payload_bz).unwrap();
+        let payload = message.to_session_payload();
+        assert_eq!(payload, payload_bz);
+    }
+
+    #[test]
+    fn test_message_v1_accountable_abi_bytes() {
+        let payload_hex = "e288fb4a019a0987851ce24a3fae474d3be39c2a3245c13421d41e978453f1f80452cbc100000000000000000000000000000000000000000000000000000000000000020000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc000000000000000000000000b2db398dc13ffb1e07306f96ae359de5f265eff1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000";
+        let payload_bz = hex::decode(payload_hex).unwrap();
+        let message = MessageV1::from_session_payload(&payload_bz).unwrap();
+        let accountable_abi_bytes = MessageV1::accountable_abi_bytes(message.body_length());
+        assert_eq!(accountable_abi_bytes, 260);
     }
 }
