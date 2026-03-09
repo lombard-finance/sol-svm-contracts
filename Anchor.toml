@@ -17,6 +17,7 @@ bridge = "CAwQ43gQmFB6CD4zodoKt7ipPrHP7eQLxvGRY6tQ6zYx"
 lombard_token_pool = "51HDypJbcZ1bmqh4v16X2KaHcvc53fYi84rbb21VoN4t"
 mock_ccip_offramp = "EeqDRCWDpex3p33a8Zuw1jm1eyYRoW2jXSEuCEKdFAw2"
 mock_ccip_rmn = "sCUWcED3Evwk7BPgUCq13YAwK6jViCwy7RwA2UV7Lk1"
+ratio_oracle = "DaoKGsbRU8sYBwy3CL5uYcWPaRYcFGQVypzUQBarKifT"
 
 [registry]
 url = "https://api.apr.dev"
