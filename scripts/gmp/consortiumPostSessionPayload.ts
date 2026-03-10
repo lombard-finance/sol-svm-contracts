@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Consortium } from "../../target/types/consortium";
 import { getBase58EncodedTxBytes } from "../utils";
 import { sha256 } from "js-sha256";
-import { getConsortiumSessionPayloadPDA, getConsortiumSessionPDA, getConsortiumValidatedPayloadPDA } from "./utils";
+import { convertToBuf, getConsortiumSessionPayloadPDA, getConsortiumSessionPDA, getConsortiumValidatedPayloadPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -31,7 +31,7 @@ if (!program.programId.equals(programId)) {
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-const payloadBuf = Buffer.from(process.argv[2], "hex");
+let payloadBuf = convertToBuf(process.argv[2]);
 const payload = Array.from(Uint8Array.from(payloadBuf));
 const payloadHashBuf = Buffer.from(sha256(payload), "hex");
 const payloadHash = Array.from(Uint8Array.from(payloadHashBuf));

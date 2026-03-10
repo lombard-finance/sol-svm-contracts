@@ -4,6 +4,7 @@ import { PublicKey } from "@solana/web3.js";
 import { sha256 } from "js-sha256";
 import { getBase58EncodedTxBytes } from "../utils";
 import { AssetRouter } from "../../target/types/asset_router";
+import { convertToBuf } from "./utils";
 
 const VALIDATED_PAYLOAD_SEED = Buffer.from("validated_payload");
 const DEPOSIT_PAYLOAD_SPENT_SEED = Buffer.from("deposit_payload_spent");
@@ -49,7 +50,7 @@ if (!payloadHex) {
   console.error("missing mint payload hex");
   process.exit(1);
 }
-const mintPayload = Buffer.from(payloadHex, "hex");
+let mintPayload = convertToBuf(payloadHex);
 if (mintPayload.length !== DEPOSIT_V1_PAYLOAD_LEN) {
   console.error(`mint payload must be exactly ${DEPOSIT_V1_PAYLOAD_LEN} bytes, got ${mintPayload.length}`);
   process.exit(1);

@@ -4,7 +4,7 @@ import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { getBase58EncodedTxBytes, getTokenAuthority } from "../utils";
 import { Mailbox } from "../../target/types/mailbox";
 import { sha256 } from "js-sha256";
-import { getAssetRouterConfigPDA, getConsortiumSessionPayloadPDA, getConsortiumValidatedPayloadPDA, getInboundMessagePathPDA, getMesageHandledPDA } from "./utils";
+import { convertToBuf, getAssetRouterConfigPDA, getConsortiumSessionPayloadPDA, getConsortiumValidatedPayloadPDA, getInboundMessagePathPDA, getMesageHandledPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -38,7 +38,7 @@ const assetRouterProgramId = process.env.ASSET_ROUTER_PROGRAM_ID
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-const payloadBuf = Buffer.from(process.argv[2], "hex");
+let payloadBuf = convertToBuf(process.argv[2]);
 const payload = Array.from(Uint8Array.from(payloadBuf));
 const payloadHashBuf = Buffer.from(sha256(payload), "hex");
 const payloadHash = Array.from(Uint8Array.from(payloadHashBuf));

@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Consortium } from "../../target/types/consortium";
 import { sha256 } from "js-sha256";
 import { getBase58EncodedTxBytes, getMetadataPDA, getValsetPayloadPDA } from "../utils";
-import { getConsortiumConfigPDA } from "./utils";
+import { convertToBuf, getConsortiumConfigPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -32,7 +32,7 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const valsetPayload = Buffer.from(process.argv[2], "hex");
+let valsetPayload = convertToBuf(process.argv[2]);
 console.log(`valset payload length: ${valsetPayload.length}`);
 
 (async () => {

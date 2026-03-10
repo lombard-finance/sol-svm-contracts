@@ -63,6 +63,34 @@ export function getMesageHandledPDA(program: PublicKey, messageHash: Buffer<Arra
   return PublicKey.findProgramAddressSync([MAILBOX_MESSAGE_HANDLED_SEED, messageHash], program)[0];
 }
 
+export function extractR(sigBytes: Buffer<ArrayBuffer>): Buffer<ArrayBuffer> {
+  const startR = (sigBytes[1] & 0x80) == 0 ? 2 : 3;
+  const lengthR = sigBytes[startR+1];
+  return sigBytes.subarray(startR+2, startR+2+lengthR);
+}
+
+export function extractS(sigBytes: Buffer<ArrayBuffer>): Buffer<ArrayBuffer> {
+  const startR = (sigBytes[1] & 0x80) == 0 ? 2 : 3;
+  const lengthR = sigBytes[startR+1];
+  const startS = startR + 2 + lengthR;
+  const lengthS = sigBytes[startS + 1];
+  return sigBytes.subarray(startS+2, startS+2+lengthS);
+}
+
+export function convertToRS(sigBytes: Buffer<ArrayBuffer>): Buffer<ArrayBuffer> {
+  return Buffer.concat([extractR(sigBytes), extractS(sigBytes)]);
+}
+
+export function convertToBuf(data: string): Buffer<ArrayBuffer> {
+  //Try 1hex` encoding first
+  let result = Buffer.from(data, "hex");
+  if (result.length == 0 ) {
+    // Try `base64` encoding
+    result = Buffer.from(data, "base64");
+  }
+  return result;
+}
+
 // export function getTokenAuthority(program: PublicKey) {
 //   return PublicKey.findProgramAddressSync([TOKEN_AUTHORITY_SEED], program)[0];
 // }
