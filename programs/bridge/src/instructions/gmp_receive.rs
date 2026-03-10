@@ -1,13 +1,22 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint as TokenMint, TokenAccount, TokenInterface};
 
-use mailbox::{constants::{INBOUND_MESSAGE_PATH_SEED, MESSAGE_SEED}, state::{InboundMessagePath, MessageV1Info}};
+use mailbox::{
+    constants::{INBOUND_MESSAGE_PATH_SEED, MESSAGE_SEED},
+    state::{InboundMessagePath, MessageV1Info},
+};
 
 use crate::{
-    constants::{CONFIG_SEED, INBOUND_DIRECTION, LOCAL_TOKEN_CONFIG_SEED, MESSAGE_HANDLED_SEED, REMOTE_BRIDGE_CONFIG_SEED, REMOTE_TOKEN_CONFIG_SEED},
+    constants::{
+        CONFIG_SEED, INBOUND_DIRECTION, LOCAL_TOKEN_CONFIG_SEED, MESSAGE_HANDLED_SEED,
+        REMOTE_BRIDGE_CONFIG_SEED, REMOTE_TOKEN_CONFIG_SEED,
+    },
     errors::BridgeError,
     state::{Config, LocalTokenConfig, MessageHandled, RemoteBridgeConfig, RemoteTokenConfig},
-    utils::{gmp_messages::{InboundResponse, Mint}, token_actions},
+    utils::{
+        gmp_messages::{InboundResponse, Mint},
+        token_actions,
+    },
 };
 
 #[derive(Accounts)]
@@ -30,7 +39,7 @@ pub struct GMPReceive<'info> {
 
     #[account(
         seeds = [CONFIG_SEED],
-        constraint = !config.paused @ BridgeError::Paused, 
+        constraint = !config.paused @ BridgeError::Paused,
         bump,
     )]
     pub config: Account<'info, Config>,
@@ -101,13 +110,22 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<
         mint_message.token_address == ctx.accounts.mint.key().to_bytes(),
         BridgeError::InvalidTokenAddress
     );
-    let recipient_derived_token_account = token_actions::get_token_account(ctx.accounts.token_program.key(), ctx.accounts.mint.key(), Pubkey::new_from_array(mint_message.recipient));
+    let recipient_derived_token_account = token_actions::get_token_account(
+        ctx.accounts.token_program.key(),
+        ctx.accounts.mint.key(),
+        Pubkey::new_from_array(mint_message.recipient),
+    );
     require!(
-        mint_message.recipient == ctx.accounts.recipient.key().to_bytes() || ctx.accounts.recipient.key() == recipient_derived_token_account?,
+        mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
+            || (ctx.accounts.recipient.key() == recipient_derived_token_account?
+                && ctx.accounts.recipient.owner.key().to_bytes() == mint_message.recipient),
         BridgeError::RecipientMismatch
     );
     require!(mint_message.amount > 0, BridgeError::ZeroAmount);
-    ctx.accounts.remote_token_config.inbound_rate_limit.consume::<Clock>(mint_message.amount)?;
+    ctx.accounts
+        .remote_token_config
+        .inbound_rate_limit
+        .consume::<Clock>(mint_message.amount)?;
 
     token_actions::execute_mint(
         ctx.accounts.token_program.to_account_info(),
@@ -119,7 +137,7 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<
         ctx.bumps.token_authority,
     )?;
 
-    Ok(InboundResponse{
+    Ok(InboundResponse {
         amount: mint_message.amount,
         message: mint_message.message,
     })

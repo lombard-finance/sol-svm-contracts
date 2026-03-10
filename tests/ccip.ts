@@ -808,15 +808,17 @@ describe("CCIP Token Pool", () => {
 				.rpc({ commitment: "confirmed" });
 
 			const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
+			const expecedGmpMessage = messageV1(
+				Buffer.from(outboundMessagePathBytes),
+				config.globalNonce.toNumber(),
+				bridge.programId.toBuffer(),
+				Buffer.from(foreignBridgeAddressBytes),
+				foreignPoolAddress,
+				expectedBody.bytes(),
+			);
 
-			const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-			expect(outboundMessage[0].body).to.deep.eq(expectedBody.bytes());
-			expect(outboundMessage[0].recipient).to.deep.eq(foreignBridgeAddressBytes);
-			expect(Uint8Array.from(outboundMessage[0].destinationCaller)).to.deep.eq(foreignPoolAddress);
-			expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-			expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMessagePathBytes);
-			// todo: change to a sender program when implemented
-			expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(bridge.programId.toBuffer())));
+			const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+			expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
 
 			// 260 is the size of the gmp message in bytes assuming body is less than 32 bytes
 			const potentialFee = feePerByte.muln(260);
@@ -827,15 +829,8 @@ describe("CCIP Token Pool", () => {
 			expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount - BigInt(amountToSend));
 
 			const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-			const expectedMsg = messageV1(
-					outboundMessagePath,
-					outboundMessage[0].nonce.toNumber(),
-					bridge.programId.toBuffer(),
-					foreignBridgeAddress,
-					foreignPoolAddress,
-					outboundMessage[0].body
-			);
-			const expectedHash = sha256(expectedMsg);
+
+			const expectedHash = sha256(outboundMessageAccount.data);
 			const encodedExpectedHash = abiCoder.encode(['bytes32'] , ['0x'+expectedHash]);
 			const expectedHashBuffer = Buffer.from(encodedExpectedHash.substring(2), "hex");
 
