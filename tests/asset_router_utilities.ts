@@ -8,7 +8,7 @@ import * as anchor from "@coral-xyz/anchor";
 export const MINT_SELECTOR: Buffer = Buffer.from([0x15, 0x5b, 0x6b, 0x13]);
 export const REDEEM_SELECTOR: Buffer = Buffer.from([0xaa, 0x3d, 0xb8, 0x5f]);
 export const REDEEM_NATIVE_FOR_BTC_SELECTOR: Buffer = Buffer.from([0x4e, 0x3e, 0x50, 0x47]);
-export const DEPOSIT_SELECTOR: Buffer = Buffer.from([0x4e, 0x3e, 0x50, 0x47]);
+export const DEPOSIT_SELECTOR: Buffer = Buffer.from([0xcc, 0xb4, 0x12, 0x15]);
 
 export class MintMsg {
   selector: Buffer;
@@ -162,6 +162,7 @@ export const LEDGER_MAILBOX_ADDRESS = Buffer.from(
 );
 export const LEDGER_MAILBOX_ADDRESS_BZ = Array.from(Uint8Array.from(LEDGER_MAILBOX_ADDRESS));
 export const BITCOIN_LCHAIN_ID = Buffer.from(sha256("bitcoin-lchain-id"), "hex");
+export const BITCOIN_TOKEN_ADDRESS = Buffer.from("0000000000000000000000000000000000000000000000000000000000000001", "hex");
 export const BITCOIN_LCHAIN_ID_BZ = Array.from(Uint8Array.from(BITCOIN_LCHAIN_ID));
 export const ASSETS_MODULE_ADDRESS = Array.from(
   Uint8Array.from(Buffer.from("0000000000000000000000008bf729ffe074caee622c02928173467e658e19e2", "hex"))
