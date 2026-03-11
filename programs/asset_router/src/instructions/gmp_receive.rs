@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint as TokenMint, TokenAccount, TokenInterface};
+use anchor_spl::{associated_token, token_interface::{Mint as TokenMint, TokenAccount, TokenInterface}};
 
 use bascule_gmp::{
     cpi::{accounts::ValidateMint, validate_mint},
@@ -96,8 +96,15 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<
         mint_message.token_address == ctx.accounts.mint.key().to_bytes(),
         AssetRouterError::InvalidTokenAddress
     );
+    let recipient_derived_token_account = associated_token::get_associated_token_address_with_program_id(
+        &Pubkey::new_from_array(mint_message.recipient),
+        &ctx.accounts.mint.key(),
+        &ctx.accounts.token_program.key(),
+     );
     require!(
-        mint_message.recipient == ctx.accounts.recipient.key().to_bytes(),
+        mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
+            || (ctx.accounts.recipient.key() == recipient_derived_token_account
+                && ctx.accounts.recipient.owner.key().to_bytes() == mint_message.recipient),
         AssetRouterError::RecipientMismatch
     );
     require!(mint_message.amount > 0, AssetRouterError::ZeroAmount);
