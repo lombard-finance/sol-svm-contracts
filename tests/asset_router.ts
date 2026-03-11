@@ -23,6 +23,7 @@ import {
   ASSETS_MODULE_ADDRESS,
   BITCOIN_LCHAIN_ID,
   BITCOIN_LCHAIN_ID_BZ,
+  BITCOIN_TOKEN_ADDRESS,
   BTCSTAKING_MODULE_ADDRESS,
   BTCSTAKING_MODULE_ADDRESS_BZ,
   DepositMsg,
@@ -139,7 +140,7 @@ describe("Asset Router", () => {
       LCHAIN_ID,
       stakedMintKeypair.publicKey.toBuffer(),
       BITCOIN_LCHAIN_ID,
-      PublicKey.default.toBuffer()
+      BITCOIN_TOKEN_ADDRESS
     ],
     program.programId
   )[0];
@@ -149,7 +150,7 @@ describe("Asset Router", () => {
       LCHAIN_ID,
       nativeMintKeypair.publicKey.toBuffer(),
       BITCOIN_LCHAIN_ID,
-      PublicKey.default.toBuffer()
+      BITCOIN_TOKEN_ADDRESS
     ],
     program.programId
   )[0];
@@ -239,6 +240,7 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey,
             paused: false,
             nativeMint: nativeMintKeypair.publicKey,
+            consortium: consortium.programId,
             mailbox: mailboxAddress,
             bascule: bascule,
             basculeGmp: basculeGmp,
@@ -261,6 +263,7 @@ describe("Asset Router", () => {
           treasury: treasury.publicKey,
           paused: false,
           nativeMint: nativeMintKeypair.publicKey,
+          consortium: consortium.programId,
           mailbox: mailboxAddress,
           bascule: bascule,
           basculeGmp: basculeGmp,
@@ -567,7 +570,7 @@ describe("Asset Router", () => {
           LCHAIN_ID_BZ,
           mintStakedAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
-          Array.from(Uint8Array.from(PublicKey.default.toBuffer())),
+          Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
           { redeem: {} }
         )
         .accounts({
@@ -584,7 +587,7 @@ describe("Asset Router", () => {
       expect(TokenRouteSetEvents[0].fromTokenAddress).to.be.deep.eq(mintStakedAsBytes);
       expect(TokenRouteSetEvents[0].toChainId).to.be.deep.eq(BITCOIN_LCHAIN_ID_BZ);
       expect(TokenRouteSetEvents[0].toTokenAddress).to.be.deep.eq(
-        Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+        Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
       );
       expect(TokenRouteSetEvents[0].tokenRouteType).to.be.deep.eq({ redeem: {} });
     });
@@ -595,7 +598,7 @@ describe("Asset Router", () => {
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
-          Array.from(Uint8Array.from(PublicKey.default.toBuffer())),
+          Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
           { redeem: {} }
         )
         .accounts({
@@ -612,7 +615,7 @@ describe("Asset Router", () => {
       expect(TokenRouteSetEvents[0].fromTokenAddress).to.be.deep.eq(mintNativeAsBytes);
       expect(TokenRouteSetEvents[0].toChainId).to.be.deep.eq(BITCOIN_LCHAIN_ID_BZ);
       expect(TokenRouteSetEvents[0].toTokenAddress).to.be.deep.eq(
-        Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+        Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
       );
       expect(TokenRouteSetEvents[0].tokenRouteType).to.be.deep.eq({ redeem: {} });
     });
@@ -624,7 +627,7 @@ describe("Asset Router", () => {
             LCHAIN_ID_BZ,
             mintNativeAsBytes,
             BITCOIN_LCHAIN_ID_BZ,
-            Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+            Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
           )
           .accounts({
             payer: payer.publicKey
@@ -640,7 +643,7 @@ describe("Asset Router", () => {
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
-          Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+          Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
         )
         .accounts({
           payer: admin.publicKey
@@ -653,7 +656,7 @@ describe("Asset Router", () => {
       expect(TokenRouteRemovedEvents[0].fromTokenAddress).to.be.deep.eq(mintNativeAsBytes);
       expect(TokenRouteRemovedEvents[0].toChainId).to.be.deep.eq(BITCOIN_LCHAIN_ID_BZ);
       expect(TokenRouteRemovedEvents[0].toTokenAddress).to.be.deep.eq(
-        Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+        Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
       );
       expect(TokenRouteRemovedEvents[0].tokenRouteType).to.be.deep.eq({ redeem: {} });
 
@@ -667,7 +670,7 @@ describe("Asset Router", () => {
             LCHAIN_ID_BZ,
             mintNativeAsBytes,
             BITCOIN_LCHAIN_ID_BZ,
-            Array.from(Uint8Array.from(PublicKey.default.toBuffer())),
+            Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
             { redeem: {} }
           )
           .accounts({
@@ -685,7 +688,7 @@ describe("Asset Router", () => {
             BITCOIN_LCHAIN_ID_BZ,
             mintNativeAsBytes,
             BITCOIN_LCHAIN_ID_BZ,
-            Array.from(Uint8Array.from(PublicKey.default.toBuffer())),
+            Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
             { redeem: {} }
           )
           .accounts({
@@ -702,7 +705,7 @@ describe("Asset Router", () => {
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
-          Array.from(Uint8Array.from(PublicKey.default.toBuffer())),
+          Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
           { redeem: {} }
         )
         .accounts({
@@ -719,7 +722,7 @@ describe("Asset Router", () => {
       expect(TokenRouteSetEvents[0].fromTokenAddress).to.be.deep.eq(mintNativeAsBytes);
       expect(TokenRouteSetEvents[0].toChainId).to.be.deep.eq(BITCOIN_LCHAIN_ID_BZ);
       expect(TokenRouteSetEvents[0].toTokenAddress).to.be.deep.eq(
-        Array.from(Uint8Array.from(PublicKey.default.toBuffer()))
+        Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS))
       );
       expect(TokenRouteSetEvents[0].tokenRouteType).to.be.deep.eq({ redeem: {} });
     });
@@ -2268,19 +2271,23 @@ describe("Asset Router", () => {
 
         const totalFee = stakedRedeemFee.add(stakedToNativeCommission).toNumber();
 
-        const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-        expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMsgPath);
-        expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-        expect(outboundMessage[0].sender).to.deep.eq(Array.from(program.programId.toBytes()));
-        expect(outboundMessage[0].recipient).to.deep.eq(Array.from(BTCSTAKING_MODULE_ADDRESS));
-        expect(outboundMessage[0].destinationCaller).to.be.null;
-
-        const redeemMsg = RedeemMsg.from(outboundMessage[0].body);
-        expect(redeemMsg.chain).to.be.deep.eq(BITCOIN_LCHAIN_ID);
-        expect(redeemMsg.token).to.be.deep.eq(stakedMintKeypair.publicKey.toBuffer());
-        expect(redeemMsg.sender).to.be.deep.eq(staker1StakedTA.toBuffer());
-        expect(redeemMsg.recipient).to.be.deep.eq(arg.scriptPubkey);
-        expect(redeemMsg.amount).to.be.eq(amount - BigInt(totalFee));
+        const expectedBody = new RedeemMsg(
+          BITCOIN_LCHAIN_ID,
+          stakedMintKeypair.publicKey.toBuffer(),
+          staker1StakedTA.toBuffer(),
+          arg.scriptPubkey,
+          amount - BigInt(totalFee)
+        )
+        const expectedGmpMessage = messageV1(
+          Buffer.from(outboundMsgPath),
+          config.globalNonce.toNumber(),
+          Buffer.from(program.programId.toBytes()),
+          BTCSTAKING_MODULE_ADDRESS,
+          PublicKey.default.toBuffer(),
+          expectedBody.toBuffer(),
+        );
+        const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+        expect(outboundMessageAccount.data).to.deep.eq(expectedGmpMessage)
 
         const balanceAfter = await spl.getAccount(provider.connection, staker1StakedTA);
         expect(balanceAfter.amount).eq(balanceBefore.amount - amount);
@@ -2546,19 +2553,23 @@ describe("Asset Router", () => {
       console.log("staker sol diff", stakerSolBalanceBefore - stakerSolBalanceAfter);
       console.log("treasury sol diff", treasurySolBalanceAfter - treasurySolBalanceBefore);
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMsgPath);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(program.programId.toBytes()));
-      expect(outboundMessage[0].recipient).to.deep.eq(Array.from(BTCSTAKING_MODULE_ADDRESS));
-      expect(outboundMessage[0].destinationCaller).to.be.null;
-
-      const redeemMsg = RedeemMsg.from(outboundMessage[0].body);
-      expect(redeemMsg.chain).to.be.deep.eq(LCHAIN_ID);
-      expect(redeemMsg.token).to.be.deep.eq(stakedMintKeypair.publicKey.toBuffer());
-      expect(redeemMsg.sender).to.be.deep.eq(staker1StakedTA.toBuffer());
-      expect(redeemMsg.recipient).to.be.deep.eq(staker1NativeTA.toBuffer());
-      expect(redeemMsg.amount).to.be.eq(amount - BigInt(stakedRedeemFee.toNumber()));
+      const expectedBody = new RedeemMsg(
+        LCHAIN_ID,
+        stakedMintKeypair.publicKey.toBuffer(),
+        staker1StakedTA.toBuffer(),
+        staker1NativeTA.toBuffer(),
+        amount - BigInt(stakedRedeemFee.toNumber())
+      )
+      const expectedGmpMessage = messageV1(
+        Buffer.from(outboundMsgPath),
+        config.globalNonce.toNumber(),
+        Buffer.from(program.programId.toBytes()),
+        BTCSTAKING_MODULE_ADDRESS,
+        PublicKey.default.toBuffer(),
+        expectedBody.toBuffer(),
+      );
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount.data).to.deep.eq(expectedGmpMessage)
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1StakedTA);
       expect(balanceAfter.amount).eq(balanceBefore.amount - amount);
@@ -2683,19 +2694,24 @@ describe("Asset Router", () => {
       console.log("staker sol diff", stakerSolBalanceBefore - stakerSolBalanceAfter);
       console.log("treasury sol diff", treasurySolBalanceAfter - treasurySolBalanceBefore);
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMsgPath);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(program.programId.toBytes()));
-      expect(outboundMessage[0].recipient).to.deep.eq(Array.from(BTCSTAKING_MODULE_ADDRESS));
-      expect(outboundMessage[0].destinationCaller).to.null;
 
-      const depositMsg = DepositMsg.from(outboundMessage[0].body);
-      expect(depositMsg.chain).to.be.deep.eq(LCHAIN_ID);
-      expect(depositMsg.token).to.be.deep.eq(stakedMintKeypair.publicKey.toBuffer());
-      expect(depositMsg.sender).to.be.deep.eq(staker1NativeTA.toBuffer());
-      expect(depositMsg.recipient).to.be.deep.eq(staker1StakedTA.toBuffer());
-      expect(depositMsg.amount).to.be.eq(amount);
+      const expectedBody = new DepositMsg(
+        LCHAIN_ID,
+        stakedMintKeypair.publicKey.toBuffer(),
+        staker1NativeTA.toBuffer(),
+        staker1StakedTA.toBuffer(),
+        amount
+      )
+      const expectedGmpMessage = messageV1(
+        Buffer.from(outboundMsgPath),
+        config.globalNonce.toNumber(),
+        Buffer.from(program.programId.toBytes()),
+        BTCSTAKING_MODULE_ADDRESS,
+        PublicKey.default.toBuffer(),
+        expectedBody.toBuffer(),
+      );
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount.data).to.deep.eq(expectedGmpMessage)
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1NativeTA);
       expect(balanceAfter.amount).eq(balanceBefore.amount - amount);
