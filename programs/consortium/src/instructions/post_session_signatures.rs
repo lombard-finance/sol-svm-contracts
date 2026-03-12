@@ -15,8 +15,16 @@ pub struct PostSessionSignatures<'info> {
     pub payer: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [SESSION_SEED, &payer.key.to_bytes()[..], &payload_hash[..]], bump)]
+    #[account(
+        mut,
+        seeds = [SESSION_SEED, &payer.key.to_bytes()[..], &payload_hash[..]],
+        bump,
+        realloc = 8 + Session::size(config.current_validators.len()),
+        realloc::payer = payer,
+        realloc::zero = false,
+    )]
     pub session: Account<'info, Session>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn post_session_signatures(
