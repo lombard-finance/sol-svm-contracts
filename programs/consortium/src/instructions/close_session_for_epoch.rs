@@ -16,7 +16,7 @@ pub struct CloseSessionForEpoch<'info> {
     #[account(
         mut,
         close = payer,
-        seeds = [SESSION_SEED, &epoch.to_le_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
+        seeds = [SESSION_SEED, &epoch.to_be_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
         bump
     )]
     pub session: Account<'info, Session>,

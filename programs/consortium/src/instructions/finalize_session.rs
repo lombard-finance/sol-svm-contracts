@@ -18,7 +18,7 @@ pub struct FinalizeSession<'info> {
     #[account(
         mut,
         close = payer,
-        seeds = [SESSION_SEED, &config.current_epoch.to_le_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
+        seeds = [SESSION_SEED, &config.current_epoch.to_be_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
         bump
     )]
     pub session: Account<'info, Session>,

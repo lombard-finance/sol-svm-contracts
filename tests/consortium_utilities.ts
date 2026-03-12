@@ -374,7 +374,7 @@ export class ConsortiumUtility {
 		const currentEpoch = cfg.currentEpoch
 
 		const sessionPDA = PublicKey.findProgramAddressSync(
-				[Buffer.from("session"), currentEpoch.toBuffer("le", 8), payer.publicKey.toBuffer(), payloadHash],
+				[Buffer.from("session"), currentEpoch.toBuffer("be", 8), payer.publicKey.toBuffer(), payloadHash],
 		this.consortium.programId
 			)[0];
 

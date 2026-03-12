@@ -20,7 +20,7 @@ pub struct CreateSession<'info> {
         // cannot put precise length here since consortium may change while
         // session is already created
         space = 8 + Session::size(config.current_validators.len()),
-        seeds = [SESSION_SEED, &config.current_epoch.to_le_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
+        seeds = [SESSION_SEED, &config.current_epoch.to_be_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
         bump,
     )]
     pub session: Account<'info, Session>,
