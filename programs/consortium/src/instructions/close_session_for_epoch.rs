@@ -1,10 +1,8 @@
 //! Instruction to finalize a notary session after signatures have been submitted
 //! and the minimum weight threshold has been reached
 use crate::{
-    constants::{CONFIG_SEED, SESSION_SEED, VALIDATED_PAYLOAD_SEED},
-    errors::ConsortiumError,
-    events::SessionFinalized,
-    state::{Config, Session, ValidatedPayload},
+    constants::{CONFIG_SEED, SESSION_SEED},
+    state::{Config, Session},
 };
 use anchor_lang::prelude::*;
 
