@@ -268,7 +268,7 @@ describe("Consortium", () => {
         const cfg = await program.account.config.fetch(configPDA);
         const currentEpoch = cfg.currentEpoch
         sessionPDA = PublicKey.findProgramAddressSync(
-          [Buffer.from("session"), currentEpoch.toBuffer("le", 8), payer.publicKey.toBuffer(), Buffer.from(nextValsetHash, "hex")],
+          [Buffer.from("session"), currentEpoch.toBuffer("be", 8), payer.publicKey.toBuffer(), Buffer.from(nextValsetHash, "hex")],
           program.programId
         )[0];
       });
