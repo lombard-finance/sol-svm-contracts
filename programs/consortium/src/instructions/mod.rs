@@ -2,6 +2,8 @@ pub mod admin;
 pub use admin::*;
 pub mod accept_ownership;
 pub use accept_ownership::*;
+pub mod close_session_for_epoch;
+pub use close_session_for_epoch::*;
 pub mod create_session;
 pub use create_session::*;
 pub mod finalize_session;

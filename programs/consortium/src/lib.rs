@@ -68,4 +68,8 @@ pub mod consortium {
     pub fn update_valset(ctx: Context<UpdateValset>, payload_hash: [u8; 32]) -> Result<()> {
         instructions::update_valset(ctx, payload_hash)
     }
+
+    pub fn close_session_for_epoch(ctx: Context<CloseSessionForEpoch>, payload_hash: [u8; 32], epoch: u64) -> Result<()> {
+        instructions::close_session_for_epoch(ctx, payload_hash, epoch)
+    }
 }
