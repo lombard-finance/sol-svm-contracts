@@ -15,7 +15,12 @@ pub struct FinalizeSession<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
-    #[account(mut, close = payer, seeds = [SESSION_SEED, &payer.key.to_bytes()[..], &payload_hash[..]], bump)]
+    #[account(
+        mut,
+        close = payer,
+        seeds = [SESSION_SEED, &config.current_epoch.to_be_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
+        bump
+    )]
     pub session: Account<'info, Session>,
     #[account(
         init,

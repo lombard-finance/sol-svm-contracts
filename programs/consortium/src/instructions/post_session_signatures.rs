@@ -15,8 +15,13 @@ pub struct PostSessionSignatures<'info> {
     pub payer: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
-    #[account(mut, seeds = [SESSION_SEED, &payer.key.to_bytes()[..], &payload_hash[..]], bump)]
+    #[account(
+        mut,
+        seeds = [SESSION_SEED, &config.current_epoch.to_be_bytes()[..], &payer.key.to_bytes()[..], &payload_hash[..]],
+        bump
+    )]
     pub session: Account<'info, Session>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn post_session_signatures(

@@ -36,12 +36,14 @@ export interface Signature {
 export class ConsortiumUtility {
   private readonly consortium: Program<Consortium>;
   private readonly keypairs: Secp256k1Keypair[] = [];
+  private configPDA: PublicKey;
   epoch : Number;
   height : Number;
 
 	constructor(consortium : Program<Consortium>, initialKeypairs: Secp256k1Keypair[] = []) {
-    this.keypairs = initialKeypairs;
-    this.consortium = consortium;
+		this.keypairs = initialKeypairs;
+		this.consortium = consortium;
+		this.configPDA = PublicKey.findProgramAddressSync([Buffer.from("consortium_config")], consortium.programId)[0];
 	}
 
 	/**
@@ -368,32 +370,34 @@ export class ConsortiumUtility {
 		const payloadSignatures = this.signPayload(payload);
 		const payloadHash = Buffer.from(sha256(payload).slice(2), "hex");
 		const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
+		const cfg = await this.consortium.account.config.fetch(this.configPDA);
+		const currentEpoch = cfg.currentEpoch
 
-    const sessionPDA = PublicKey.findProgramAddressSync(
-			[Buffer.from("session"), payer.publicKey.toBuffer(), payloadHash],
-      this.consortium.programId
-		)[0];
+		const sessionPDA = PublicKey.findProgramAddressSync(
+				[Buffer.from("session"), currentEpoch.toBuffer("be", 8), payer.publicKey.toBuffer(), payloadHash],
+		this.consortium.programId
+			)[0];
 
-    const validatedPayloadPDA = PublicKey.findProgramAddressSync(
-			[Buffer.from("validated_payload"), payloadHash],
-      this.consortium.programId
-		)[0];
+		const validatedPayloadPDA = PublicKey.findProgramAddressSync(
+				[Buffer.from("validated_payload"), payloadHash],
+		this.consortium.programId
+			)[0];
 
-		await this.consortium.methods
-			.createSession(payloadHashBytes)
-			.accounts({
-				payer: payer.publicKey,
-				session: sessionPDA,
-				validatedPayload: validatedPayloadPDA,
-			})
-			.signers([payer])
-			.rpc({commitment: "confirmed"});
+			await this.consortium.methods
+				.createSession(payloadHashBytes)
+				.accounts({
+					payer: payer.publicKey,
+					session: sessionPDA,
+					validatedPayload: validatedPayloadPDA,
+				})
+				.signers([payer])
+				.rpc({commitment: "confirmed"});
 
-    const indices = [];
-    for (let i = 0; i < payloadSignatures.length; i++) {
-      console.log(Buffer.concat([payloadSignatures[i].r, payloadSignatures[i].s]).toString('hex'));
-      indices.push(new BN(i));
-    }
+		const indices = [];
+		for (let i = 0; i < payloadSignatures.length; i++) {
+		console.log(Buffer.concat([payloadSignatures[i].r, payloadSignatures[i].s]).toString('hex'));
+		indices.push(new BN(i));
+		}
 
 		await this.consortium.methods
 			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), indices)
@@ -402,21 +406,21 @@ export class ConsortiumUtility {
 				session: sessionPDA,
 			})
 			.signers([payer])
-      .rpc({commitment: "confirmed"});
+			.rpc({commitment: "confirmed"});
 
-		await this.consortium.methods
-			.finalizeSession(payloadHashBytes)
-			.accounts({
-				payer: payer.publicKey,
-				session: sessionPDA,
-				validatedPayload: validatedPayloadPDA,
-			})
-			.signers([payer])
-      .rpc({commitment: "confirmed"});
+				await this.consortium.methods
+					.finalizeSession(payloadHashBytes)
+					.accounts({
+						payer: payer.publicKey,
+						session: sessionPDA,
+						validatedPayload: validatedPayloadPDA,
+					})
+					.signers([payer])
+			.rpc({commitment: "confirmed"});
 
 		return {
-      validatedPayloadPDA,
-      sessionPDA
+			validatedPayloadPDA,
+			sessionPDA
 		};
 	}
 
