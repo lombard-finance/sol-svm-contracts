@@ -92,7 +92,7 @@ export class MailboxUtilities {
     await consortium.provider.connection.confirmTransaction(tx);
   }
 
-  async deliverMessage(fromMailboxAddress: Buffer, fromLchainId: Buffer, payer: Keypair, message: Buffer) {
+  async deliverMessage(fromMailboxAddress: Buffer, fromLchainId: Buffer, payer: Keypair, message: Buffer): Promise<{payloadHash: Buffer<ArrayByuffer>, payloadHashBytes: number[]}> {
     await this.consortiumUtility.createAndFinalizeSession(payer, message);
     const payloadHash = Buffer.from(sha256(message).slice(2), "hex");
     const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
@@ -121,6 +121,7 @@ export class MailboxUtilities {
       .signers([payer])
       .rpc();
     await mailbox.provider.connection.confirmTransaction(deliverMessageTx);
+    return {payloadHash, payloadHashBytes};
   }
 
   static getMailboxConfigPDA() {

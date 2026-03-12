@@ -18,6 +18,11 @@ pub fn verify_ed25519_instruction(
     let ed25519_instruction =
         load_instruction_at_checked((current_index - 1) as usize, instruction_sysvar)?;
 
+    // Check instruction program ID
+    if ed25519_instruction.program_id != anchor_lang::solana_program::ed25519_program::ID {
+        return Err(AssetRouterError::InvalidEd25519Instruction.into());
+    }
+
     // Verify the content of the Ed25519 instruction
     let instruction_data = ed25519_instruction.data;
     if instruction_data.len() < 2 {

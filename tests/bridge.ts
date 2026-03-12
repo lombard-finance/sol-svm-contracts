@@ -777,14 +777,18 @@ describe("Bridge", () => {
         .rpc({ commitment: "confirmed" });
 
       const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
+      const expecedGmpMessage = messageV1(
+        Buffer.from(outboundMessagePathBytes),
+        config.globalNonce.toNumber(),
+        bridge.programId.toBuffer(),
+        Buffer.from(foreignBridgeAddressBytes),
+        foreignCaller,
+        expectedBody.bytes(),
+      );
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMessagePathBytes);
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(bridge.programId.toBuffer())));
-      expect(outboundMessage[0].recipient).to.deep.eq(foreignBridgeAddressBytes);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(Uint8Array.from(outboundMessage[0].destinationCaller)).to.deep.eq(foreignCaller);
-      expect(outboundMessage[0].body).to.deep.eq(expectedBody.bytes());
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
+
 
       const expectedFee = feePerByte.muln(bridgeMessageLength);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -843,14 +847,17 @@ describe("Bridge", () => {
         .rpc({ commitment: "confirmed" });
 
       const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
+      const expecedGmpMessage = messageV1(
+        Buffer.from(outboundMessagePathBytes),
+        config.globalNonce.toNumber(),
+        bridge.programId.toBuffer(),
+        Buffer.from(foreignBridgeAddressBytes),
+        foreignCaller,
+        expectedBody.bytes(),
+      );
 
-      const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-      expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(outboundMessagePathBytes);
-      expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(bridge.programId.toBuffer())));
-      expect(outboundMessage[0].recipient).to.deep.eq(foreignBridgeAddressBytes);
-      expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-      expect(Uint8Array.from(outboundMessage[0].destinationCaller)).to.deep.eq(foreignCaller);
-      expect(outboundMessage[0].body).to.deep.eq(expectedBody.bytes());
+      const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
 
       const expectedFee = feePerByte.muln(bridgeMessageLength).muln(40).divn(100);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -958,14 +965,17 @@ describe("Bridge", () => {
           .rpc({ commitment: "confirmed" });
 
         const expectedBody = new BridgePayload(arg.foreignToken(), user.publicKey.toBytes(), recipient, amountToSend);
+        const expecedGmpMessage = messageV1(
+          Buffer.from(arg.outboundMessagePath()),
+          config.globalNonce.toNumber(),
+          bridge.programId.toBuffer(),
+          Buffer.from(foreignBridgeAddressBytes),
+          foreignCaller,
+          expectedBody.bytes(),
+        );
 
-        const outboundMessage = await mailbox.account.outboundMessage.fetch(outboundMessagePDA);
-        expect(outboundMessage[0].messagePathIdentifier).to.deep.eq(arg.outboundMessagePath());
-        expect(outboundMessage[0].sender).to.deep.eq(Array.from(Uint8Array.from(bridge.programId.toBuffer())));
-        expect(outboundMessage[0].recipient).to.deep.eq(foreignBridgeAddressBytes);
-        expect(outboundMessage[0].nonce).to.deep.eq(config.globalNonce);
-        expect(Uint8Array.from(outboundMessage[0].destinationCaller)).to.deep.eq(foreignCaller);
-        expect(outboundMessage[0].body).to.deep.eq(expectedBody.bytes());
+        const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
+        expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
 
         const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
         expect(treasurySolBalanceAfter - treasurySolBalanceBefore).to.be.eq(0);
