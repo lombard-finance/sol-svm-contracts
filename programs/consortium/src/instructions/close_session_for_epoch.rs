@@ -23,6 +23,6 @@ pub struct CloseSessionForEpoch<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn close_session_for_epoch(_: Context<CloseSessionForEpoch>, _: [u8; 32], _: u64) -> Result<()> {
+pub fn close_session_for_epoch(_: Context<CloseSessionForEpoch>, payload_hash: [u8; 32], epoch: u64) -> Result<()> {
     Ok(())
 }
