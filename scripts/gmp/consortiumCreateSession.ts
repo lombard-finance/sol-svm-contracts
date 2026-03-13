@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Consortium } from "../../target/types/consortium";
 import { getBase58EncodedTxBytes } from "../utils";
 import { sha256 } from "js-sha256";
-import { convertToBuf, getConsortiumSessionPDA, getConsortiumValidatedPayloadPDA } from "./utils";
+import { convertToBuf, getConsortiumConfigPDA, getConsortiumSessionPDA, getConsortiumValidatedPayloadPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -40,7 +40,10 @@ const payloadHash = Array.from(Uint8Array.from(payloadHashBuf));
     const payer = provider.wallet.publicKey; // Get wallet address
 
     // Derive PDA for session
-    const sessionPDA = getConsortiumSessionPDA(programId, payer, payloadHashBuf);
+    const configPDA = getConsortiumConfigPDA(programId);
+    const cfg = await program.account.config.fetch(configPDA);
+		const currentEpoch = cfg.currentEpoch
+    const sessionPDA = getConsortiumSessionPDA(programId, payer, payloadHashBuf, currentEpoch);
     console.log("Using session PDA:", sessionPDA.toBase58());
 
     // Derive PDA for validatedPayload

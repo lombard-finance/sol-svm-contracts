@@ -39,15 +39,6 @@ pub fn post_session_signatures(
         ConsortiumError::SignaturesIndicesMismatch
     );
 
-    // If the validator set has changed inbetween posting the payload and finalizing it,
-    // we need to start from scratch.
-    if ctx.accounts.session.epoch != ctx.accounts.config.current_epoch {
-        ctx.accounts.session.new_epoch(
-            ctx.accounts.config.current_epoch,
-            ctx.accounts.config.current_validators.len(),
-        );
-    }
-
     signatures
         .iter()
         .zip(indices.iter())

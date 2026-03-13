@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { Consortium } from "../../target/types/consortium";
 import { getBase58EncodedTxBytes } from "../utils";
 import { sha256 } from "js-sha256";
-import { convertToBuf, getConsortiumSessionPayloadPDA, getConsortiumSessionPDA, getConsortiumValidatedPayloadPDA } from "./utils";
+import { convertToBuf, getConsortiumSessionPayloadPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {

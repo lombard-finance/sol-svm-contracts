@@ -21,7 +21,6 @@ pub struct Config {
 
 #[account]
 pub struct Session {
-    pub epoch: u64,
     pub signed: Vec<bool>,
     pub weight: u64,
 }
@@ -31,12 +30,6 @@ impl Session {
         8 + // epoch
         4 + consortium_length + // signed
         8 // weight
-    }
-
-    pub fn new_epoch(&mut self, epoch: u64, val_len: usize) {
-        self.epoch = epoch;
-        self.signed = vec![false; val_len];
-        self.weight = 0;
     }
 }
 

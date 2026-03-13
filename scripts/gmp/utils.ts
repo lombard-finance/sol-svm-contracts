@@ -11,8 +11,8 @@ export function getConsortiumConfigPDA(program: PublicKey) {
   return PublicKey.findProgramAddressSync([CONSORTIUM_CONFIG_SEED], program)[0];
 }
 
-export function getConsortiumSessionPDA(program: PublicKey, payer: PublicKey, payloadHash: Buffer<ArrayBuffer>) {
-  return PublicKey.findProgramAddressSync([CONSORTIUM_SESSION_SEED, payer.toBytes(), payloadHash], program)[0];
+export function getConsortiumSessionPDA(program: PublicKey, payer: PublicKey, payloadHash: Buffer<ArrayBuffer>, epoch: anchor.BN) {
+  return PublicKey.findProgramAddressSync([CONSORTIUM_SESSION_SEED, epoch.toBuffer("be", 8), payer.toBytes(), payloadHash], program)[0];
 }
 
 export function getConsortiumSessionPayloadPDA(program: PublicKey, payer: PublicKey, payloadHash: Buffer<ArrayBuffer>) {
