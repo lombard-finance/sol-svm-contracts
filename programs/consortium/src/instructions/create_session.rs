@@ -43,7 +43,6 @@ pub fn create_session(ctx: Context<CreateSession>, payload_hash: [u8; 32]) -> Re
         ConsortiumError::NoValidatorSet
     );
 
-    ctx.accounts.session.epoch = ctx.accounts.config.current_epoch;
     ctx.accounts.session.signed = vec![false; ctx.accounts.config.current_validators.len()];
 
     emit!(SessionCreated { hash: payload_hash });

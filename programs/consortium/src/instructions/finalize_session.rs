@@ -35,11 +35,6 @@ pub struct FinalizeSession<'info> {
 
 pub fn finalize_session(ctx: Context<FinalizeSession>, payload_hash: [u8; 32]) -> Result<()> {
     require!(
-        ctx.accounts.config.current_epoch == ctx.accounts.session.epoch,
-        ConsortiumError::OutdatedEpoch
-    );
-
-    require!(
         ctx.accounts.session.weight >= ctx.accounts.config.current_weight_threshold,
         ConsortiumError::NotEnoughSignatures
     );
