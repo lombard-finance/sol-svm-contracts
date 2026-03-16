@@ -11,6 +11,8 @@ pub enum MailboxError {
     Paused,
     #[msg("Program is not paused")]
     NotPaused,
+    #[msg("Invalid payload hash")]
+    InvalidPayloadHash,
     #[msg("Invalid payload size")]
     InvalidPayloadLength,
     #[msg("Payload too large")]
