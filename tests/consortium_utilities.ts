@@ -1,4 +1,5 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { PublicKey } from "@solana/web3.js";
 import { keccak_256 } from "@noble/hashes/sha3";
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";

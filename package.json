@@ -28,6 +28,9 @@
     "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
     "unpause": "ts-node -T scripts/unpause.ts",
     "getConfig": "ts-node -T scripts/getConfig.ts",
+<<<<<<< fix/vulnerability-fix-20260318
+    "test:lbtc": "anchor test -p lbtc -- --no-default-features --features devnet"
+=======
     "gmp_initializeConsortium": "ts-node -T scripts/gmp/initializeConsortium.ts",
     "gmp_setInitialValidatorSet": "ts-node -T scripts/gmp/setInitialValidatorSet.ts",
     "gmp_setInitialValidatorSetFromSession": "ts-node -T scripts/gmp/setInitialValidatorSetFromSession.ts",
@@ -56,6 +59,7 @@
     "gmp_consortiumPostSessionPayload": "ts-node -T scripts/gmp/consortiumPostSessionPayload.ts",
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
     "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts"
+>>>>>>> audit/ledger-v2-ccip
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
