@@ -27,7 +27,8 @@
     "setTreasury": "ts-node -T scripts/setTreasury.ts",
     "transferOwnership": "ts-node -T scripts/transferOwnership.ts",
     "unpause": "ts-node -T scripts/unpause.ts",
-    "getConfig": "ts-node -T scripts/getConfig.ts"
+    "getConfig": "ts-node -T scripts/getConfig.ts",
+    "test:lbtc": "anchor test -p lbtc -- --no-default-features --features devnet"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
