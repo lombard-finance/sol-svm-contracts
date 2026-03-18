@@ -1,0 +1,27 @@
+[package]
+name = "mailbox"
+version = "0.1.0"
+description = "The mailbox program supporting the Lombard Ledger General Message Passing protocol"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "mailbox"
+
+[features]
+default = ["mainnet"]
+mainnet = []
+devnet = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+consortium = { path = "../consortium", features = ["cpi"] }
+solana-security-txt = "1.1.1"
+
+[dev-dependencies]
+hex = "0.4.3"

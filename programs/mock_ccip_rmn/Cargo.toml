@@ -1,0 +1,31 @@
+[package]
+name = "mock_ccip_rmn"
+version = "0.1.0"
+description = "The mock Offramp/Onramp program to test LomabrdTokenPool"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "mock_ccip_rmn"
+
+[features]
+default = ["mainnet"]
+mainnet = []
+devnet = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
+base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"] }
+rmn_remote = { path = "../../dependencies/ccip/programs/rmn-remote", features = ["no-entrypoint"] }
+lombard_token_pool = { path = "../lombard_token_pool", features = ["cpi"] }
+
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic"))']

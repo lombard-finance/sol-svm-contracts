@@ -1,5 +1,10 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { PublicKey } from "@solana/web3.js";
+import { keccak_256 } from "@noble/hashes/sha3";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
+import { PublicKey, Keypair } from "@solana/web3.js";
+import { Consortium, Consortium as ConsortiumProgram } from "../target/types/consortium";
 import { ethers, sha256 } from "ethers";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -30,12 +35,16 @@ export interface Signature {
  * Consortium class for managing keypairs and signing operations
  */
 export class ConsortiumUtility {
+  private readonly consortium: Program<Consortium>;
   private readonly keypairs: Secp256k1Keypair[] = [];
+  private configPDA: PublicKey;
   epoch : Number;
   height : Number;
 
-	constructor(initialKeypairs: Secp256k1Keypair[] = []) {
+	constructor(consortium : Program<Consortium>, initialKeypairs: Secp256k1Keypair[] = []) {
 		this.keypairs = initialKeypairs;
+		this.consortium = consortium;
+		this.configPDA = PublicKey.findProgramAddressSync([Buffer.from("consortium_config")], consortium.programId)[0];
 	}
 
 	/**
@@ -247,6 +256,246 @@ export class ConsortiumUtility {
 		const fullPayload = selector + encodedData.slice(2); // Remove 0x from encoded data
 		
 		return Buffer.from(fullPayload.slice(2), 'hex');
+	}
+
+	/**
+	 * Initialize the consortium program and set the initial validator set
+	 * @param admin The admin keypair for the consortium
+	 * @param epoch Optional epoch number (defaults to 1)
+	 * @param weightThreshold Optional weight threshold (defaults to 1)
+	 * @param height Optional block height (defaults to 1)
+	 * @param deployerWallet Optional deployer wallet (defaults to provider wallet)
+	 * @returns Object containing both transaction signatures
+	 */
+	async initializeConsortiumProgram(
+		admin: Keypair,
+		epoch: number = 1,
+		weightThreshold: number = this.keypairs.length - 1,
+		height: number = 1,
+		deployerWallet?: anchor.Wallet
+	): Promise<{ initializeTx: string; setValSetTx: string }> {
+    const program = this.consortium;
+
+		// Use provider wallet if no deployer specified
+		const deployer = deployerWallet || program.provider.wallet;
+
+		try {
+			// Step 1: Initialize the consortium program
+			const initializeTx = await program.methods
+				.initialize(admin.publicKey)
+				.accounts({
+					deployer: deployer.publicKey,
+				})
+				.signers([deployer.payer])
+				.rpc({commitment: "confirmed"});
+			
+			// Step 2: Set the initial validator set
+			const valsetPayload = this.createValSetPayload(epoch, weightThreshold, height);
+			
+			const setValSetTx = await program.methods
+				.setInitialValset(valsetPayload)
+				.accounts({
+					admin: admin.publicKey,
+				})
+				.signers([admin])
+        .rpc({commitment: "confirmed"});
+
+			// Fetch the config account and check its fields
+			const configPDA = this.getConsortiumConfigPDA();
+			const config = await program.account.config.fetch(configPDA);
+
+			if (!config) {
+				throw new Error("Consortium config account not found after initialization");
+			}
+			if (!config.admin.equals(admin.publicKey)) {
+				throw new Error(`Config admin mismatch: expected ${admin.publicKey.toBase58()}, got ${config.admin.toBase58()}`);
+			}
+			if (config.currentEpoch.toNumber() !== epoch) {
+				throw new Error(`Config epoch mismatch: expected ${epoch}, got ${config.currentEpoch}`);
+			}
+			if (config.currentWeightThreshold.toNumber() !== weightThreshold) {
+				throw new Error(`Config weight threshold mismatch: expected ${weightThreshold}, got ${config.currentWeightThreshold}`);
+			}
+			
+			return {
+				initializeTx,
+				setValSetTx
+			};
+		} catch (error) {
+			throw new Error(`Failed to initialize consortium program: ${error.message}`);
+		}
+	}
+
+  async updateValset(valsetPayload : Buffer, payer : Keypair) {
+
+    const valsetPayloadLength = valsetPayload.length;
+    const valsetPayloadHash = sha256(valsetPayload).slice(2);
+    const valsetPayloadHashBytes = Array.from(Buffer.from(valsetPayloadHash, "hex"));
+
+    const { validatedPayloadPDA } = await this.createAndFinalizeSession(payer, valsetPayload);
+
+    const sessionPayloadPDA = PublicKey.findProgramAddressSync(
+      [Buffer.from("session_payload"), payer.publicKey.toBuffer(), Buffer.from(valsetPayloadHash, "hex")],
+      this.consortium.programId
+    )[0];
+
+    const chunkMaxSize = 512;
+    for (let i = 0; i < valsetPayloadLength; i+=chunkMaxSize) {
+      const chunk = valsetPayload.subarray(i, Math.min(i+chunkMaxSize, valsetPayloadLength));
+      await this.consortium.methods
+        .postSessionPayload(valsetPayloadHashBytes, chunk, valsetPayloadLength)
+        .accounts({
+          payer: payer.publicKey,
+          sessionPayload: sessionPayloadPDA,
+        })
+        .signers([payer])
+        .rpc({commitment: "confirmed"});
+    }
+
+    await this.consortium.methods
+      .updateValset(valsetPayloadHashBytes)
+      .accounts({
+        payer: payer.publicKey,
+        validatedPayload: validatedPayloadPDA,
+        sessionPayload: sessionPayloadPDA,
+      })
+      .signers([payer])
+      .rpc({commitment: "confirmed"});
+  }
+
+	async createAndFinalizeSession(
+		payer: Keypair,
+		payload: Buffer
+	): Promise<{ validatedPayloadPDA: PublicKey; sessionPDA : PublicKey  }> {
+
+		const payloadSignatures = this.signPayload(payload);
+		const payloadHash = Buffer.from(sha256(payload).slice(2), "hex");
+		const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
+		const cfg = await this.consortium.account.config.fetch(this.configPDA);
+		const currentEpoch = cfg.currentEpoch
+
+		const sessionPDA = PublicKey.findProgramAddressSync(
+				[Buffer.from("session"), currentEpoch.toBuffer("be", 8), payer.publicKey.toBuffer(), payloadHash],
+		this.consortium.programId
+			)[0];
+
+		const validatedPayloadPDA = PublicKey.findProgramAddressSync(
+				[Buffer.from("validated_payload"), payloadHash],
+		this.consortium.programId
+			)[0];
+
+			await this.consortium.methods
+				.createSession(payloadHashBytes)
+				.accounts({
+					payer: payer.publicKey,
+					session: sessionPDA,
+					validatedPayload: validatedPayloadPDA,
+				})
+				.signers([payer])
+				.rpc({commitment: "confirmed"});
+
+		const indices = [];
+		for (let i = 0; i < payloadSignatures.length; i++) {
+		console.log(Buffer.concat([payloadSignatures[i].r, payloadSignatures[i].s]).toString('hex'));
+		indices.push(new BN(i));
+		}
+
+		await this.consortium.methods
+			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), indices)
+			.accounts({
+				payer: payer.publicKey,
+				session: sessionPDA,
+			})
+			.signers([payer])
+			.rpc({commitment: "confirmed"});
+
+				await this.consortium.methods
+					.finalizeSession(payloadHashBytes)
+					.accounts({
+						payer: payer.publicKey,
+						session: sessionPDA,
+						validatedPayload: validatedPayloadPDA,
+					})
+					.signers([payer])
+			.rpc({commitment: "confirmed"});
+
+		return {
+			validatedPayloadPDA,
+			sessionPDA
+		};
+	}
+
+	getValidatedPayloadPDA(payloadHash: Buffer): PublicKey {
+		return PublicKey.findProgramAddressSync(
+			[Buffer.from("validated_payload"), payloadHash],
+			this.consortium.programId
+		)[0];
+	}
+
+	/**
+	 * Get the consortium config PDA
+	 * @returns The config PDA public key
+	 */
+	getConsortiumConfigPDA(): PublicKey {
+		const [configPDA] = PublicKey.findProgramAddressSync(
+			[Buffer.from("consortium_config")],
+      this.consortium.programId
+		);
+		return configPDA;
+	}
+
+	/**
+	 * Fetch the consortium config account
+	 * @returns The consortium config account data
+	 */
+	async fetchConsortiumConfig(): Promise<any> {
+		const configPDA = this.getConsortiumConfigPDA();
+		return await this.consortium.account.config.fetch(configPDA);
+	}
+
+	/**
+	 * Check if the consortium program is initialized
+	 * @returns True if initialized, false otherwise
+	 */
+	async isConsortiumInitialized(): Promise<boolean> {
+		try {
+			await this.fetchConsortiumConfig();
+			return true;
+		} catch (error) {
+			return false;
+		}
+	}
+
+	/**
+	 * Check if the consortium has a validator set configured
+	 * @returns True if validator set is configured, false otherwise
+	 */
+	async hasValidatorSet(): Promise<boolean> {
+		try {
+			const config = await this.fetchConsortiumConfig();
+			return config.currentEpoch > 0;
+		} catch (error) {
+			return false;
+		}
+	}
+
+	/**
+	 * Get the current validator set from the consortium program
+	 * @returns Object containing validator set information
+	 */
+	async getValidatorSet(): Promise<{
+		epoch: number;
+		validators: Uint8Array[];
+		weights: number[];
+		weightThreshold: number;
+	}> {
+		const config = await this.fetchConsortiumConfig();
+		return {
+			epoch: config.currentEpoch.toNumber(),
+			validators: config.currentValidators,
+			weights: config.currentWeights.map((w: any) => w.toNumber()),
+			weightThreshold: config.currentWeightThreshold.toNumber(),
+		};
 	}
 }
 

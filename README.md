@@ -16,6 +16,31 @@ LBTC is liquid Bitcoin; it's yield-bearing, cross-chain, and 1:1 backed by BTC. 
 | LBTC             | Native minting program for LBTC.                                                                                                 | LomP48F7bLbKyMRHHsDVt7wuHaUQvQnVVspjcbfuAek |
 | Token | LBTC token | LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY |
 
+## Contracts Breakdown
+### Consortium
+
+The **Consortium** contract is the core notary and governance program for the LBTC protocol on Solana. It manages a decentralized set of validators (the "consortium") responsible for attesting to payloads originating from the Lombard Ledger consortium. This contract provides a secure, multi-signature validation mechanism for cross-chain and protocol-critical actions.
+
+Currently program does not track the validator set history.
+
+#### Key Features
+
+- **Validator Set Management:**  
+  The contract allows for the initialization and dynamic updating of the validator set, including their weights and the threshold required for consensus. Only the admin (or a designated owner) can set the initial validator set, but subsequent updates can be proposed and finalized by anyone, provided they are accompanied by valid signatures from the current consortium.
+
+- **Session Lifecycle & Payload Handling:**  
+  - For most payloads, only the hash of the payload is required for validation and notarization.
+  - For validator set updates, the payload may be large and is therefore submitted in chunks.
+  - Each session tracks the payload hash, the participating validators, and the collection of their signatures.
+
+- **ValidatedPayload PDA:**  
+  Once a payload is successfully validated by the consortium (i.e., enough valid signatures are collected), a `ValidatedPayload` Program Derived Address (PDA) is created.  
+  - **External Readability:** This PDA is designed to be read by external contracts and programs, providing a canonical, on-chain proof that a given payload has been validated by the consortium.  
+  - This enables seamless integration with other Solana programs and ensures that only properly validated actions are executed.
+
+- **Security & Upgradability:**  
+  Ownership can be transferred securely via a two-step process (propose and accept).
+
 ### BTC deposit flow
 Graph below represents BTC to LBTC flow
 

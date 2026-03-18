@@ -1,0 +1,26 @@
+[package]
+name = "mailbox_receiver"
+version = "0.1.0"
+description = "A dummy gmp receiver program to test and showcase how to write a receiver"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "mailbox_receiver"
+
+[features]
+default = ["mainnet"]
+mainnet = []
+devnet = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.31.1"
+mailbox = { path = "../mailbox", features = ["cpi"]}
+
+[dev-dependencies]
+hex = "0.4.3"

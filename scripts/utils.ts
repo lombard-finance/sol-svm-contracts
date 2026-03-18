@@ -1,7 +1,16 @@
-import { Connection, Transaction, PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { Connection, Keypair, Transaction, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import * as fs from "fs";
 import bs58 from "bs58";
 import { CONFIG_SEED, TOKEN_AUTHORITY_SEED, METADATA_SEED } from "./constants";
+
+/** Load keypair from ANCHOR_WALLET path for use as a Signer with .secretKey (e.g. SPL createAssociatedTokenAccount / transaction.sign). */
+export function loadWalletKeypair(): Keypair {
+  const path = process.env.ANCHOR_WALLET;
+  if (!path) throw new Error("ANCHOR_WALLET is not set");
+  const secret = JSON.parse(fs.readFileSync(path, "utf-8"));
+  return Keypair.fromSecretKey(new Uint8Array(secret));
+}
 
 export async function getBase58EncodedTxBytes(instruction: TransactionInstruction, connection: Connection) {
   const transaction = new Transaction().add(instruction);
