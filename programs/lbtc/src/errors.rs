@@ -77,6 +77,8 @@ pub enum LBTCError {
     PauserNotFound,
     #[msg("Metadata finalized already")]
     MetadataFinalizedAlready,
+    #[msg("Metadata not finalized")]
+    MetadataNotFinalized,
     #[msg("Payload mismatch")]
     PayloadMismatch,
 }
