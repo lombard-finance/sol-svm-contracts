@@ -15,7 +15,13 @@ pub struct SetNextValset<'info> {
     pub config: Account<'info, Config>,
     #[account(mut, close = payer, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
     pub metadata: Account<'info, Metadata>,
-    #[account(mut, close = payer, seeds = [&payload.hash, &payer.key.to_bytes()], bump)]
+    #[account(
+        mut,
+        close = payer,
+        seeds = [&payload.hash, &payer.key.to_bytes()],
+        constraint = (&payload.hash == &metadata.hash) @ LBTCError::PayloadMismatch,
+        bump
+    )]
     pub payload: Account<'info, ValsetPayload>,
 }
 

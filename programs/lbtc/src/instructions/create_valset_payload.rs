@@ -58,6 +58,7 @@ pub fn create_valset_payload(
         LBTCError::ValsetPayloadHashMismatch
     );
 
+    ctx.accounts.metadata.finalized = true;
     ctx.accounts.payload.hash = ctx.accounts.metadata.hash;
     ctx.accounts.payload.epoch = epoch;
     ctx.accounts.payload.weight_threshold = weight_threshold;

@@ -23,6 +23,7 @@ pub fn create_metadata_for_valset_payload(
     hash: [u8; 32],
 ) -> Result<()> {
     ctx.accounts.metadata.hash = hash;
+    ctx.accounts.metadata.finalized = false;
     emit!(ValsetMetadataCreated { hash });
     Ok(())
 }
