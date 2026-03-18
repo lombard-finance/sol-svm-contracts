@@ -1,11 +1,16 @@
 //! Adds validators and weights for a validator set being constructed.
-use crate::{constants::VALIDATOR_PUBKEY_SIZE, events::ValsetMetadataPosted, state::Metadata};
+use crate::{constants::VALIDATOR_PUBKEY_SIZE, errors::LBTCError, events::ValsetMetadataPosted, state::Metadata};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct ValsetMetadata<'info> {
     pub payer: Signer<'info>,
-    #[account(mut, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
+    #[account(
+        mut, 
+        seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()],
+        constraint = !metadata.finalized @ LBTCError::MetadataFinalizedAlready,
+        bump
+    )]
     pub metadata: Account<'info, Metadata>,
 }
 
