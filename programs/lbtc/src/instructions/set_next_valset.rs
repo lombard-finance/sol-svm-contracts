@@ -13,7 +13,13 @@ pub struct SetNextValset<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds = [constants::CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
-    #[account(mut, close = payer, seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()], bump)]
+    #[account(
+        mut,
+        close = payer,
+        seeds = [&metadata.hash, &crate::constants::METADATA_SEED, &payer.key.to_bytes()],
+        constraint = metadata.finalized @ LBTCError::MetadataNotFinalized,
+        bump
+    )]
     pub metadata: Account<'info, Metadata>,
     #[account(
         mut,
