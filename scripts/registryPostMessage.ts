@@ -1,8 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Registry } from "../target/types/registry";
-import { getBase58EncodedTxBytes, getRegistryMessageDataPDA } from "./utils";
-import { sha256 } from "js-sha256";
+import { getBase58EncodedTxBytes } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
