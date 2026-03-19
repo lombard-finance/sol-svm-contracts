@@ -40,7 +40,7 @@ pub fn verify_ed25519_instruction(
 
     // Verify public key
     if offsets.public_key_instruction_index != u16::MAX {
-        return Err(AssetRouterError::InvalidSInstructionData.into());
+        return Err(AssetRouterError::InvalidEd25519Instruction.into());
     }
     let pubkey_start = offsets.public_key_offset as usize;
     let pubkey_end = pubkey_start + 32;
@@ -50,7 +50,7 @@ pub fn verify_ed25519_instruction(
 
     // Verify message
     if offsets.message_instruction_index != u16::MAX {
-        return Err(AssetRouterError::InvalidSInstructionData.into());
+        return Err(AssetRouterError::InvalidEd25519Instruction.into());
     }
     let msg_start = offsets.message_data_offset as usize;
     let msg_end = msg_start + offsets.message_data_size as usize;
@@ -60,7 +60,7 @@ pub fn verify_ed25519_instruction(
 
     // Verify signature
     if offsets.signature_instruction_index != u16::MAX {
-        return Err(AssetRouterError::InvalidSInstructionData.into());
+        return Err(AssetRouterError::InvalidEd25519Instruction.into());
     }
     let sig_start = offsets.signature_offset as usize;
     let sig_end = sig_start + 64;

@@ -73,8 +73,6 @@ pub enum AssetRouterError {
     InvalidMessage,
     #[msg("Invalid signature")]
     InvalidSignature,
-    #[msg("Invalid instruction data")]
-    InvalidSInstructionData,
     #[msg("Missing bascule account")]
     MissingBasculeAccount,
     #[msg("Invalid bascule program")]
