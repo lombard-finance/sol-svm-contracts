@@ -131,6 +131,9 @@ pub struct TokenOnramp<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub remote_token_config: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub treasury: Option<UncheckedAccount<'info>>,
 
     pub system_program: Program<'info, System>,
 }
@@ -203,7 +206,10 @@ fn bridge_deposit_for_burn_with_caller(
             remote_bridge_config: ctx.accounts.remote_bridge_config.to_account_info(),
             local_token_config: ctx.accounts.local_token_config.to_account_info(),
             remote_token_config: ctx.accounts.remote_token_config.to_account_info(),
-            treasury: None,
+            treasury: match &ctx.accounts.treasury {
+                Some(a) => Some(a.to_account_info()),
+                None => None,
+            },
             system_program: ctx.accounts.system_program.to_account_info(),
         },
         pool_signer_seeds,

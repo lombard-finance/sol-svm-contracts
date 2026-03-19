@@ -798,6 +798,11 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
+					{ // Treasury
+						pubkey: tokenPool.programId,
+						isWritable: false,
+						isSigner: false
+					},
 					{
 						pubkey: SystemProgram.programId,
 						isWritable: false,
