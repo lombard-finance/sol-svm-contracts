@@ -9,7 +9,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use mailbox::{
     cpi::{accounts::SendMessage, send_message},
-    program::Mailbox,
+    program::Mailbox, state::OutboundMessagePath,
 };
 
 #[derive(Accounts)]
@@ -57,8 +57,10 @@ pub struct Deposit<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub mailbox_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    pub outbound_message_path: UncheckedAccount<'info>,
+    #[account(
+        constraint = outbound_message_path.destination_chain_id == config.ledger_lchain_id @ AssetRouterError::InvalidMessagePath,
+    )]
+    pub outbound_message_path: Account<'info, OutboundMessagePath>,
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub outbound_message: UncheckedAccount<'info>,
