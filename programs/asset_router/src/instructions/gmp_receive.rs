@@ -65,7 +65,7 @@ pub struct GMPReceive<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(seeds = [BASCULE_VALIDATOR_SEED], bump)]
+    #[account(mut, seeds = [BASCULE_VALIDATOR_SEED], bump)]
     pub bascule_validator: Option<UncheckedAccount<'info>>,
     /// When config.bascule_gmp is Some, must be the bascule_gmp program; otherwise optional.
     /// CHECK: instruction body constrains it to have correct configured address.
@@ -135,6 +135,11 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<
             .bascule_gmp_mint_payload
             .as_ref()
             .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let bascule_validator = ctx
+            .accounts
+            .bascule_validator
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
         let bascule_validator_bump = ctx
             .bumps
             .bascule_validator
@@ -151,7 +156,8 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<
             CpiContext::new_with_signer(
                 bascule_gmp_address.to_account_info(),
                 ValidateMint {
-                    validator: ctx.accounts.config.to_account_info(),
+                    validator: bascule_validator.to_account_info(),
+                    payer: ctx.accounts.handler.to_account_info(),
                     config: bascule_gmp_config.to_account_info(),
                     account_roles: bascule_gmp_account_roles.to_account_info(),
                     mint_payload: bascule_gmp_mint_payload.to_account_info(),

@@ -17,6 +17,7 @@ pub struct ExecuteOfframpContext<'info> {
     pub token_pool: UncheckedAccount<'info>,
     /// CHECK: maybe add some checks later
     #[account(
+        mut,
         seeds = [b"external_token_pools_signer", token_pool.key().as_ref()],
         bump,
     )]
@@ -33,7 +34,7 @@ pub fn execute_offramp<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, ExecuteOfframpContext<'info>>,
     nonce: u16,
 ) -> Result<()> {
-    let mut accounts = vec![AccountMeta::new_readonly(ctx.accounts.cpi_signer.key(), true)];
+    let mut accounts = vec![AccountMeta::new(ctx.accounts.cpi_signer.key(), true)];
     let mut account_infos = vec![ctx.accounts.cpi_signer.to_account_info()];
     ctx.remaining_accounts.iter().for_each(|a| {
         if !a.is_signer {
