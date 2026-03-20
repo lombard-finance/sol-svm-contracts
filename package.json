@@ -50,6 +50,7 @@
     "gmp_assetRouterDeposit": "ts-node -T scripts/gmp/assetRouterDeposit.ts",
     "gmp_assetRouterRedeem": "ts-node -T scripts/gmp/assetRouterRedeem.ts",
     "gmp_assetRouterGetConfig": "ts-node -T scripts/gmp/assetRouterGetConfig.ts",
+    "gmp_assetRouterGetTokenConfig": "ts-node -T scripts/gmp/assetRouterGetTokenConfig.ts",
     "gmp_consortiumGetConfig": "ts-node -T scripts/gmp/consortiumGetConfig.ts",
     "gmp_consortiumCreateSession": "ts-node -T scripts/gmp/consortiumCreateSession.ts",
     "gmp_consortiumPostSignatures": "ts-node -T scripts/gmp/consortiumPostSignatures.ts",

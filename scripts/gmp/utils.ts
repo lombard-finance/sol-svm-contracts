@@ -2,7 +2,7 @@ import { Connection, Transaction, PublicKey, TransactionInstruction } from "@sol
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import bs58 from "bs58";
-import { ASSET_ROUTER_CONFIG_SEED, ASSET_ROUTER_TOKEN_ROUTE_SEED, CONSORTIUM_CONFIG_SEED, CONSORTIUM_SESSION_PAYLOAD_SEED, CONSORTIUM_SESSION_SEED, CONSORTIUM_VALIDATED_PAYLOAD_SEED, MAILBOX_CONFIG_SEED, MAILBOX_INBOUND_MESSGE_PATH_SEED, MAILBOX_MESSAGE_HANDLED_SEED, MAILBOX_OUTBOUND_MESSAGE_SEED, MAILBOX_OUTBOUND_MESSGE_PATH_SEED, MAILBOX_SENDER_CONFIG_SEED, ORACLE_SEED } from "./constants";
+import { ASSET_ROUTER_CONFIG_SEED, ASSET_ROUTER_TOKEN_CONFIG_SEED, ASSET_ROUTER_TOKEN_ROUTE_SEED, CONSORTIUM_CONFIG_SEED, CONSORTIUM_SESSION_PAYLOAD_SEED, CONSORTIUM_SESSION_SEED, CONSORTIUM_VALIDATED_PAYLOAD_SEED, MAILBOX_CONFIG_SEED, MAILBOX_INBOUND_MESSGE_PATH_SEED, MAILBOX_MESSAGE_HANDLED_SEED, MAILBOX_OUTBOUND_MESSAGE_SEED, MAILBOX_OUTBOUND_MESSGE_PATH_SEED, MAILBOX_SENDER_CONFIG_SEED, ORACLE_SEED } from "./constants";
 import { sha256 } from "js-sha256";
 
 const BITCOIN_ADDRESS = Buffer.from("0000000000000000000000000000000000000000000000000000000000000001", "hex"); 
@@ -37,6 +37,10 @@ export function getAssetRouterTokenBtcRoutePDA(program: PublicKey, fromChainId: 
 
 export function getAssetRouterTokenLocalRoutePDA(program: PublicKey, chainId: Buffer<ArrayBuffer>, fromMint: PublicKey, toMint: PublicKey) {
   return PublicKey.findProgramAddressSync([ASSET_ROUTER_TOKEN_ROUTE_SEED, chainId, fromMint.toBytes(), chainId, toMint.toBytes()], program)[0];
+}
+
+export function getAssetRouterTokenConfigPDA(program: PublicKey, mint: PublicKey) {
+  return PublicKey.findProgramAddressSync([ASSET_ROUTER_TOKEN_CONFIG_SEED, mint.toBytes()], program)[0];
 }
 
 export function getMailboxConfigPDA(program: PublicKey) {
