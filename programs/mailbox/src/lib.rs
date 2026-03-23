@@ -115,6 +115,9 @@ pub mod mailbox {
     ) -> Result<()> {
         instructions::update_config(ctx, default_max_payload_size, fee_per_byte)
     }
+    pub fn set_treasury(ctx: Context<Admin>, new_treasury: Pubkey) -> Result<()> {
+        instructions::set_treasury(ctx, new_treasury)
+    }
 
     pub fn pause(ctx: Context<Pause>) -> Result<()> {
         instructions::pause(ctx)
