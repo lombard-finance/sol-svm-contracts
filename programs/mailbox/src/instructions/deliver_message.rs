@@ -39,6 +39,7 @@ pub struct DeliverMessage<'info> {
         owner = config.consortium,
         seeds = [SESSION_PAYLOAD_SEED, &deliverer.key.to_bytes()[..], &payload_hash[..]],
         seeds::program = config.consortium,
+        constraint = (sha256(&consortium_payload.payload).to_bytes() == payload_hash[..]) @ MailboxError::InvalidPayloadHash,
         bump
     )]
     pub consortium_payload: Account<'info, SessionPayload>,
@@ -56,12 +57,6 @@ pub struct DeliverMessage<'info> {
 }
 
 pub fn deliver_message(ctx: Context<DeliverMessage>, payload_hash: [u8; 32]) -> Result<()> {
-
-    let computed_payload_hash = sha256(&ctx.accounts.consortium_payload.payload).to_bytes();
-    require!(
-        computed_payload_hash == payload_hash,
-        MailboxError::InvalidPayloadHash
-    );
 
     // no need to check if the message was already deliverd or handled
     // since the account init would fail if it was already initialized
