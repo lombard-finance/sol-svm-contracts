@@ -9,5 +9,13 @@
     "LZ_oft_adapter": "7AwaQPN3Sh3qHo2j44nvwmNgPS9FhDDbBcUXAdi12pk1",
     "LZ_oft_store": "8YN34wKaAc34BwFKxnUqQeRwWmfhbs4vYw2rnz2Z89sp",
     "LZ_escrow": "8aNceYRuD5PR51o2pBnhw9cCktByixMPySUJrP3FexzA",
-    "LZ_multisig": "J3XK1JJTF6udknuLb15oUQhYbooUFiafhNxwYHAMxXE1"
+    "LZ_multisig": "J3XK1JJTF6udknuLb15oUQhYbooUFiafhNxwYHAMxXE1",
+
+    "Consortium": "Lomfd3XZfPV8PyLkjuLVwpYhrBoGJdnYkm98HCgeYGC",
+    "Mailbox": "Lomu595CAtJGF6mpnfeAJ7daZfVdHeRkAdKyfqzXqom",
+    "Asset Router": "Lom7TQyK45pTUjFmmsuLaBrMVQ5crggYnSuCrjm9ebr",
+    "Ratio Oracle": "LomWze3gBt8Y7RN3sspuh2jupqAQPUi4tuaLWDnf6CZ",
+    "Bridge": "LombUtstgyrZUhjvi12hUnm7HG7CxhtanUv6hakuCm4",
+    "Lombard Token Pool": "Lomi5fKsXdGrrW2M3JRbJx5DnT3zgmSEfYWMUPeNaAB",
+    "BTC.b": "BTCJxNpGpMNwxqsZPYrcaJpDbrn1GgEmzf1XTzL2KRN8"
 }
