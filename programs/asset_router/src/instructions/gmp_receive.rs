@@ -32,7 +32,11 @@ pub struct GMPReceive<'info> {
     #[account(mut)]
     pub handler: Signer<'info>,
 
-    #[account(seeds = [CONFIG_SEED], bump)]
+    #[account(
+        constraint = !config.paused @ AssetRouterError::Paused,
+        seeds = [CONFIG_SEED],
+        bump
+    )]
     pub config: Account<'info, Config>,
 
     // This account is used to track which messages have been handled to avoid handling them again
