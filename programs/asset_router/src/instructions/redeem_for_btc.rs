@@ -103,7 +103,7 @@ pub fn redeem_for_btc(
 
     let amount_after_fee = amount - fee;
     require!(
-        amount_after_fee > ctx.accounts.token_config.redeem_for_btc_min_amount,
+        amount_after_fee >= ctx.accounts.token_config.redeem_for_btc_min_amount,
         AssetRouterError::AmountBelowDustLimit
     );
 
