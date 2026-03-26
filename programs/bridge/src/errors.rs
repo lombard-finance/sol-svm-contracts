@@ -45,6 +45,8 @@ pub enum BridgeError {
     UnexpectedFeeDiscount,
     #[msg("Token owner mismatch")]
     WrongTokenOwner,
+    #[msg("Invalid payload hash")]
+    InvalidPayloadHash,
 }
 
 impl From<std::io::Error> for BridgeError {

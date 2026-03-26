@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint as TokenMint, TokenAccount, TokenInterface};
+use anchor_lang::solana_program::hash::hash as sha256;
 
 use mailbox::{
     constants::{INBOUND_MESSAGE_PATH_SEED, MESSAGE_SEED},
@@ -101,7 +102,14 @@ pub struct GMPReceive<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<InboundResponse> {
+pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<InboundResponse> {
+    let message_info = &ctx.accounts.message_info;
+
+    let computed_payload_hash = sha256(&message_info.message.to_session_payload()).to_bytes();
+    require!(
+        computed_payload_hash == payload_hash,
+        BridgeError::InvalidPayloadHash
+    );
     let mint_message = Mint::from_message(&ctx.accounts.message_info.message.body)?;
 
     // the following checks could be omitted and cause and error later on directly when

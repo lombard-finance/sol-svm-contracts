@@ -47,6 +47,8 @@ pub enum AssetRouterError {
     InvalidPayloadLength,
     #[msg("Invalid payload selector")]
     InvalidPayloadSelector,
+    #[msg("Invalid payload hash")]
+    InvalidPayloadHash,
     #[msg("Buffer IO error")]
     BufferIOError,
     #[msg("Invalid message length")]

@@ -39,6 +39,7 @@ pub struct DeliverMessage<'info> {
         owner = config.consortium,
         seeds = [SESSION_PAYLOAD_SEED, &deliverer.key.to_bytes()[..], &payload_hash[..]],
         seeds::program = config.consortium,
+        constraint = (sha256(&consortium_payload.payload).to_bytes() == payload_hash[..]) @ MailboxError::InvalidPayloadHash,
         bump
     )]
     pub consortium_payload: Account<'info, SessionPayload>,
@@ -46,7 +47,7 @@ pub struct DeliverMessage<'info> {
     /// check that the consortium program has validated the payload
     #[account(
         owner = config.consortium,
-        seeds = [VALIDATED_PAYLOAD_SEED, &sha256(&consortium_payload.payload).to_bytes()[..]],
+        seeds = [VALIDATED_PAYLOAD_SEED, &payload_hash[..]],
         seeds::program = config.consortium,
         bump
     )]
@@ -56,7 +57,6 @@ pub struct DeliverMessage<'info> {
 }
 
 pub fn deliver_message(ctx: Context<DeliverMessage>, payload_hash: [u8; 32]) -> Result<()> {
-    let message_info = &mut ctx.accounts.message_info;
 
     // no need to check if the message was already deliverd or handled
     // since the account init would fail if it was already initialized
@@ -68,6 +68,8 @@ pub fn deliver_message(ctx: Context<DeliverMessage>, payload_hash: [u8; 32]) -> 
         decoded_message.message_path_identifier == ctx.accounts.inbound_message_path.identifier,
         MailboxError::InvalidMessagePath
     );
+
+    let message_info = &mut ctx.accounts.message_info;
 
     // Update payload state to delivered
     message_info.status = MessageState::Delivered;
