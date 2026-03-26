@@ -31,7 +31,7 @@ if (!program.programId.equals(programId)) {
 }
 const bridgeIdl = require("../../target/idl/bridge.json");
 const bridgeProgramId = process.env.BRIDGE_PROGRAM_ID
-  ? new PublicKey(process.env.MAILBOX_PROGRAM_ID)
+  ? new PublicKey(process.env.BRIDGE_PROGRAM_ID)
   : new PublicKey(bridgeIdl.address);
 const mailboxProgram = new anchor.Program(
   require("../../target/idl/bridge.json"),
