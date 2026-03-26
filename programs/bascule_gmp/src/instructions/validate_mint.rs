@@ -12,6 +12,9 @@ use crate::state::{
 pub struct ValidateMint<'info> {
     #[account(mut)]
     pub validator: Signer<'info>,
+    /// Pays for the 'Deposit' account creation if the account does not already exist; can be any account
+    #[account(mut)]
+    payer: Signer<'info>,
     #[account(
         constraint = config.paused == false @ BasculeGmpError::Paused,
         seeds = [CONFIG_SEED],
@@ -26,7 +29,7 @@ pub struct ValidateMint<'info> {
     pub account_roles: Account<'info, AccountRoles>,
     #[account(
         init_if_needed,
-        payer = validator,
+        payer = payer,
         space = 8 + MintPayload::INIT_SPACE,
         seeds = [MINT_PAYLOAD_SEED, &mint_message.mint_id()],
         bump

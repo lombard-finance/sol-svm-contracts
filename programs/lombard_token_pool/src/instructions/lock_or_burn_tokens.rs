@@ -192,6 +192,7 @@ fn bridge_deposit_for_burn_with_caller(
         .expect("bridge must be provided")
         .to_account_info(),
         Deposit {
+            fee_payer: ctx.accounts.authority.to_account_info(), 
             sender: ctx.accounts.pool_signer.to_account_info(), 
             sender_token_account: ctx.accounts.pool_token_account.to_account_info(), 
             token_program: ctx.accounts.token_program.to_account_info(), 

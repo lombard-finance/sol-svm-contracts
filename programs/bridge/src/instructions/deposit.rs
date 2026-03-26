@@ -14,6 +14,8 @@ use mailbox::{
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(mut)]
+    pub fee_payer: Signer<'info>,
+    #[account(mut)]
     pub sender: Signer<'info>,
     #[account(
         mut,
@@ -113,7 +115,7 @@ pub fn deposit(
             .as_ref()
             .to_account_info(),
             SendMessage{
-                fee_payer: ctx.accounts.sender.to_account_info(),
+                fee_payer: ctx.accounts.fee_payer.to_account_info(),
                 sender_authority: ctx.accounts.config.to_account_info(),
                 config: ctx.accounts.mailbox_config.to_account_info(),
                 outbound_message_path: ctx.accounts.outbound_message_path.to_account_info(),
