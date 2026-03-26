@@ -11,6 +11,15 @@ use anchor_lang::prelude::*;
 use instructions::*;
 use utils::consortium_payloads::RATIO_UPDATE_PAYLOAD_LEN;
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("LomWze3gBt8Y7RN3sspuh2jupqAQPUi4tuaLWDnf6CZ");
+#[cfg(feature = "staging")]
+declare_id!("LomMaT3jSjMiECtPrK4pLfzNQB2uMaxMqGenBbimjWq");
+#[cfg(feature = "bft")]
+declare_id!("LomfreVHrrMrSpv54KCJ6AC1eKL8QbL1Ej28S3gwawa");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("DaoKGsbRU8sYBwy3CL5uYcWPaRYcFGQVypzUQBarKifT");
 
 #[program]

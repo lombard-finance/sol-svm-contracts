@@ -10,6 +10,15 @@ pub mod utils;
 
 use instructions::*;
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("Lomfd3XZfPV8PyLkjuLVwpYhrBoGJdnYkm98HCgeYGC");
+#[cfg(feature = "staging")]
+declare_id!("Lom4WypiQ2pXWWXEsX1N8695hVLwG3yNqwq1YvvutVE");
+#[cfg(feature = "bft")]
+declare_id!("LomCbo8K5ar4kVpqoGGktE8WemHfGz84V8aH8Y1iGxd");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("2Zp4V3e64T5zNggMe75UdVPPBYxCvL9kFyd2LkJByjTj");
 
 #[program]
