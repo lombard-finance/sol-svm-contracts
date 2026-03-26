@@ -27,7 +27,6 @@ pub struct CreateSession<'info> {
     /// CHECK: Only want to check that the validated payload account does not exist.
     #[account(
         constraint = validated_payload.data_is_empty() @ ConsortiumError::ValidatedPayloadNotEmpty,
-        constraint = validated_payload.lamports() == 0 @ ConsortiumError::ValidatedPayloadAlreadyExists,
         constraint = validated_payload.owner == &System::id() @ ConsortiumError::ValidatedPayloadAlreadyExists,
         seeds = [VALIDATED_PAYLOAD_SEED, &payload_hash[..]],
         bump
