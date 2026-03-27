@@ -94,7 +94,10 @@ describe("Asset Router", () => {
     [Buffer.from("token_config"), stakedMintKeypair.publicKey.toBuffer()],
     program.programId
   )[0];
-  const tokenAuth = PublicKey.findProgramAddressSync(
+  const messagingAuthorityPDA = PublicKey.findProgramAddressSync(
+    [Buffer.from("messaging_authority")],
+    program.programId
+  )[0];  const tokenAuth = PublicKey.findProgramAddressSync(
     [Buffer.from("token_authority")],
     program.programId
   )[0] as PublicKey;
@@ -2207,7 +2210,7 @@ describe("Asset Router", () => {
     );
 
     before("Exempt assetRouter from mailbox fees", async () => {
-      await mailboxUtilities.setSenderConfig(program.programId, 10000, true);
+      await mailboxUtilities.setSenderConfig(messagingAuthorityPDA, 10000, true);
     });
 
     const args = [
@@ -2258,7 +2261,7 @@ describe("Asset Router", () => {
             outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
             // senderConfig: null,
             // treasury: treasury.publicKey
-            senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId),
+            senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
             treasury: null
           })
           .signers([staker1])
@@ -2355,7 +2358,7 @@ describe("Asset Router", () => {
 
     it("redeemForBtc from staked rejects when amount below dust limit", async function () {
       const scriptPubkey = Buffer.from("5120e4ac542bbca2e12bc615744b8f755b30d9e345a2fc8622704031e2e6cdfc2f8e", "hex");
-      const totalFee = stakedRedeemFee.add(stakedToNativeCommission);
+      const totalFee = stakedRedeemFee.add(stakedToNativeCommission.sub(new BN(1)));
       const amount = totalFee.add(redeemForBtcMinAmount);
 
       await expect(
@@ -2381,7 +2384,7 @@ describe("Asset Router", () => {
 
     it("redeemForBtc from native rejects when amount below dust limit", async function () {
       const scriptPubkey = Buffer.from("5120e4ac542bbca2e12bc615744b8f755b30d9e345a2fc8622704031e2e6cdfc2f8e", "hex");
-      const amount = stakedToNativeCommission.add(redeemForBtcMinAmount);
+      const amount = stakedToNativeCommission.add(redeemForBtcMinAmount.sub(new BN(1)));
 
       await expect(
         program.methods
@@ -2542,7 +2545,7 @@ describe("Asset Router", () => {
           mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
           outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
           outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId),
+          senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
           treasury: null
         })
         .signers([staker1])
@@ -2683,7 +2686,7 @@ describe("Asset Router", () => {
           mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
           outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
           outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId),
+          senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
           treasury: null
         })
         .signers([staker1])

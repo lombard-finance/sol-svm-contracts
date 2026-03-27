@@ -33,7 +33,7 @@ pub struct Deposit<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, if sender.owner.key() == system_program.key() { sender.key.as_ref() } else { sender.owner.as_ref() }],
+        seeds = [SENDER_CONFIG_SEED, sender.key.as_ref()],
         constraint = sender_config.whitelisted @ BridgeError::NotWhitelisted,
         bump
     )]

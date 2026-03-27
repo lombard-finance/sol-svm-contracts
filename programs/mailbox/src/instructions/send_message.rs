@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
+use anchor_lang::solana_program::pubkey;
 use anchor_lang::solana_program::system_instruction::transfer;
 
 use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
@@ -44,7 +45,7 @@ pub struct SendMessage<'info> {
     pub treasury: Option<UncheckedAccount<'info>>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, &sender_authority.owner.to_bytes()],
+        seeds = [SENDER_CONFIG_SEED, &sender_authority.key.to_bytes()],
         bump
     )]
     pub sender_config: Option<Account<'info, SenderConfig>>,

@@ -113,7 +113,8 @@ describe("CCIP Token Pool", () => {
 	let bridgeRemoteTokenConfigPDA: PublicKey;
 	let bridgeRemoteTokenConfigPDA2: PublicKey;
 	let bridgeRemoteTokenConfigPDA3: PublicKey;
-	
+	let bridgeSenderConfigPDA:PublicKey;
+
 	let mockCcipOfframpConfigPDA: PublicKey;
 	let cpiSignerPDA: PublicKey;
 	let ccipAllowedOfframpPDA: PublicKey;
@@ -185,10 +186,6 @@ describe("CCIP Token Pool", () => {
 	const foreignChainSelector = new BN('1234567');
 	const foreignPoolData = Buffer.from(sha256("some-source-pool-data"), "hex");
 	const foreignPoolDataBytes = Array.from(Uint8Array.from(foreignPoolData));
-	const bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
-	[Buffer.from("sender_config"), bridge.programId.toBuffer()],
-	mailbox.programId
-	)[0];
 	const tokenPoolProgramData = PublicKey.findProgramAddressSync(
 		[tokenPool.programId.toBuffer()],
 		new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
@@ -233,6 +230,10 @@ describe("CCIP Token Pool", () => {
 		tokenPoolSenderConfigPDA = PublicKey.findProgramAddressSync(
 		[Buffer.from("sender_config"), tokenPoolSignerPDA.toBuffer()],
 		bridge.programId
+		)[0];
+		bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
+		[Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
+		mailbox.programId
 		)[0];
 
 		[mockCcipOfframpConfigPDA] = PublicKey.findProgramAddressSync([Buffer.from("ccip_mock_config")], mockCcipOfframp.programId);
@@ -649,7 +650,7 @@ describe("CCIP Token Pool", () => {
 				.signers([admin])
 				.rpc({ commitment: "confirmed" });
 			await mailbox.methods
-				.setSenderConfig(bridge.programId, customMaxPayloadSize, true)
+				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true)
 				.accounts({
 					admin: admin.publicKey
 				})

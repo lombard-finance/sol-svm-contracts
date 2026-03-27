@@ -754,7 +754,7 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("ConstraintSeeds");
+      ).to.be.rejectedWith("InvalidPayloadHash");
     });
 
     it("SessionPayloadPDA does not match hash", async function () {
@@ -1325,7 +1325,7 @@ describe("Mailbox", () => {
 
       // we use system program just for ease of testing
       await mailbox.methods
-        .setSenderConfig(SystemProgram.programId, customMaxPayloadSize, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
         .accounts({
           admin: admin.publicKey
         })
@@ -1342,7 +1342,9 @@ describe("Mailbox", () => {
           senderAuthority: payerFeeExempt.publicKey,
           outboundMessage: outboundMessagePDA,
           outboundMessagePath: outboundMessagePathPDA,
-          senderConfig: systemProgramSenderConfigPDA,
+          senderConfig: PublicKey.findProgramAddressSync(
+            [Buffer.from("sender_config"), payerFeeExempt.publicKey.toBuffer()],
+            mailbox.programId)[0],
           treasury: null
         })
         .signers([payerFeeExempt])
