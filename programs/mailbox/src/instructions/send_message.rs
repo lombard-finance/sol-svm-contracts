@@ -45,7 +45,14 @@ pub struct SendMessage<'info> {
     pub treasury: Option<UncheckedAccount<'info>>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, &sender_authority.key.to_bytes()],
+        seeds = [
+            SENDER_CONFIG_SEED,
+            if sender_authority.data_is_empty() {
+                sender_authority.key.as_ref()
+            } else {
+                sender_authority.owner.as_ref()
+            }
+        ],
         bump
     )]
     pub sender_config: Option<Account<'info, SenderConfig>>,
