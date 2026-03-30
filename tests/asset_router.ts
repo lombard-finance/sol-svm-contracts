@@ -2545,7 +2545,7 @@ describe("Asset Router", () => {
           mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
           outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
           outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId,),
+          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId),
           treasury: null
         })
         .signers([staker1])
