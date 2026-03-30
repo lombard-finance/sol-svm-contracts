@@ -27,6 +27,7 @@ base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", f
 ccip_common = { path = "../../dependencies/ccip/programs/ccip-common" }
 bridge = { path = "../bridge", features = ["cpi"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
+solana-security-txt = "1.1.1"
 
 [build-dependencies]
 build_commit = { path = "../../dependencies/ccip/crates/build-commit" }
