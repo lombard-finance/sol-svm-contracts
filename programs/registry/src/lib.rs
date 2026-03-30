@@ -4,6 +4,7 @@ pub mod constants;
 pub mod events;
 pub mod instructions;
 use instructions::*;
+pub mod security;
 
 declare_id!("Eah44rnwyrwhcMgSrLXUzU1VeyMzSfsYb5SXJYg7oX2K");
 

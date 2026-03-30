@@ -603,6 +603,7 @@ dependencies = [
  "anchor-spl",
  "base-token-pool",
  "mailbox",
+ "solana-security-txt",
  "spl-token-2022",
 ]
 
@@ -1364,6 +1365,7 @@ dependencies = [
  "build_commit",
  "ccip_common",
  "mailbox",
+ "solana-security-txt",
 ]
 
 [[package]]
@@ -1819,6 +1821,7 @@ name = "registry"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "solana-security-txt",
 ]
 
 [[package]]
