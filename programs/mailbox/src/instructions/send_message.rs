@@ -84,13 +84,18 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
+    let sender = match ctx.accounts.sender_authority.data_is_empty() {
+        true => ctx.accounts.sender_authority.key.to_bytes(),
+        false => ctx.accounts.sender_authority.owner.to_bytes(),
+    };
+
     let message = MessageV1 {
         nonce: config.global_nonce,
         body: message_body,
         destination_caller: destination_caller,
         recipient: recipient,
         message_path_identifier: ctx.accounts.outbound_message_path.identifier,
-        sender: ctx.accounts.sender_authority.owner.to_bytes(),
+        sender: sender,
     };
 
     if !fee_disabled {
