@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::events::InboundMessagePathStatusChanged;
-use crate::utils::message_utils::message_path_identifier;
 use crate::{
-    constants::{CONFIG_SEED, INBOUND_MESSAGE_PATH_SEED, SELF_CHAIN_ID},
+    constants::{CONFIG_SEED, INBOUND_MESSAGE_PATH_SEED},
     errors::MailboxError,
     state::{Config, InboundMessagePath},
 };
