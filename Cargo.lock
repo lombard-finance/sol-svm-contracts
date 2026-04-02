@@ -603,8 +603,8 @@ dependencies = [
  "anchor-spl",
  "base-token-pool",
  "mailbox",
- "solana-security-txt",
  "solana-address",
+ "solana-security-txt",
  "spl-token-2022",
 ]
 
