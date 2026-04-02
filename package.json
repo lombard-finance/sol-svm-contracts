@@ -57,7 +57,8 @@
     "gmp_consortiumFinalizeSession": "ts-node -T scripts/gmp/consortiumFinalizeSession.ts",
     "gmp_consortiumPostSessionPayload": "ts-node -T scripts/gmp/consortiumPostSessionPayload.ts",
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
-    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts"
+    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts",
+    "bridge_bridgeInitialize": "ts-node -T scripts/bridge/bridgeInitialize.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
