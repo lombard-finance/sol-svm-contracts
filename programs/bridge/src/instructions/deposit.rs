@@ -37,7 +37,7 @@ pub struct Deposit<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED, 
-            if bytes_are_curve_point(sender.key.as_ref()) {
+            if bytes_are_curve_point(sender.key.as_ref()) || sender.data_is_empty() {
                 sender.key.as_ref()
             } else {
                 sender.owner.as_ref()

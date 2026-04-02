@@ -47,7 +47,7 @@ pub struct SendMessage<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED,
-            if bytes_are_curve_point(sender_authority.key.as_ref()) {
+            if bytes_are_curve_point(sender_authority.key.as_ref()) || sender_authority.data_is_empty() {
                 sender_authority.key.as_ref()
             } else {
                 sender_authority.owner.as_ref()
@@ -84,7 +84,8 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
-    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) {
+    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) ||
+        ctx.accounts.sender_authority.data_is_empty() {
         true => ctx.accounts.sender_authority.key.to_bytes(),
         false => ctx.accounts.sender_authority.owner.to_bytes(),
     };

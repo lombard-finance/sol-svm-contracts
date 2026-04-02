@@ -96,7 +96,8 @@ describe("Asset Router", () => {
   const messagingAuthorityPDA = PublicKey.findProgramAddressSync(
     [Buffer.from("messaging_authority")],
     program.programId
-  )[0];  const tokenAuth = PublicKey.findProgramAddressSync(
+  )[0];
+  const tokenAuth = PublicKey.findProgramAddressSync(
     [Buffer.from("token_authority")],
     program.programId
   )[0] as PublicKey;
