@@ -5,7 +5,7 @@ import { Bridge } from "../../target/types/bridge";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn bridge_bridgeInitialize <admin address> <mailbox address> <mint address> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeInitialize <admin address> <mailbox address> <mint address> [--populate]
 
     Initializes the Bridge contract. `);
   process.exit(0);
