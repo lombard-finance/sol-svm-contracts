@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
-use anchor_lang::solana_program::pubkey;
 use anchor_lang::solana_program::system_instruction::transfer;
+use solana_address::bytes_are_curve_point;
 
 use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
@@ -47,7 +47,7 @@ pub struct SendMessage<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED,
-            if sender_authority.data_is_empty() {
+            if bytes_are_curve_point(sender_authority.key.as_ref()) {
                 sender_authority.key.as_ref()
             } else {
                 sender_authority.owner.as_ref()
@@ -84,7 +84,7 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
-    let sender = match ctx.accounts.sender_authority.data_is_empty() {
+    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) {
         true => ctx.accounts.sender_authority.key.to_bytes(),
         false => ctx.accounts.sender_authority.owner.to_bytes(),
     };

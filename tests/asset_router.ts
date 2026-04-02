@@ -79,7 +79,6 @@ describe("Asset Router", () => {
 
   const consortium = anchor.workspace.Consortium as Program<Consortium>;
   const consortiumUtility = new ConsortiumUtility(consortium);
-  consortiumUtility.generateAndAddKeypairs(3);
 
   const nativeMintKeypair = Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
   const stakedMintKeypair = Keypair.fromSeed(Uint8Array.from(Array(32).fill(6)));
@@ -224,6 +223,7 @@ describe("Asset Router", () => {
       staker2.publicKey
     );
 
+    consortiumUtility.generateAndAddKeypairs(3);
     await consortiumUtility.initializeConsortiumProgram(admin);
 
     mailboxUtilities = new MailboxUtilities(consortiumUtility, LCHAIN_ID, admin, treasury.publicKey);
