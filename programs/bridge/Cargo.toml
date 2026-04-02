@@ -25,6 +25,7 @@ spl-token-2022 = { version = "6.0.0", features = ["no-entrypoint"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
 base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"]}
 solana-address = { version = "2.5.0", features = ["syscalls"] }
+solana-security-txt = "1.1.1"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
