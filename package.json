@@ -58,7 +58,8 @@
     "gmp_consortiumPostSessionPayload": "ts-node -T scripts/gmp/consortiumPostSessionPayload.ts",
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
     "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts",
-    "crosschain_bridgeInitialize": "ts-node -T scripts/crosschain/bridgeInitialize.ts"
+    "crosschain_bridgeInitialize": "ts-node -T scripts/crosschain/bridgeInitialize.ts",
+    "crosschain_tokenPoolGetRecipient": "ts-node -T scripts/crosschain/tokenPoolGetRecipient.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
