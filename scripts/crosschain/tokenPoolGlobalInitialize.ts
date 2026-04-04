@@ -6,9 +6,9 @@ import { getTokenPoolSigner } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolGetRecipient <mint address>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolGlobalInitialize
 
-    Gets LonbardTokenPool's signer PDA address for certain mint. `);
+    Initializes global config for the LombardTokenPool contract. `);
   process.exit(0);
 }
 
@@ -31,15 +31,28 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
+const programData = PublicKey.findProgramAddressSync(
+        [program.programId.toBuffer()],
+        new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
+      )[0];
 
 (async () => {
   try {
-    const tokenPoolSignerPDA = getTokenPoolSigner(mint, program.programId); // Get wallet address
+    const deployer = provider.wallet.publicKey; // Get wallet address
 
-    console.log(`TokenPool signer PDA: ${tokenPoolSignerPDA.toString()}`)
+    const tx = await program.methods
+      .initGlobalConfig()
+      .accounts({
+        authority: deployer,
+        programData: programData
+      });
 
+    if (populate) {
+      console.log("Transaction bytes:", await getBase58EncodedTxBytes(await tx.instruction(), provider.connection));
+    } else {
+      console.log("Transaction Signature:", await tx.rpc());
+    }
   } catch (err) {
-    console.error("Error initializing bridge:", err);
+    console.error("Error initializing LombardTokePool global config:", err);
   }
 })();

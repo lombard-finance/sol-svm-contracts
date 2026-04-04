@@ -44,7 +44,7 @@
     "gmp_assetRouterUnsetTokenRoute": "ts-node -T scripts/gmp/assetRouterUnsetTokenRoute.ts",
     "gmp_assetRouterSetTokenConfig": "ts-node -T scripts/gmp/assetRouterSetTokenConfig.ts",
     "gmp_assetRouterChangeAuth": "ts-node -T scripts/gmp/assetRouterChangeAuth.ts",
-    "gmp_assetRouterChangeNativeMint": "ts-node -T scripts/gmp/assetRouterChangeNativeMint.ts", 
+    "gmp_assetRouterChangeNativeMint": "ts-node -T scripts/gmp/assetRouterChangeNativeMint.ts",
     "gmp_assetRouterRedeemForBtc": "ts-node -T scripts/gmp/assetRouterRedeemForBtc.ts",
     "gmp_assetRouterMintFromPayload": "ts-node -T scripts/gmp/assetRouterMintFromPayload.ts",
     "gmp_assetRouterDeposit": "ts-node -T scripts/gmp/assetRouterDeposit.ts",
@@ -59,7 +59,9 @@
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
     "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts",
     "crosschain_bridgeInitialize": "ts-node -T scripts/crosschain/bridgeInitialize.ts",
-    "crosschain_tokenPoolGetRecipient": "ts-node -T scripts/crosschain/tokenPoolGetRecipient.ts"
+    "crosschain_tokenPoolGetRecipient": "ts-node -T scripts/crosschain/tokenPoolGetRecipient.ts",
+    "crosschain_tokenPoolGlobalInitialize": "ts-node -T scripts/crosschain/tokenPoolGlobalInitialize.ts",
+    "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
@@ -87,5 +89,6 @@
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^4.3.5"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
