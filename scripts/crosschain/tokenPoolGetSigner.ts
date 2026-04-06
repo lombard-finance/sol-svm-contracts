@@ -6,7 +6,7 @@ import { getTokenPoolSigner } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolGetRecipient <mint address>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolGetSigner <mint address>
 
     Gets LonbardTokenPool's signer PDA address for certain mint. `);
   process.exit(0);
