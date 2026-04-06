@@ -57,13 +57,15 @@
     "gmp_consortiumFinalizeSession": "ts-node -T scripts/gmp/consortiumFinalizeSession.ts",
     "gmp_consortiumPostSessionPayload": "ts-node -T scripts/gmp/consortiumPostSessionPayload.ts",
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
-    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts"
+    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts",
+    "test:anchor-each": "bash scripts/anchor-test-each.sh"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
     "@noble/secp256k1": "^3.0.0",
     "@solana/spl-governance": "^0.3.28",
     "@solana/spl-token": "^0.4.12",
+    "@solana/web3.js": "1.98.4",
     "anchor-bankrun": "^0.5.0",
     "dotenv": "^17.2.2",
     "js-sha256": "^0.11.0",
@@ -85,5 +87,8 @@
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^4.3.5"
+  },
+  "resolutions": {
+    "@solana/web3.js": "1.98.4"
   }
 }
