@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use anchor_spl::token_interface::{Mint, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use base_token_pool::common::*;
 use ccip_common::seed;
@@ -67,7 +67,7 @@ pub struct TokenOfframp<'info> {
         bump,
         constraint = valid_version(state.version, MAX_POOL_STATE_V) @ CcipTokenPoolError::InvalidVersion,
     )]
-    pub state: Account<'info, State>,
+    pub state: Box<Account<'info, State>>,
 
     #[account(address = state.config.token_program)]
     pub token_program: Interface<'info, TokenInterface>,
@@ -87,6 +87,14 @@ pub struct TokenOfframp<'info> {
 
     #[account(
         mut,
+        associated_token::mint = mint,
+        associated_token::authority = pool_signer,
+        associated_token::token_program = token_program,
+    )]
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        mut,
         seeds = [
             POOL_CHAINCONFIG_SEED,
             &release_or_mint.remote_chain_selector.to_le_bytes(),
@@ -95,7 +103,7 @@ pub struct TokenOfframp<'info> {
         bump,
         constraint = valid_version(chain_config.version, MAX_POOL_CHAIN_CONFIG_V) @ CcipTokenPoolError::InvalidVersion,
     )]
-    pub chain_config: Account<'info, ChainConfig>,
+    pub chain_config: Box<Account<'info, ChainConfig>>,
 
     ////////////////////
     // RMN Remote CPI //

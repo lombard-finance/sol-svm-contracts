@@ -569,6 +569,11 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
+					{ // poolSigner token account
+						pubkey: tokenPoolSignerTA,
+						isWritable: true,
+						isSigner: false
+					},
 					{ // chainConfig
 						pubkey: tokenPoolChainConfigPDA,
 						isWritable: true,
