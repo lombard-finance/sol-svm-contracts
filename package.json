@@ -44,7 +44,7 @@
     "gmp_assetRouterUnsetTokenRoute": "ts-node -T scripts/gmp/assetRouterUnsetTokenRoute.ts",
     "gmp_assetRouterSetTokenConfig": "ts-node -T scripts/gmp/assetRouterSetTokenConfig.ts",
     "gmp_assetRouterChangeAuth": "ts-node -T scripts/gmp/assetRouterChangeAuth.ts",
-    "gmp_assetRouterChangeNativeMint": "ts-node -T scripts/gmp/assetRouterChangeNativeMint.ts", 
+    "gmp_assetRouterChangeNativeMint": "ts-node -T scripts/gmp/assetRouterChangeNativeMint.ts",
     "gmp_assetRouterRedeemForBtc": "ts-node -T scripts/gmp/assetRouterRedeemForBtc.ts",
     "gmp_assetRouterMintFromPayload": "ts-node -T scripts/gmp/assetRouterMintFromPayload.ts",
     "gmp_assetRouterDeposit": "ts-node -T scripts/gmp/assetRouterDeposit.ts",
@@ -57,7 +57,17 @@
     "gmp_consortiumFinalizeSession": "ts-node -T scripts/gmp/consortiumFinalizeSession.ts",
     "gmp_consortiumPostSessionPayload": "ts-node -T scripts/gmp/consortiumPostSessionPayload.ts",
     "gmp_getTokenAuthorities": "ts-node -T scripts/gmp/getTokenAuthorities.ts",
-    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts"
+    "gmp_getConsortiumConfig": "ts-node -T scripts/gmp/getConsortiumConfig.ts",
+    "crosschain_bridgeInitialize": "ts-node -T scripts/crosschain/bridgeInitialize.ts",
+    "crosschain_bridgeSetRemoteConfig": "ts-node -T scripts/crosschain/bridgeSetRemoteConfig.ts",
+    "crosschain_bridgeSetLocalTokenConfig": "ts-node -T scripts/crosschain/bridgeSetLocalTokenConfig.ts",
+    "crosschain_bridgeSetRemoteTokenConfig": "ts-node -T scripts/crosschain/bridgeSetRemoteTokenConfig.ts",
+    "crosschain_bridgeSetSenderConfig": "ts-node -T scripts/crosschain/bridgeSetSenderConfig.ts",
+    "crosschain_tokenPoolGetSigner": "ts-node -T scripts/crosschain/tokenPoolGetSigner.ts",
+    "crosschain_tokenPoolGlobalInitialize": "ts-node -T scripts/crosschain/tokenPoolGlobalInitialize.ts",
+    "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts",
+    "crosschain_tokenPoolInitRemoteChainConfig": "ts-node -T scripts/crosschain/tokenPoolInitRemoteChainConfig.ts",
+    "crosschain_tokenPoolAppendRemotePool": "ts-node -T scripts/crosschain/tokenPoolAppendRemotePool.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.31.1",
