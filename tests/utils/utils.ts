@@ -2,8 +2,8 @@ import { expect } from "chai";
 import * as anchor from "@coral-xyz/anchor";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { ConfirmOptions, Keypair, PublicKey } from "@solana/web3.js";
-import { Bascule } from "../target/types/bascule";
-import { findInitialProgramAddress } from "../app/util";
+import { Bascule } from "../../target/types/bascule";
+import { findInitialProgramAddress } from "../../app/util";
 
 export const EPaused = "EPaused";
 export const ENotAdmin = "ENotAdmin";
@@ -17,6 +17,27 @@ export const EAlreadyWithdrawn = "EAlreadyWithdrawn";
 export const EWithdrawalFailedValidation = "EWithdrawalFailedValidation";
 
 export const rpcOpts: ConfirmOptions = { commitment: "confirmed" };
+
+/** Retry txs when RPC returns "Blockhash not found". */
+export async function withBlockhashRetry<T>(
+  fn: () => Promise<T>,
+  opts?: { retries?: number; delayMs?: number }
+): Promise<T> {
+  const retries = opts?.retries ?? 5;
+  const delayMs = opts?.delayMs ?? 200;
+  let last: unknown;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (e: unknown) {
+      last = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("Blockhash not found") || i === retries - 1) throw e;
+      await new Promise<void>((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw last;
+}
 
 export interface TestAccounts {
   deployer: anchor.Wallet;
@@ -130,14 +151,16 @@ export class TestSetup {
   /** Initializes the program (by calling the 'initialize' method) */
   async init(payer?: anchor.Wallet) {
     payer ??= this.acc.deployer;
-    await this.program.methods
+    await withBlockhashRetry(() =>
+      this.program.methods
       .initialize()
       .accounts({
         payer: payer.publicKey,
         programData: findInitialProgramAddress(this.program.programId)
       })
       .signers([payer.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     // grant permissions to accounts
     await this.grantPermissions();
@@ -148,11 +171,13 @@ export class TestSetup {
    */
   async transferAdminInit(newAdmin: PublicKey, currentAdmin: anchor.Wallet) {
     console.log("transferring admin to", newAdmin.toBase58());
-    await this.program.methods
+    await withBlockhashRetry(() =>
+      this.program.methods
       .transferAdminInit(newAdmin)
       .accounts({ admin: currentAdmin.publicKey })
       .signers([currentAdmin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -160,11 +185,13 @@ export class TestSetup {
    */
   async transferAdminAccept(pendingAdmin: anchor.Wallet) {
     console.log("accepting admin transfer", pendingAdmin.publicKey.toBase58());
-    await this.program.methods
+    await withBlockhashRetry(() =>
+      this.program.methods
       .transferAdminAccept()
       .accounts({ pendingAdmin: pendingAdmin.publicKey })
       .signers([pendingAdmin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -173,7 +200,9 @@ export class TestSetup {
   async grantPauser(pauser: PublicKey, w?: anchor.Wallet) {
     console.log("grant pauser to", pauser.toBase58());
     w ??= this.acc.admin;
-    await this.program.methods.grantPauser(pauser).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+    await withBlockhashRetry(() =>
+      this.program.methods.grantPauser(pauser).accounts({ admin: w.publicKey }).signers([w.payer]).rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -182,7 +211,9 @@ export class TestSetup {
   async grantReporter(reporter: PublicKey, w?: anchor.Wallet) {
     console.log("grant reporter to", reporter.toBase58());
     w ??= this.acc.admin;
-    await this.program.methods.grantReporter(reporter).accounts({ admin: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+    await withBlockhashRetry(() =>
+      this.program.methods.grantReporter(reporter).accounts({ admin: w.publicKey }).signers([w.payer]).rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -191,11 +222,13 @@ export class TestSetup {
   async grantValidator(validator: PublicKey, w?: anchor.Wallet) {
     console.log("grant validator to", validator.toBase58());
     w ??= this.acc.admin;
-    await this.program.methods
+    await withBlockhashRetry(() =>
+      this.program.methods
       .addWithdrawalValidator(validator)
       .accounts({ admin: w.publicKey })
       .signers([w.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -219,11 +252,13 @@ export class TestSetup {
    */
   async setThreshold(amount: number | anchor.BN, w?: anchor.Wallet) {
     w ??= this.acc.admin;
-    return await this.program.methods
+    return await withBlockhashRetry(() =>
+      this.program.methods
       .updateValidateThreshold(new anchor.BN(amount))
       .accounts({ admin: w.publicKey })
       .signers([w.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -231,7 +266,9 @@ export class TestSetup {
    */
   async pause(w?: anchor.Wallet) {
     w ??= this.acc.pauser;
-    return await this.program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+    return await withBlockhashRetry(() =>
+      this.program.methods.pause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -239,7 +276,9 @@ export class TestSetup {
    */
   async unpause(w?: anchor.Wallet) {
     w ??= this.acc.pauser;
-    return await this.program.methods.unpause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc(rpcOpts);
+    return await withBlockhashRetry(() =>
+      this.program.methods.unpause().accounts({ pauser: w.publicKey }).signers([w.payer]).rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -247,11 +286,13 @@ export class TestSetup {
    */
   async reportDeposit(depositId: number[] | DepositId, w?: anchor.Wallet) {
     w ??= this.acc.reporter;
-    return await this.program.methods
+    return await withBlockhashRetry(() =>
+      this.program.methods
       .reportDeposit(depositId instanceof DepositId ? depositId.depositId : depositId)
       .accounts({ reporter: w.publicKey })
       .signers([w.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**
@@ -260,11 +301,13 @@ export class TestSetup {
   async validateWithdrawal(d: DepositId, validator?: anchor.Wallet, payer?: anchor.Wallet) {
     validator ??= this.acc.validator;
     payer ??= validator;
-    return await this.program.methods
+    return await withBlockhashRetry(() =>
+      this.program.methods
       .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
       .accounts({ validator: validator.publicKey, payer: payer.publicKey })
       .signers([validator.payer, payer.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
   }
 
   /**

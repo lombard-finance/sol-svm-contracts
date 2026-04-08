@@ -7,10 +7,10 @@ import { Mailbox } from "../target/types/mailbox";
 import { sha256 } from "js-sha256";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { ConsortiumUtility, randomNumber } from "./consortium_utilities";
+import { ConsortiumUtility, randomNumber } from "./utils/consortium_utilities";
 import { keccak256 } from "ethers";
 import { MailboxReceiver } from "../target/types/mailbox_receiver";
-import { MESSAGE_V1_SELECTOR, MessageV1 } from "./mailbox_utilities";
+import { MESSAGE_V1_SELECTOR, MessageV1 } from "./utils/mailbox_utilities";
 import {
   BITCOIN_LCHAIN_ID,
   fundWallet,
@@ -20,9 +20,10 @@ import {
   LEDGER_MAILBOX_ADDRESS,
   LEDGER_MAILBOX_ADDRESS_BZ,
   ZERO_BUFFER32
-} from "./asset_router_utilities";
+} from "./utils/asset_router_utilities";
 import { describe } from "mocha";
 import { AssetRouter } from "../target/types/asset_router";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -115,18 +116,21 @@ describe("Mailbox", () => {
   describe("Initialize and set roles", function () {
     it("initialize: fails when payer is not deployer", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .initialize(payer.publicKey, consortium.programId, treasury.publicKey, defaultMaxPayloadSize, feePerByte)
           .accounts({
             deployer: payer.publicKey
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized function call");
+          )
+        ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("initialize: successful", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .initialize(
           provider.wallet.publicKey,
           consortium.programId,
@@ -138,7 +142,8 @@ describe("Mailbox", () => {
           deployer: provider.wallet.publicKey
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await mailbox.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.eq(provider.wallet.publicKey.toBase58());
@@ -152,24 +157,28 @@ describe("Mailbox", () => {
   describe("Ownership", function () {
     it("transferOwnership: failure from unauthorized party", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .transferOwnership(admin.publicKey)
           .accounts({
             admin: admin.publicKey
           })
           .signers([admin])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("transferOwnership: successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .transferOwnership(admin.publicKey)
         .accounts({
           admin: provider.wallet.publicKey
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await mailbox.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(provider.wallet.publicKey.toBase58());
@@ -178,20 +187,24 @@ describe("Mailbox", () => {
 
     it("acceptOwnership: failure from unauthorized party", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .acceptOwnership()
           .accounts({ payer: provider.wallet.publicKey })
           .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("acceptOwnership: successful by pending admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .acceptOwnership()
         .accounts({ payer: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await mailbox.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
@@ -201,24 +214,28 @@ describe("Mailbox", () => {
 
   describe("Grant and revoke roles", () => {
     it("Grant role", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .grantAccountRole(pauser.publicKey, { pauser: {} })
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
       const accountRoles = await mailbox.account.accountRoles.fetch(accountRolesPauserPDA);
       expect(accountRoles.roles).to.be.deep.eq([{ pauser: {} }]);
     });
     it("Revoke role", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .revokeAccountRoles(pauser.publicKey)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
       // Check that the account roles PDA was closed (account no longer exists)
       await expect(mailbox.account.accountRoles.fetch(accountRolesPauserPDA)).to.be.rejectedWith(
         /Account does not exist|AccountNotFound/
@@ -259,24 +276,28 @@ describe("Mailbox", () => {
 
     it("enableInboundMessagePath rejects when called by not admin", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .enableInboundMessagePath(LEDGER_LCHAIN_ID_BZ, LEDGER_MAILBOX_ADDRESS_BZ)
           .accounts({
             admin: payer.publicKey,
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("enableInboundMessagePath successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .enableInboundMessagePath(LEDGER_LCHAIN_ID_BZ, LEDGER_MAILBOX_ADDRESS_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const inboundMessagePathAccount = await mailbox.account.inboundMessagePath.fetch(inboundMessagePathPDA);
       expect(inboundMessagePathAccount.identifier).to.be.deep.eq(inboundMessagePathBytes);
@@ -300,36 +321,42 @@ describe("Mailbox", () => {
       );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .enableInboundMessagePath(LEDGER_LCHAIN_ID_BZ, anotherMailboxBytes)
           .accounts({
             admin: admin.publicKey,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("already in use");
+          )
+        ).to.be.rejectedWith("already in use");
     });
 
     it("enableOutboundMessagePath rejects when called by not admin", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .enableOutboundMessagePath(LEDGER_LCHAIN_ID_BZ)
           .accounts({
             admin: payer.publicKey,
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("enableOutboundMessagePath successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .enableOutboundMessagePath(LEDGER_LCHAIN_ID_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const outboundMessagePathAccount = await mailbox.account.outboundMessagePath.fetch(outboundMessagePathPDA);
       expect(outboundMessagePathAccount.identifier).to.be.deep.eq(outboundMessagePathBytes);
@@ -356,13 +383,15 @@ describe("Mailbox", () => {
       )[0];
       const anotherOutboundMessagePathBytes = Array.from(Uint8Array.from(outboundMessagePath));
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .enableOutboundMessagePath(anotherChainIdBytes)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       //New one is set
       const anotherOutboundMessagePathAccount = await mailbox.account.outboundMessagePath.fetch(
@@ -385,24 +414,28 @@ describe("Mailbox", () => {
 
     it("disableInboundMessagePath rejects when called by not admin", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .disableInboundMessagePath(LEDGER_LCHAIN_ID_BZ)
           .accounts({
             admin: payer.publicKey,
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("disableInboundMessagePath successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .disableInboundMessagePath(LEDGER_LCHAIN_ID_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(await provider.connection.getAccountInfo(inboundMessagePathPDA)).to.be.null;
 
@@ -416,24 +449,28 @@ describe("Mailbox", () => {
 
     it("disableOutboundMessagePath rejects when called by not admin", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .disableOutboundMessagePath(LEDGER_LCHAIN_ID_BZ)
           .accounts({
             admin: payer.publicKey,
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("disableOutboundMessagePath successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .disableOutboundMessagePath(LEDGER_LCHAIN_ID_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(await provider.connection.getAccountInfo(outboundMessagePathPDA)).to.be.null;
 
@@ -465,21 +502,25 @@ describe("Mailbox", () => {
         })
       );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .enableInboundMessagePath(LEDGER_LCHAIN_ID_BZ, LEDGER_MAILBOX_ADDRESS_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await mailboxReceiver.methods
+      await withBlockhashRetry(() =>
+        mailboxReceiver.methods
         .initialize(mailbox.programId)
         .accounts({
           deployer: provider.wallet.publicKey
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     afterEach(async function () {
@@ -539,16 +580,19 @@ describe("Mailbox", () => {
       it(`deliverMessage when dCaller is ${dCaller.name}`, async () => {
         const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-        await consortium.methods
+        await withBlockhashRetry(() =>
+          consortium.methods
           .postSessionPayload(payloadHashBytes, message.toBuffer(), message.toBuffer().length)
           .accounts({
             payer: payer.publicKey,
             sessionPayload: sessionPayloadPDA
           })
           .signers([payer])
-          .rpc({ commitment: "confirmed" });
+          .rpc({ commitment: "confirmed" })
+        );
 
-        await mailbox.methods
+        await withBlockhashRetry(() =>
+          mailbox.methods
           .deliverMessage(payloadHashBytes)
           .accounts({
             deliverer: payer.publicKey,
@@ -557,7 +601,8 @@ describe("Mailbox", () => {
             consortiumValidatedPayload: validatedPayloadPDA
           })
           .signers([payer])
-          .rpc({ commitment: "confirmed" });
+          .rpc({ commitment: "confirmed" })
+        );
 
         const messageInfo = await mailbox.account.messageV1Info.fetch(messageInfoPDA);
         expect(messageInfo.message.messagePathIdentifier).to.be.deep.eq(inboundMessagePathBytes);
@@ -576,7 +621,8 @@ describe("Mailbox", () => {
       });
 
       it(`handleMessage when dCaller is ${dCaller.name}`, async () => {
-        await mailbox.methods
+        await withBlockhashRetry(() =>
+          mailbox.methods
           .handleMessage(payloadHashBytes)
           .accounts({
             handler: user.publicKey,
@@ -605,7 +651,8 @@ describe("Mailbox", () => {
             }
           ])
           .signers([user])
-          .rpc({ commitment: "confirmed" });
+          .rpc({ commitment: "confirmed" })
+        );
 
         const messageInfo = await mailbox.account.messageV1Info.fetch(messageInfoPDA);
         expect(messageInfo.message.messagePathIdentifier).to.be.deep.eq(inboundMessagePathBytes);
@@ -625,7 +672,8 @@ describe("Mailbox", () => {
 
       it("handleMessage rejects when already handled", async () => {
         await expect(
-          mailbox.methods
+            withBlockhashRetry(() =>
+              mailbox.methods
             .handleMessage(payloadHashBytes)
             .accounts({
               handler: user.publicKey,
@@ -655,7 +703,8 @@ describe("Mailbox", () => {
             ])
             .signers([user])
             .rpc({ commitment: "confirmed" })
-        ).to.be.rejectedWith("InvalidPayloadState");
+            )
+          ).to.be.rejectedWith("InvalidPayloadState");
       });
     });
   });
@@ -675,14 +724,16 @@ describe("Mailbox", () => {
       const result = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
       validatedPayloadPDA = result.validatedPayloadPDA;
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: sessionPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("postSessionPayload when payload is not validated", async function () {
@@ -694,21 +745,24 @@ describe("Mailbox", () => {
         Buffer.from("test")
       );
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: message.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
       const validatedPayloadPDA = PublicKey.findProgramAddressSync(
         [Buffer.from("validated_payload"), message.toHash()],
         consortium.programId
       )[0];
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -718,7 +772,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("consortium_validated_payload. Error Code: AccountNotInitialized");
+          )
+        ).to.be.rejectedWith("consortium_validated_payload. Error Code: AccountNotInitialized");
     });
 
     it("Session payload not finished", async function () {
@@ -734,17 +789,20 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
 
       const chunk = message.toBuffer().subarray(0, message.toBuffer().length / 2);
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), chunk, message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: sessionPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -754,7 +812,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("InvalidPayloadHash");
+          )
+        ).to.be.rejectedWith("InvalidPayloadHash");
     });
 
     it("SessionPayloadPDA does not match hash", async function () {
@@ -767,17 +826,20 @@ describe("Mailbox", () => {
       );
       await consortiumUtility.createAndFinalizeSession(payer, otherMessage.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(otherMessage.toHashBytes(), otherMessage.toBuffer(), otherMessage.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: otherMessage.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -787,12 +849,14 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("consortium_payload. Error Code: ConstraintSeeds");
+          )
+        ).to.be.rejectedWith("consortium_payload. Error Code: ConstraintSeeds");
     });
 
     it("Invalid deliverer", async function () {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: user.publicKey,
@@ -802,7 +866,8 @@ describe("Mailbox", () => {
           })
           .signers([user])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("consortium_payload. Error Code: ConstraintSeeds");
+          )
+        ).to.be.rejectedWith("consortium_payload. Error Code: ConstraintSeeds");
     });
 
     it("ValidatedPayloadPDA does not match hash", async function () {
@@ -818,7 +883,8 @@ describe("Mailbox", () => {
       ).validatedPayloadPDA;
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -828,7 +894,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("consortium_validated_payload. Error Code: ConstraintSeeds");
+          )
+        ).to.be.rejectedWith("consortium_validated_payload. Error Code: ConstraintSeeds");
     });
 
     it("deliverMessage rejects when message contains invalid path", async function () {
@@ -847,17 +914,20 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: message.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -867,7 +937,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("InvalidMessagePath");
+          )
+        ).to.be.rejectedWith("InvalidMessagePath");
     });
 
     it("deliverMessage rejects on repeated call", async function () {
@@ -885,16 +956,19 @@ describe("Mailbox", () => {
         mailbox.programId
       )[0];
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: message.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .deliverMessage(message.toHashBytes())
         .accounts({
           deliverer: payer.publicKey,
@@ -903,10 +977,12 @@ describe("Mailbox", () => {
           consortiumValidatedPayload: validatedPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -916,7 +992,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith(`account Address { address: ${messageInfoPDA.toBase58()}, base: None } already in use`);
+          )
+        ).to.be.rejectedWith(`account Address { address: ${messageInfoPDA.toBase58()}, base: None } already in use`);
     });
 
     it("deliverMessage rejects when selector is invalid", async function () {
@@ -932,17 +1009,20 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: message.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -952,7 +1032,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("InvalidPayloadSelector");
+          )
+        ).to.be.rejectedWith("InvalidPayloadSelector");
     });
   });
 
@@ -970,17 +1051,20 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: sessionPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .handleMessage(message.toHashBytes())
           .accounts({
             handler: user.publicKey,
@@ -1010,7 +1094,8 @@ describe("Mailbox", () => {
           ])
           .signers([user])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("message_info. Error Code: AccountNotInitialized");
+          )
+        ).to.be.rejectedWith("message_info. Error Code: AccountNotInitialized");
     });
 
     it("handleMessage rejects when recipient program is invalid", async function () {
@@ -1024,16 +1109,19 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: sessionPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .deliverMessage(message.toHashBytes())
         .accounts({
           deliverer: payer.publicKey,
@@ -1042,10 +1130,12 @@ describe("Mailbox", () => {
           consortiumValidatedPayload: validatedPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .handleMessage(message.toHashBytes())
           .accounts({
             handler: payer.publicKey,
@@ -1075,7 +1165,8 @@ describe("Mailbox", () => {
           ])
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.rejectedWith("recipient_program. Error Code: ConstraintAddress");
+          )
+        ).to.rejectedWith("recipient_program. Error Code: ConstraintAddress");
     });
 
     it("handleMessage rejects when dCaller is invalid", async function () {
@@ -1091,16 +1182,19 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: sessionPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .deliverMessage(message.toHashBytes())
         .accounts({
           deliverer: payer.publicKey,
@@ -1109,10 +1203,12 @@ describe("Mailbox", () => {
           consortiumValidatedPayload: validatedPayloadPDA
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .handleMessage(message.toHashBytes())
           .accounts({
             handler: user.publicKey,
@@ -1142,7 +1238,8 @@ describe("Mailbox", () => {
           ])
           .signers([user])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("InvalidDestinationCaller");
+          )
+        ).to.be.rejectedWith("InvalidDestinationCaller");
     });
   });
 
@@ -1157,26 +1254,30 @@ describe("Mailbox", () => {
       const maxPayloadSize = randomNumber(3);
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .setSenderConfig(sender.publicKey, maxPayloadSize, true)
           .accounts({
             admin: payer.publicKey
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("setSenderConfig successful by admin", async () => {
       const maxPayloadSize = randomNumber(3);
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .setSenderConfig(sender.publicKey, maxPayloadSize, true)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const senderConfigAccount = await mailbox.account.senderConfig.fetch(senderConfigPDA);
       expect(senderConfigAccount.maxPayloadSize).to.be.eq(maxPayloadSize);
@@ -1186,13 +1287,15 @@ describe("Mailbox", () => {
     it("setSenderConfig update successful by admin", async () => {
       const maxPayloadSize = randomNumber(3);
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .setSenderConfig(sender.publicKey, maxPayloadSize, false)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const senderConfigAccount = await mailbox.account.senderConfig.fetch(senderConfigPDA);
       expect(senderConfigAccount.maxPayloadSize).to.be.eq(maxPayloadSize);
@@ -1201,24 +1304,28 @@ describe("Mailbox", () => {
 
     it("setSenderConfig rejects when called by not admin", async () => {
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .unsetSenderConfig(sender.publicKey)
           .accounts({
             admin: payer.publicKey
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("unsetSenderConfig successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .unsetSenderConfig(sender.publicKey)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(await provider.connection.getAccountInfo(senderConfigPDA)).to.be.null;
     });
@@ -1237,21 +1344,25 @@ describe("Mailbox", () => {
         })
       );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .enableOutboundMessagePath(LEDGER_LCHAIN_ID_BZ)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     afterEach(async function () {
@@ -1280,7 +1391,8 @@ describe("Mailbox", () => {
       const balanceBefore = await provider.connection.getBalance(payer.publicKey);
       const treasuryBalanceBefore = await provider.connection.getBalance(treasury.publicKey);
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
         .accountsPartial({
           feePayer: payer.publicKey,
@@ -1291,7 +1403,8 @@ describe("Mailbox", () => {
           senderConfig: null
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
       expect(outboundMessageAccount).to.be.not.null;
@@ -1324,18 +1437,21 @@ describe("Mailbox", () => {
       console.log("global nonce:", config.globalNonce.toNumber());
 
       // we use system program just for ease of testing
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceBefore = await provider.connection.getBalance(payerFeeExempt.publicKey);
       const treasuryBalanceBefore = await provider.connection.getBalance(treasury.publicKey);
 
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
         .accountsPartial({
           feePayer: payerFeeExempt.publicKey,
@@ -1348,7 +1464,8 @@ describe("Mailbox", () => {
           treasury: null
         })
         .signers([payerFeeExempt])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
       expect(outboundMessageAccount).to.be.not.null;
@@ -1384,7 +1501,8 @@ describe("Mailbox", () => {
       )[0];
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
           .accountsPartial({
             feePayer: payer.publicKey,
@@ -1396,7 +1514,8 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("PayloadTooLarge");
+          )
+        ).to.be.rejectedWith("PayloadTooLarge");
     });
   });
 
@@ -1424,25 +1543,31 @@ describe("Mailbox", () => {
     });
 
     it("Grant pauser role: successful by admin", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .grantAccountRole(pauser.publicKey, { pauser: {} })
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Pause rejects when called by not pauser", async () => {
       await expect(
-        mailbox.methods.pause().accounts({ pauser: payer.publicKey }).signers([payer]).rpc()
-      ).to.be.rejectedWith("AccountNotInitialized");
+          withBlockhashRetry(() =>
+            mailbox.methods.pause().accounts({ pauser: payer.publicKey }).signers([payer]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("AccountNotInitialized");
     });
 
     it("Pauser can set on pause", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .pause()
         .accounts({ pauser: pauser.publicKey })
         .signers([pauser])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(PauseEvents[0]).to.be.not.undefined;
       expect(PauseEvents[0].paused).to.be.true;
@@ -1450,8 +1575,10 @@ describe("Mailbox", () => {
 
     it("Pause rejects when contract is already paused", async () => {
       await expect(
-        mailbox.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser]).rpc()
-      ).to.be.rejectedWith("Paused");
+          withBlockhashRetry(() =>
+            mailbox.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     //Deliver
@@ -1466,17 +1593,20 @@ describe("Mailbox", () => {
       const sessionPayloadPDA = message.sessionPayloadPDA(payer);
       const { validatedPayloadPDA } = await consortiumUtility.createAndFinalizeSession(payer, message.toBuffer());
 
-      await consortium.methods
+      await withBlockhashRetry(() =>
+        consortium.methods
         .postSessionPayload(message.toHashBytes(), message.toBuffer(), message.toBuffer().length)
         .accounts({
           payer: payer.publicKey,
           sessionPayload: message.sessionPayloadPDA(payer)
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .deliverMessage(message.toHashBytes())
           .accounts({
             deliverer: payer.publicKey,
@@ -1485,8 +1615,9 @@ describe("Mailbox", () => {
             consortiumValidatedPayload: validatedPayloadPDA
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Paused");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     //Send
@@ -1503,7 +1634,8 @@ describe("Mailbox", () => {
       )[0];
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(() =>
+            mailbox.methods
           .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
           .accountsPartial({
             feePayer: payer.publicKey,
@@ -1515,21 +1647,26 @@ describe("Mailbox", () => {
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Paused");
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     it("Pauser can not disable pause", async () => {
       await expect(
-        mailbox.methods.unpause().accounts({ admin: pauser.publicKey }).signers([pauser]).rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          withBlockhashRetry(() =>
+            mailbox.methods.unpause().accounts({ admin: pauser.publicKey }).signers([pauser]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("Admin can disable pause", async () => {
-      await mailbox.methods
+      await withBlockhashRetry(() =>
+        mailbox.methods
         .unpause()
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(PauseEvents[0]).to.be.not.undefined;
       expect(PauseEvents[0].paused).to.be.false;

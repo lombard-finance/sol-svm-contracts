@@ -1,18 +1,18 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
+import { BN, Program } from "@coral-xyz/anchor";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
 import { Consortium } from "../target/types/consortium";
 import { Mailbox } from "../target/types/mailbox";
 import { sha256 } from "js-sha256";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { ConsortiumUtility } from "./consortium_utilities";
-import { MailboxUtilities } from "./mailbox_utilities";
+import { ConsortiumUtility } from "./utils/consortium_utilities";
+import { MailboxUtilities, messageV1 } from "./utils/mailbox_utilities";
 import { keccak256, randomBytes } from "ethers";
-import { messageV1 } from "./mailbox_utilities";
 import { Bridge } from "../target/types/bridge";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -203,10 +203,24 @@ describe("Bridge", () => {
     await fundWallet(user, 25 * LAMPORTS_PER_SOL);
 
     multisig = await spl.createMultisig(provider.connection, admin, [tokenAuth, minter.publicKey], 1);
-    // mint = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys);
-    // mint2 = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8);
-    mint = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys, spl.TOKEN_PROGRAM_ID);
-    mint2 = await spl.createMint(provider.connection, admin, multisig, admin.publicKey, 8, mintKeys2, spl.TOKEN_2022_PROGRAM_ID);
+    mint = await spl.createMint(
+      provider.connection,
+      admin,
+      multisig,
+      admin.publicKey,
+      8,
+      mintKeys,
+      spl.TOKEN_PROGRAM_ID
+    );
+    mint2 = await spl.createMint(
+      provider.connection,
+      admin,
+      multisig,
+      admin.publicKey,
+      8,
+      mintKeys2,
+      spl.TOKEN_2022_PROGRAM_ID
+    );
 
     [localTokenConfigPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("local_token_config"), mint.toBytes()],
@@ -239,13 +253,15 @@ describe("Bridge", () => {
 
     mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
 
-    await mailbox.methods
-      .initialize(admin.publicKey, consortium.programId, treasury.publicKey, defaultMaxPayloadSize, feePerByte)
-      .accounts({
-        deployer: provider.wallet.publicKey
-      })
-      .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-      .rpc();
+    await withBlockhashRetry(() =>
+      mailbox.methods
+        .initialize(admin.publicKey, consortium.programId, treasury.publicKey, defaultMaxPayloadSize, feePerByte)
+        .accounts({
+          deployer: provider.wallet.publicKey
+        })
+        .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
+        .rpc({ commitment: "confirmed" })
+    );
 
     userTA = await spl.createAssociatedTokenAccount(provider.connection, user, mint, user.publicKey);
     userTA2 = await spl.createAssociatedTokenAccount(provider.connection, user, mint2, user.publicKey);
@@ -258,26 +274,30 @@ describe("Bridge", () => {
   describe("Initialize bridge", () => {
     it("initialize: fails when payer is not deployer", async () => {
       await expect(
-        bridge.methods
-          .initialize(admin.publicKey, mailbox.programId)
-          .accounts({
-            deployer: payer.publicKey,
-            mint
-          })
-          .signers([payer])
-          .rpc()
+        withBlockhashRetry(() =>
+          bridge.methods
+            .initialize(admin.publicKey, mailbox.programId)
+            .accounts({
+              deployer: payer.publicKey,
+              mint
+            })
+            .signers([payer])
+            .rpc({ commitment: "confirmed" })
+        )
       ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("initialize: successful", async () => {
-      await bridge.methods
-        .initialize(admin.publicKey, mailbox.programId)
-        .accounts({
-          deployer: provider.wallet.publicKey,
-          mint
-        })
-        .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .initialize(admin.publicKey, mailbox.programId)
+          .accounts({
+            deployer: provider.wallet.publicKey,
+            mint
+          })
+          .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
       expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
@@ -295,25 +315,29 @@ describe("Bridge", () => {
     );
 
     it("grant role", async () => {
-      await bridge.methods
-        .grantAccountRole(pauser.publicKey, { pauser: {} })
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .grantAccountRole(pauser.publicKey, { pauser: {} })
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
       const accountRoles = await bridge.account.accountRoles.fetch(accountRolesPauserPDA);
       expect(accountRoles.roles).to.be.deep.eq([{ pauser: {} }]);
     });
 
     it("revoke role", async () => {
-      await bridge.methods
-        .revokeAccountRoles(pauser.publicKey)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .revokeAccountRoles(pauser.publicKey)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
       // Check that the account roles PDA was closed (account no longer exists)
       await expect(bridge.account.accountRoles.fetch(accountRolesPauserPDA)).to.be.rejectedWith(
         /Account does not exist|AccountNotFound/
@@ -324,55 +348,65 @@ describe("Bridge", () => {
   describe("Set up paths", () => {
     //------------- Mailbox
     it("Enable inbound path from chain_1", async () => {
-      await mailbox.methods
-        .enableInboundMessagePath(foreignLchainIdBytes, foreignMailboxAddressBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .enableInboundMessagePath(foreignLchainIdBytes, foreignMailboxAddressBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Enable inbound path from chain_2", async () => {
-      await mailbox.methods
-        .enableInboundMessagePath(foreignLchainIdBytes2, foreignMailboxAddressBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .enableInboundMessagePath(foreignLchainIdBytes2, foreignMailboxAddressBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Enable outbound path to chain_1", async () => {
-      await mailbox.methods
-        .enableOutboundMessagePath(foreignLchainIdBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .enableOutboundMessagePath(foreignLchainIdBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Enable outbound path to chain_2", async () => {
-      await mailbox.methods
-        .enableOutboundMessagePath(foreignLchainIdBytes2)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .enableOutboundMessagePath(foreignLchainIdBytes2)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     //------------- Bridge
     it("Enable remote bridge on chain_1", async () => {
       const foreignBridgeAddressBytes = Array.from(randomBytes(32));
-      await bridge.methods
-        .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteBridgeConfig = await bridge.account.remoteBridgeConfig.fetch(remoteBridgeConfigPDA);
       expect(bridgeRemoteBridgeConfig.chainId).to.be.deep.eq(foreignLchainIdBytes);
@@ -380,13 +414,15 @@ describe("Bridge", () => {
     });
 
     it("Change remote bridge on chain_1", async () => {
-      await bridge.methods
-        .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteBridgeConfig = await bridge.account.remoteBridgeConfig.fetch(remoteBridgeConfigPDA);
       expect(bridgeRemoteBridgeConfig.chainId).to.be.deep.eq(foreignLchainIdBytes);
@@ -394,13 +430,15 @@ describe("Bridge", () => {
     });
 
     it("Enable remote bridge on chain_2", async () => {
-      await bridge.methods
-        .setRemoteBridgeConfig(foreignLchainIdBytes2, foreignBridgeAddressBytes)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteBridgeConfig(foreignLchainIdBytes2, foreignBridgeAddressBytes)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteBridgeConfig = await bridge.account.remoteBridgeConfig.fetch(remoteBridgeConfigPDA2);
       expect(bridgeRemoteBridgeConfig.chainId).to.be.deep.eq(foreignLchainIdBytes2);
@@ -408,26 +446,30 @@ describe("Bridge", () => {
     });
 
     it("Enable local mint_1", async () => {
-      await bridge.methods
-        .setLocalTokenConfig(mint)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setLocalTokenConfig(mint)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeLocalTokenConfig = await bridge.account.localTokenConfig.fetch(localTokenConfigPDA);
       expect(bridgeLocalTokenConfig.mint.toBase58()).to.be.eq(mint.toBase58());
     });
 
     it("Enable local mint_2", async () => {
-      await bridge.methods
-        .setLocalTokenConfig(mint2)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setLocalTokenConfig(mint2)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeLocalTokenConfig = await bridge.account.localTokenConfig.fetch(localTokenConfigPDA2);
       expect(bridgeLocalTokenConfig.mint.toBase58()).to.be.eq(mint2.toBase58());
@@ -435,13 +477,15 @@ describe("Bridge", () => {
 
     it("Set remote token_1 on chain_1", async () => {
       const foreignTokenBytes = Array.from(randomBytes(32));
-      await bridge.methods
-        .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteTokenConfig = await bridge.account.remoteTokenConfig.fetch(remoteTokenConfigPDA11);
       expect(bridgeRemoteTokenConfig.chainId).to.be.deep.eq(foreignLchainIdBytes);
@@ -450,13 +494,15 @@ describe("Bridge", () => {
     });
 
     it("Change remote token_1 on chain_1", async () => {
-      await bridge.methods
-        .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteTokenConfig = await bridge.account.remoteTokenConfig.fetch(remoteTokenConfigPDA11);
       expect(bridgeRemoteTokenConfig.chainId).to.be.deep.eq(foreignLchainIdBytes);
@@ -465,13 +511,15 @@ describe("Bridge", () => {
     });
 
     it("Set remote token_2 on chain_1", async () => {
-      await bridge.methods
-        .setRemoteTokenConfig(mint2, foreignLchainIdBytes, foreignTokenBytes2, 3)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteTokenConfig(mint2, foreignLchainIdBytes, foreignTokenBytes2, 3)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteTokenConfig = await bridge.account.remoteTokenConfig.fetch(remoteTokenConfigPDA11);
       expect(bridgeRemoteTokenConfig.chainId).to.be.deep.eq(foreignLchainIdBytes);
@@ -480,44 +528,52 @@ describe("Bridge", () => {
     });
 
     it("Set remote token_1 on chain_2", async () => {
-      await bridge.methods
-        .setRemoteTokenConfig(mint, foreignLchainIdBytes2, foreignTokenBytes, 3)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteTokenConfig(mint, foreignLchainIdBytes2, foreignTokenBytes, 3)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Set remote token_2 on chain_2", async () => {
-      await bridge.methods
-        .setRemoteTokenConfig(mint2, foreignLchainIdBytes2, foreignTokenBytes2, 3)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRemoteTokenConfig(mint2, foreignLchainIdBytes2, foreignTokenBytes2, 3)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     //------------- Sender config
     it("Set sender config on mailbox", async () => {
-      await mailbox.methods
-        .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Set sender config on bridge", async () => {
-      await bridge.methods
-        .setSenderConfig(sender.publicKey, new BN(0), true) //DISCOUNT percent (0 = 100% fee) which pays token pool; fee goes to treasury
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setSenderConfig(sender.publicKey, new BN(0), true) //DISCOUNT percent (0 = 100% fee) which pays token pool; fee goes to treasury
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
   });
 
@@ -630,90 +686,92 @@ describe("Bridge", () => {
           [Buffer.from("message_handled"), payloadHash],
           bridge.programId
         )[0];
-        await mailbox.methods
-          .handleMessage(payloadHashBytes)
-          .accounts({
-            handler: payer.publicKey,
-            recipientProgram: bridge.programId
-          })
-          .remainingAccounts([
-            {
-              pubkey: payer.publicKey,
-              isWritable: true,
-              isSigner: true
-            },
-            {
-              pubkey: bridgeConfigPDA,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              pubkey: receiverMessageHandledPDA,
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // token_program
-              pubkey: spl.TOKEN_PROGRAM_ID,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // recipient
-              pubkey: arg.receiverTokeAccount(),
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // mint
-              pubkey: arg.localToken(),
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // mint_authority
-              pubkey: multisig, // or tokenAuth
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // token_authority
-              pubkey: tokenAuth,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // remote_bridge_config
-              pubkey: arg.remoteBridgeConfigPDA(),
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // local_token_config
-              pubkey: arg.localTokenConfig(),
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // remote_token_config
-              pubkey: arg.remoteTokenConfigPDA(),
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // inbound_message_path
-              pubkey: arg.inboundMessagePathPDA(),
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              pubkey: SystemProgram.programId,
-              isWritable: false,
-              isSigner: false
-            }
-          ])
-          .signers([payer])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          mailbox.methods
+            .handleMessage(payloadHashBytes)
+            .accounts({
+              handler: payer.publicKey,
+              recipientProgram: bridge.programId
+            })
+            .remainingAccounts([
+              {
+                pubkey: payer.publicKey,
+                isWritable: true,
+                isSigner: true
+              },
+              {
+                pubkey: bridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: receiverMessageHandledPDA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // recipient
+                pubkey: arg.receiverTokeAccount(),
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint
+                pubkey: arg.localToken(),
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint_authority
+                pubkey: multisig, // or tokenAuth
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // token_authority
+                pubkey: tokenAuth,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_bridge_config
+                pubkey: arg.remoteBridgeConfigPDA(),
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // local_token_config
+                pubkey: arg.localTokenConfig(),
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_token_config
+                pubkey: arg.remoteTokenConfigPDA(),
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // inbound_message_path
+                pubkey: arg.inboundMessagePathPDA(),
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: SystemProgram.programId,
+                isWritable: false,
+                isSigner: false
+              }
+            ])
+            .signers([payer])
+            .rpc({ commitment: "confirmed" })
+        );
 
         const tokenBalanceAfter = await spl.getAccount(provider.connection, arg.receiverTokeAccount());
         expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amount));
@@ -723,20 +781,24 @@ describe("Bridge", () => {
 
   describe("Send bridge", () => {
     before("Set bridge fee = 100% mailbox fee", async () => {
-      await mailbox.methods
-        .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
-      await bridge.methods
-        .setSenderConfig(sender.publicKey, new BN(0), true) //DISCOUNT percent (0 = 100% fee) which pays token pool; fee goes to treasury
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setSenderConfig(sender.publicKey, new BN(0), true) //DISCOUNT percent (0 = 100% fee) which pays token pool; fee goes to treasury
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("send tokens when fee is 100%", async () => {
@@ -754,27 +816,29 @@ describe("Bridge", () => {
 
       const amountToSend = 2000;
 
-      await bridge.methods
-        .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-        .accountsPartial({
-          sender: sender.publicKey, //token pool
-          senderTokenAccount: senderTA, //token pool
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          config: bridgeConfigPDA,
-          senderConfig: senderConfigPDA,
-          remoteBridgeConfig: remoteBridgeConfigPDA,
-          localTokenConfig: localTokenConfigPDA,
-          remoteTokenConfig: remoteTokenConfigPDA11,
-          mint: mint,
-          mailbox: mailbox.programId,
-          mailboxConfig: mailboxConfigPDA,
-          outboundMessage: outboundMessagePDA,
-          outboundMessagePath: outboundMessagePathPDA,
-          mailboxSenderConfig: bridgeSenderConfigPDA,
-          treasury: treasury.publicKey
-        })
-        .signers([sender])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+          .accountsPartial({
+            sender: sender.publicKey, //token pool
+            senderTokenAccount: senderTA, //token pool
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            config: bridgeConfigPDA,
+            senderConfig: senderConfigPDA,
+            remoteBridgeConfig: remoteBridgeConfigPDA,
+            localTokenConfig: localTokenConfigPDA,
+            remoteTokenConfig: remoteTokenConfigPDA11,
+            mint: mint,
+            mailbox: mailbox.programId,
+            mailboxConfig: mailboxConfigPDA,
+            outboundMessage: outboundMessagePDA,
+            outboundMessagePath: outboundMessagePathPDA,
+            mailboxSenderConfig: bridgeSenderConfigPDA,
+            treasury: treasury.publicKey
+          })
+          .signers([sender])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
       const expecedGmpMessage = messageV1(
@@ -783,12 +847,11 @@ describe("Bridge", () => {
         bridge.programId.toBuffer(),
         Buffer.from(foreignBridgeAddressBytes),
         foreignCaller,
-        expectedBody.bytes(),
+        expectedBody.bytes()
       );
 
       const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
-      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
-
+      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage);
 
       const expectedFee = feePerByte.muln(bridgeMessageLength);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -799,13 +862,15 @@ describe("Bridge", () => {
     });
 
     it("set 60% discount to bridge fee", async () => {
-      await bridge.methods
-        .setSenderConfig(sender.publicKey, new BN(6000), true) //token pool; fee goes to treasury
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setSenderConfig(sender.publicKey, new BN(6000), true) //token pool; fee goes to treasury
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     //User pays 40% of standard mailbox fee
@@ -824,27 +889,29 @@ describe("Bridge", () => {
 
       const amountToSend = 2000;
 
-      await bridge.methods
-        .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-        .accountsPartial({
-          sender: sender.publicKey, //token pool
-          senderTokenAccount: senderTA, //token pool
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          config: bridgeConfigPDA,
-          senderConfig: senderConfigPDA,
-          remoteBridgeConfig: remoteBridgeConfigPDA,
-          localTokenConfig: localTokenConfigPDA,
-          remoteTokenConfig: remoteTokenConfigPDA11,
-          mint: mint,
-          mailbox: mailbox.programId,
-          mailboxConfig: mailboxConfigPDA,
-          outboundMessage: outboundMessagePDA,
-          outboundMessagePath: outboundMessagePathPDA,
-          mailboxSenderConfig: bridgeSenderConfigPDA,
-          treasury: treasury.publicKey
-        })
-        .signers([sender])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+          .accountsPartial({
+            sender: sender.publicKey, //token pool
+            senderTokenAccount: senderTA, //token pool
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            config: bridgeConfigPDA,
+            senderConfig: senderConfigPDA,
+            remoteBridgeConfig: remoteBridgeConfigPDA,
+            localTokenConfig: localTokenConfigPDA,
+            remoteTokenConfig: remoteTokenConfigPDA11,
+            mint: mint,
+            mailbox: mailbox.programId,
+            mailboxConfig: mailboxConfigPDA,
+            outboundMessage: outboundMessagePDA,
+            outboundMessagePath: outboundMessagePathPDA,
+            mailboxSenderConfig: bridgeSenderConfigPDA,
+            treasury: treasury.publicKey
+          })
+          .signers([sender])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
       const expecedGmpMessage = messageV1(
@@ -853,11 +920,11 @@ describe("Bridge", () => {
         bridge.programId.toBuffer(),
         Buffer.from(foreignBridgeAddressBytes),
         foreignCaller,
-        expectedBody.bytes(),
+        expectedBody.bytes()
       );
 
       const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
-      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
+      expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage);
 
       const expectedFee = feePerByte.muln(bridgeMessageLength).muln(40).divn(100);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -868,13 +935,15 @@ describe("Bridge", () => {
     });
 
     it("set 100% discount - bridging is fee free", async () => {
-      await bridge.methods
-        .setSenderConfig(sender.publicKey, new BN(10000), true)
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setSenderConfig(sender.publicKey, new BN(10000), true)
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
     });
 
     const args = [
@@ -940,29 +1009,31 @@ describe("Bridge", () => {
 
         const amountToSend = 2000;
 
-        await bridge.methods
-          .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-          .accountsPartial({
-            mailbox: mailbox.programId,
-            mailboxConfig: mailboxConfigPDA,
-            sender: sender.publicKey,
-            senderTokenAccount: arg.senderTA(),
-            mailboxSenderConfig: bridgeSenderConfigPDA,
-            config: bridgeConfigPDA,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            senderConfig: senderConfigPDA,
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+            .accountsPartial({
+              mailbox: mailbox.programId,
+              mailboxConfig: mailboxConfigPDA,
+              sender: sender.publicKey,
+              senderTokenAccount: arg.senderTA(),
+              mailboxSenderConfig: bridgeSenderConfigPDA,
+              config: bridgeConfigPDA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              senderConfig: senderConfigPDA,
 
-            outboundMessagePath: arg.outboundMessagePathPDA(),
-            outboundMessage: outboundMessagePDA,
-            remoteBridgeConfig: arg.remoteBridgeConfig(),
-            localTokenConfig: arg.localTokenConfig(),
-            remoteTokenConfig: arg.remoteTokenConfig(),
-            mint: arg.mint(),
+              outboundMessagePath: arg.outboundMessagePathPDA(),
+              outboundMessage: outboundMessagePDA,
+              remoteBridgeConfig: arg.remoteBridgeConfig(),
+              localTokenConfig: arg.localTokenConfig(),
+              remoteTokenConfig: arg.remoteTokenConfig(),
+              mint: arg.mint(),
 
-            treasury: treasury.publicKey
-          })
-          .signers([sender])
-          .rpc({ commitment: "confirmed" });
+              treasury: treasury.publicKey
+            })
+            .signers([sender])
+            .rpc({ commitment: "confirmed" })
+        );
 
         const expectedBody = new BridgePayload(arg.foreignToken(), user.publicKey.toBytes(), recipient, amountToSend);
         const expecedGmpMessage = messageV1(
@@ -971,11 +1042,11 @@ describe("Bridge", () => {
           bridge.programId.toBuffer(),
           Buffer.from(foreignBridgeAddressBytes),
           foreignCaller,
-          expectedBody.bytes(),
+          expectedBody.bytes()
         );
 
         const outboundMessageAccount = await provider.connection.getAccountInfo(outboundMessagePDA);
-        expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage)
+        expect(outboundMessageAccount.data).to.deep.eq(expecedGmpMessage);
 
         const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
         expect(treasurySolBalanceAfter - treasurySolBalanceBefore).to.be.eq(0);
@@ -988,41 +1059,47 @@ describe("Bridge", () => {
 
   describe("Pause", () => {
     it("Grant pauser role", async () => {
-      await bridge.methods
-        .grantAccountRole(pauser.publicKey, { pauser: {} })
-        .accounts({
-          admin: admin.publicKey
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .grantAccountRole(pauser.publicKey, { pauser: {} })
+          .accounts({
+            admin: admin.publicKey
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
       const accountRoles = await bridge.account.accountRoles.fetch(accountRolesPauserPDA);
       expect(accountRoles.roles).to.be.deep.eq([{ pauser: {} }]);
     });
 
     it("rejects when paused not by pauser", async () => {
       await expect(
-        bridge.methods
-          .pause()
-          .accountsPartial({
-            pauser: user.publicKey,
-            config: bridgeConfigPDA,
-            accountRoles: accountRolesPauserPDA
-          })
-          .signers([user])
-          .rpc({ commitment: "confirmed" })
+        withBlockhashRetry(() =>
+          bridge.methods
+            .pause()
+            .accountsPartial({
+              pauser: user.publicKey,
+              config: bridgeConfigPDA,
+              accountRoles: accountRolesPauserPDA
+            })
+            .signers([user])
+            .rpc({ commitment: "confirmed" })
+        )
       ).to.be.rejectedWith("account_roles. Error Code: ConstraintSeeds");
     });
 
     it("pauser can set on pause", async () => {
-      await bridge.methods
-        .pause()
-        .accountsPartial({
-          pauser: pauser.publicKey,
-          config: bridgeConfigPDA,
-          accountRoles: accountRolesPauserPDA
-        })
-        .signers([pauser])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .pause()
+          .accountsPartial({
+            pauser: pauser.publicKey,
+            config: bridgeConfigPDA,
+            accountRoles: accountRolesPauserPDA
+          })
+          .signers([pauser])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
       expect(cfg.paused).to.be.true;
@@ -1041,27 +1118,29 @@ describe("Bridge", () => {
       const amountToSend = 2000;
 
       await expect(
-        bridge.methods
-          .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-          .accountsPartial({
-            sender: sender.publicKey,
-            senderTokenAccount: senderTA,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            config: bridgeConfigPDA,
-            senderConfig: senderConfigPDA,
-            remoteBridgeConfig: remoteBridgeConfigPDA,
-            localTokenConfig: localTokenConfigPDA,
-            remoteTokenConfig: remoteTokenConfigPDA11,
-            mint: mint,
-            mailbox: mailbox.programId,
-            mailboxConfig: mailboxConfigPDA,
-            outboundMessage: outboundMessagePDA,
-            outboundMessagePath: outboundMessagePathPDA,
-            mailboxSenderConfig: bridgeSenderConfigPDA,
-            treasury: treasury.publicKey
-          })
-          .signers([sender])
-          .rpc({ commitment: "confirmed" })
+        withBlockhashRetry(() =>
+          bridge.methods
+            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+            .accountsPartial({
+              sender: sender.publicKey,
+              senderTokenAccount: senderTA,
+              tokenProgram: spl.TOKEN_PROGRAM_ID,
+              config: bridgeConfigPDA,
+              senderConfig: senderConfigPDA,
+              remoteBridgeConfig: remoteBridgeConfigPDA,
+              localTokenConfig: localTokenConfigPDA,
+              remoteTokenConfig: remoteTokenConfigPDA11,
+              mint: mint,
+              mailbox: mailbox.programId,
+              mailboxConfig: mailboxConfigPDA,
+              outboundMessage: outboundMessagePDA,
+              outboundMessagePath: outboundMessagePathPDA,
+              mailboxSenderConfig: bridgeSenderConfigPDA,
+              treasury: treasury.publicKey
+            })
+            .signers([sender])
+            .rpc({ commitment: "confirmed" })
+        )
       ).to.be.rejectedWith("Program is paused");
     });
 
@@ -1090,115 +1169,121 @@ describe("Bridge", () => {
       )[0];
 
       await expect(
-        mailbox.methods
-          .handleMessage(payloadHashBytes)
-          .accounts({
-            handler: payer.publicKey,
-            recipientProgram: bridge.programId
-          })
-          .remainingAccounts([
-            {
-              pubkey: payer.publicKey,
-              isWritable: true,
-              isSigner: true
-            },
-            {
-              pubkey: bridgeConfigPDA,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              pubkey: receiverMessageHandledPDA,
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // token_program
-              pubkey: spl.TOKEN_PROGRAM_ID,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // recipient
-              pubkey: userTA,
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // mint
-              pubkey: mint,
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // mint_authority
-              pubkey: multisig, // or tokenAuth
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // token_authority
-              pubkey: tokenAuth,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // remote_bridge_config
-              pubkey: remoteBridgeConfigPDA,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // local_token_config
-              pubkey: localTokenConfigPDA,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              // remote_token_config
-              pubkey: remoteTokenConfigPDA11,
-              isWritable: true,
-              isSigner: false
-            },
-            {
-              // inbound_message_path
-              pubkey: inboundMessagePathPDA,
-              isWritable: false,
-              isSigner: false
-            },
-            {
-              pubkey: SystemProgram.programId,
-              isWritable: false,
-              isSigner: false
-            }
-          ])
-          .signers([payer])
-          .rpc({ commitment: "confirmed" })
+        withBlockhashRetry(() =>
+          mailbox.methods
+            .handleMessage(payloadHashBytes)
+            .accounts({
+              handler: payer.publicKey,
+              recipientProgram: bridge.programId
+            })
+            .remainingAccounts([
+              {
+                pubkey: payer.publicKey,
+                isWritable: true,
+                isSigner: true
+              },
+              {
+                pubkey: bridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: receiverMessageHandledPDA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // recipient
+                pubkey: userTA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint
+                pubkey: mint,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint_authority
+                pubkey: multisig, // or tokenAuth
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // token_authority
+                pubkey: tokenAuth,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_bridge_config
+                pubkey: remoteBridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // local_token_config
+                pubkey: localTokenConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_token_config
+                pubkey: remoteTokenConfigPDA11,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // inbound_message_path
+                pubkey: inboundMessagePathPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: SystemProgram.programId,
+                isWritable: false,
+                isSigner: false
+              }
+            ])
+            .signers([payer])
+            .rpc({ commitment: "confirmed" })
+        )
       ).to.be.rejectedWith("Program is paused");
     });
 
     it("unpuase rejects when called not by admin", async () => {
       await expect(
-        bridge.methods
-          .unpause()
-          .accountsPartial({
-            admin: pauser.publicKey,
-            config: bridgeConfigPDA
-          })
-          .signers([pauser])
-          .rpc({ commitment: "confirmed" })
+        withBlockhashRetry(() =>
+          bridge.methods
+            .unpause()
+            .accountsPartial({
+              admin: pauser.publicKey,
+              config: bridgeConfigPDA
+            })
+            .signers([pauser])
+            .rpc({ commitment: "confirmed" })
+        )
       ).to.be.rejectedWith("Unauthorized");
     });
 
     it("admin can disable pause", async () => {
-      await bridge.methods
-        .unpause()
-        .accountsPartial({
-          admin: admin.publicKey,
-          config: bridgeConfigPDA
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .unpause()
+          .accountsPartial({
+            admin: admin.publicKey,
+            config: bridgeConfigPDA
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
       expect(cfg.paused).to.be.false;
@@ -1208,15 +1293,17 @@ describe("Bridge", () => {
   describe("Send and receive tokens invalid cases", () => {
     describe("Remote bridge is deleted", () => {
       before("Delete remote bridge", async function () {
-        await bridge.methods
-          .unsetRemoteBridgeConfig(foreignLchainIdBytes)
-          .accountsPartial({
-            admin: admin.publicKey,
-            config: bridgeConfigPDA,
-            remoteBridgeConfig: remoteBridgeConfigPDA
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .unsetRemoteBridgeConfig(foreignLchainIdBytes)
+            .accountsPartial({
+              admin: admin.publicKey,
+              config: bridgeConfigPDA,
+              remoteBridgeConfig: remoteBridgeConfigPDA
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("rejects when sending to chain_1", async () => {
@@ -1232,27 +1319,29 @@ describe("Bridge", () => {
         const amountToSend = 2000;
 
         await expect(
-          bridge.methods
-            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-            .accountsPartial({
-              sender: sender.publicKey,
-              senderTokenAccount: senderTA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              config: bridgeConfigPDA,
-              senderConfig: senderConfigPDA,
-              remoteBridgeConfig: remoteBridgeConfigPDA,
-              localTokenConfig: localTokenConfigPDA,
-              remoteTokenConfig: remoteTokenConfigPDA11,
-              mint: mint,
-              mailbox: mailbox.programId,
-              mailboxConfig: mailboxConfigPDA,
-              outboundMessage: outboundMessagePDA,
-              outboundMessagePath: outboundMessagePathPDA,
-              mailboxSenderConfig: bridgeSenderConfigPDA,
-              treasury: treasury.publicKey
-            })
-            .signers([sender])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            bridge.methods
+              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+              .accountsPartial({
+                sender: sender.publicKey,
+                senderTokenAccount: senderTA,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                config: bridgeConfigPDA,
+                senderConfig: senderConfigPDA,
+                remoteBridgeConfig: remoteBridgeConfigPDA,
+                localTokenConfig: localTokenConfigPDA,
+                remoteTokenConfig: remoteTokenConfigPDA11,
+                mint: mint,
+                mailbox: mailbox.programId,
+                mailboxConfig: mailboxConfigPDA,
+                outboundMessage: outboundMessagePDA,
+                outboundMessagePath: outboundMessagePathPDA,
+                mailboxSenderConfig: bridgeSenderConfigPDA,
+                treasury: treasury.publicKey
+              })
+              .signers([sender])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_bridge_config. Error Code: AccountNotInitialized");
       });
 
@@ -1281,113 +1370,119 @@ describe("Bridge", () => {
         )[0];
 
         await expect(
-          mailbox.methods
-            .handleMessage(payloadHashBytes)
-            .accounts({
-              handler: payer.publicKey,
-              recipientProgram: bridge.programId
-            })
-            .remainingAccounts([
-              {
-                pubkey: payer.publicKey,
-                isWritable: true,
-                isSigner: true
-              },
-              {
-                pubkey: bridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: receiverMessageHandledPDA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // recipient
-                pubkey: userTA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint
-                pubkey: mint,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint_authority
-                pubkey: multisig, // or tokenAuth
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // token_authority
-                pubkey: tokenAuth,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_bridge_config
-                pubkey: remoteBridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // local_token_config
-                pubkey: localTokenConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_token_config
-                pubkey: remoteTokenConfigPDA11,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // inbound_message_path
-                pubkey: inboundMessagePathPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: SystemProgram.programId,
-                isWritable: false,
-                isSigner: false
-              }
-            ])
-            .signers([payer])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            mailbox.methods
+              .handleMessage(payloadHashBytes)
+              .accounts({
+                handler: payer.publicKey,
+                recipientProgram: bridge.programId
+              })
+              .remainingAccounts([
+                {
+                  pubkey: payer.publicKey,
+                  isWritable: true,
+                  isSigner: true
+                },
+                {
+                  pubkey: bridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: receiverMessageHandledPDA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // token_program
+                  pubkey: spl.TOKEN_PROGRAM_ID,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // recipient
+                  pubkey: userTA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint
+                  pubkey: mint,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint_authority
+                  pubkey: multisig, // or tokenAuth
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // token_authority
+                  pubkey: tokenAuth,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_bridge_config
+                  pubkey: remoteBridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // local_token_config
+                  pubkey: localTokenConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_token_config
+                  pubkey: remoteTokenConfigPDA11,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // inbound_message_path
+                  pubkey: inboundMessagePathPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: SystemProgram.programId,
+                  isWritable: false,
+                  isSigner: false
+                }
+              ])
+              .signers([payer])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_bridge_config. Error Code: AccountNotInitialized");
       });
 
       after("Enable remote bridge", async function () {
-        await bridge.methods
-          .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
     });
 
     describe("Local token is deleted", () => {
       before("Delete local token_1", async function () {
-        await bridge.methods
-          .unsetLocalTokenConfig(mint)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .unsetLocalTokenConfig(mint)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("rejects when sending token_1", async () => {
@@ -1403,27 +1498,29 @@ describe("Bridge", () => {
         const amountToSend = 2000;
 
         await expect(
-          bridge.methods
-            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-            .accountsPartial({
-              sender: sender.publicKey,
-              senderTokenAccount: senderTA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              config: bridgeConfigPDA,
-              senderConfig: senderConfigPDA,
-              remoteBridgeConfig: remoteBridgeConfigPDA,
-              localTokenConfig: localTokenConfigPDA,
-              remoteTokenConfig: remoteTokenConfigPDA11,
-              mint: mint,
-              mailbox: mailbox.programId,
-              mailboxConfig: mailboxConfigPDA,
-              outboundMessage: outboundMessagePDA,
-              outboundMessagePath: outboundMessagePathPDA,
-              mailboxSenderConfig: bridgeSenderConfigPDA,
-              treasury: treasury.publicKey
-            })
-            .signers([sender])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            bridge.methods
+              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+              .accountsPartial({
+                sender: sender.publicKey,
+                senderTokenAccount: senderTA,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                config: bridgeConfigPDA,
+                senderConfig: senderConfigPDA,
+                remoteBridgeConfig: remoteBridgeConfigPDA,
+                localTokenConfig: localTokenConfigPDA,
+                remoteTokenConfig: remoteTokenConfigPDA11,
+                mint: mint,
+                mailbox: mailbox.programId,
+                mailboxConfig: mailboxConfigPDA,
+                outboundMessage: outboundMessagePDA,
+                outboundMessagePath: outboundMessagePathPDA,
+                mailboxSenderConfig: bridgeSenderConfigPDA,
+                treasury: treasury.publicKey
+              })
+              .signers([sender])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("local_token_config. Error Code: AccountNotInitialized");
       });
 
@@ -1452,115 +1549,121 @@ describe("Bridge", () => {
         )[0];
 
         await expect(
-          mailbox.methods
-            .handleMessage(payloadHashBytes)
-            .accounts({
-              handler: payer.publicKey,
-              recipientProgram: bridge.programId
-            })
-            .remainingAccounts([
-              {
-                pubkey: payer.publicKey,
-                isWritable: true,
-                isSigner: true
-              },
-              {
-                pubkey: bridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: receiverMessageHandledPDA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // recipient
-                pubkey: userTA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint
-                pubkey: mint,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint_authority
-                pubkey: multisig, // or tokenAuth
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // token_authority
-                pubkey: tokenAuth,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_bridge_config
-                pubkey: remoteBridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // local_token_config
-                pubkey: localTokenConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_token_config
-                pubkey: remoteTokenConfigPDA11,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // inbound_message_path
-                pubkey: inboundMessagePathPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: SystemProgram.programId,
-                isWritable: false,
-                isSigner: false
-              }
-            ])
-            .signers([payer])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            mailbox.methods
+              .handleMessage(payloadHashBytes)
+              .accounts({
+                handler: payer.publicKey,
+                recipientProgram: bridge.programId
+              })
+              .remainingAccounts([
+                {
+                  pubkey: payer.publicKey,
+                  isWritable: true,
+                  isSigner: true
+                },
+                {
+                  pubkey: bridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: receiverMessageHandledPDA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // token_program
+                  pubkey: spl.TOKEN_PROGRAM_ID,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // recipient
+                  pubkey: userTA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint
+                  pubkey: mint,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint_authority
+                  pubkey: multisig, // or tokenAuth
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // token_authority
+                  pubkey: tokenAuth,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_bridge_config
+                  pubkey: remoteBridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // local_token_config
+                  pubkey: localTokenConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_token_config
+                  pubkey: remoteTokenConfigPDA11,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // inbound_message_path
+                  pubkey: inboundMessagePathPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: SystemProgram.programId,
+                  isWritable: false,
+                  isSigner: false
+                }
+              ])
+              .signers([payer])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("local_token_config. Error Code: AccountNotInitialized");
       });
 
       after("Enable local token_1", async function () {
-        await bridge.methods
-          .setLocalTokenConfig(mint)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setLocalTokenConfig(mint)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
     });
 
     describe("Remote token is deleted", () => {
       before("Delete remote config token_1 chain_1", async function () {
-        await bridge.methods
-          .unsetRemoteTokenConfig(mint, foreignLchainIdBytes)
-          .accountsPartial({
-            admin: admin.publicKey,
-            config: bridgeConfigPDA,
-            remoteTokenConfig: remoteTokenConfigPDA11
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .unsetRemoteTokenConfig(mint, foreignLchainIdBytes)
+            .accountsPartial({
+              admin: admin.publicKey,
+              config: bridgeConfigPDA,
+              remoteTokenConfig: remoteTokenConfigPDA11
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("rejects when sending token_1", async () => {
@@ -1576,27 +1679,29 @@ describe("Bridge", () => {
         const amountToSend = 2000;
 
         await expect(
-          bridge.methods
-            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-            .accountsPartial({
-              sender: sender.publicKey,
-              senderTokenAccount: senderTA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              config: bridgeConfigPDA,
-              senderConfig: senderConfigPDA,
-              remoteBridgeConfig: remoteBridgeConfigPDA,
-              localTokenConfig: localTokenConfigPDA,
-              remoteTokenConfig: remoteTokenConfigPDA11,
-              mint: mint,
-              mailbox: mailbox.programId,
-              mailboxConfig: mailboxConfigPDA,
-              outboundMessage: outboundMessagePDA,
-              outboundMessagePath: outboundMessagePathPDA,
-              mailboxSenderConfig: bridgeSenderConfigPDA,
-              treasury: treasury.publicKey
-            })
-            .signers([sender])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            bridge.methods
+              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+              .accountsPartial({
+                sender: sender.publicKey,
+                senderTokenAccount: senderTA,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                config: bridgeConfigPDA,
+                senderConfig: senderConfigPDA,
+                remoteBridgeConfig: remoteBridgeConfigPDA,
+                localTokenConfig: localTokenConfigPDA,
+                remoteTokenConfig: remoteTokenConfigPDA11,
+                mint: mint,
+                mailbox: mailbox.programId,
+                mailboxConfig: mailboxConfigPDA,
+                outboundMessage: outboundMessagePDA,
+                outboundMessagePath: outboundMessagePathPDA,
+                mailboxSenderConfig: bridgeSenderConfigPDA,
+                treasury: treasury.publicKey
+              })
+              .signers([sender])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_token_config. Error Code: AccountNotInitialized");
       });
 
@@ -1625,113 +1730,119 @@ describe("Bridge", () => {
         )[0];
 
         await expect(
-          mailbox.methods
-            .handleMessage(payloadHashBytes)
-            .accounts({
-              handler: payer.publicKey,
-              recipientProgram: bridge.programId
-            })
-            .remainingAccounts([
-              {
-                pubkey: payer.publicKey,
-                isWritable: true,
-                isSigner: true
-              },
-              {
-                pubkey: bridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: receiverMessageHandledPDA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // recipient
-                pubkey: userTA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint
-                pubkey: mint,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint_authority
-                pubkey: multisig, // or tokenAuth
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // token_authority
-                pubkey: tokenAuth,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_bridge_config
-                pubkey: remoteBridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // local_token_config
-                pubkey: localTokenConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_token_config
-                pubkey: remoteTokenConfigPDA11,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // inbound_message_path
-                pubkey: inboundMessagePathPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: SystemProgram.programId,
-                isWritable: false,
-                isSigner: false
-              }
-            ])
-            .signers([payer])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            mailbox.methods
+              .handleMessage(payloadHashBytes)
+              .accounts({
+                handler: payer.publicKey,
+                recipientProgram: bridge.programId
+              })
+              .remainingAccounts([
+                {
+                  pubkey: payer.publicKey,
+                  isWritable: true,
+                  isSigner: true
+                },
+                {
+                  pubkey: bridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: receiverMessageHandledPDA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // token_program
+                  pubkey: spl.TOKEN_PROGRAM_ID,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // recipient
+                  pubkey: userTA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint
+                  pubkey: mint,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint_authority
+                  pubkey: multisig, // or tokenAuth
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // token_authority
+                  pubkey: tokenAuth,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_bridge_config
+                  pubkey: remoteBridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // local_token_config
+                  pubkey: localTokenConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_token_config
+                  pubkey: remoteTokenConfigPDA11,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // inbound_message_path
+                  pubkey: inboundMessagePathPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: SystemProgram.programId,
+                  isWritable: false,
+                  isSigner: false
+                }
+              ])
+              .signers([payer])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_token_config. Error Code: AccountNotInitialized");
       });
 
       after("Enable remote token_1 chain_1", async () => {
-        await bridge.methods
-          .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
     });
 
     describe("Remote token is disabled", () => {
       before("Disable remote token_1 chain_1", async function () {
-        await bridge.methods
-          .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 0)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 0)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("rejects when sending token_1", async () => {
@@ -1747,27 +1858,29 @@ describe("Bridge", () => {
         const amountToSend = 2000;
 
         await expect(
-          bridge.methods
-            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-            .accountsPartial({
-              sender: sender.publicKey,
-              senderTokenAccount: senderTA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              config: bridgeConfigPDA,
-              senderConfig: senderConfigPDA,
-              remoteBridgeConfig: remoteBridgeConfigPDA,
-              localTokenConfig: localTokenConfigPDA,
-              remoteTokenConfig: remoteTokenConfigPDA11,
-              mint: mint,
-              mailbox: mailbox.programId,
-              mailboxConfig: mailboxConfigPDA,
-              outboundMessage: outboundMessagePDA,
-              outboundMessagePath: outboundMessagePathPDA,
-              mailboxSenderConfig: bridgeSenderConfigPDA,
-              treasury: treasury.publicKey
-            })
-            .signers([sender])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            bridge.methods
+              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+              .accountsPartial({
+                sender: sender.publicKey,
+                senderTokenAccount: senderTA,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                config: bridgeConfigPDA,
+                senderConfig: senderConfigPDA,
+                remoteBridgeConfig: remoteBridgeConfigPDA,
+                localTokenConfig: localTokenConfigPDA,
+                remoteTokenConfig: remoteTokenConfigPDA11,
+                mint: mint,
+                mailbox: mailbox.programId,
+                mailboxConfig: mailboxConfigPDA,
+                outboundMessage: outboundMessagePDA,
+                outboundMessagePath: outboundMessagePathPDA,
+                mailboxSenderConfig: bridgeSenderConfigPDA,
+                treasury: treasury.publicKey
+              })
+              .signers([sender])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_token_config. Error Code: OutboundDirectionDisabled");
       });
 
@@ -1796,115 +1909,121 @@ describe("Bridge", () => {
         )[0];
 
         await expect(
-          mailbox.methods
-            .handleMessage(payloadHashBytes)
-            .accounts({
-              handler: payer.publicKey,
-              recipientProgram: bridge.programId
-            })
-            .remainingAccounts([
-              {
-                pubkey: payer.publicKey,
-                isWritable: true,
-                isSigner: true
-              },
-              {
-                pubkey: bridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: receiverMessageHandledPDA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // recipient
-                pubkey: userTA,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint
-                pubkey: mint,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // mint_authority
-                pubkey: multisig, // or tokenAuth
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // token_authority
-                pubkey: tokenAuth,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_bridge_config
-                pubkey: remoteBridgeConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // local_token_config
-                pubkey: localTokenConfigPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                // remote_token_config
-                pubkey: remoteTokenConfigPDA11,
-                isWritable: true,
-                isSigner: false
-              },
-              {
-                // inbound_message_path
-                pubkey: inboundMessagePathPDA,
-                isWritable: false,
-                isSigner: false
-              },
-              {
-                pubkey: SystemProgram.programId,
-                isWritable: false,
-                isSigner: false
-              }
-            ])
-            .signers([payer])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            mailbox.methods
+              .handleMessage(payloadHashBytes)
+              .accounts({
+                handler: payer.publicKey,
+                recipientProgram: bridge.programId
+              })
+              .remainingAccounts([
+                {
+                  pubkey: payer.publicKey,
+                  isWritable: true,
+                  isSigner: true
+                },
+                {
+                  pubkey: bridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: receiverMessageHandledPDA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // token_program
+                  pubkey: spl.TOKEN_PROGRAM_ID,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // recipient
+                  pubkey: userTA,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint
+                  pubkey: mint,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // mint_authority
+                  pubkey: multisig, // or tokenAuth
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // token_authority
+                  pubkey: tokenAuth,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_bridge_config
+                  pubkey: remoteBridgeConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // local_token_config
+                  pubkey: localTokenConfigPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  // remote_token_config
+                  pubkey: remoteTokenConfigPDA11,
+                  isWritable: true,
+                  isSigner: false
+                },
+                {
+                  // inbound_message_path
+                  pubkey: inboundMessagePathPDA,
+                  isWritable: false,
+                  isSigner: false
+                },
+                {
+                  pubkey: SystemProgram.programId,
+                  isWritable: false,
+                  isSigner: false
+                }
+              ])
+              .signers([payer])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("remote_token_config. Error Code: InboundDirectionDisabled");
       });
 
       after("Enable remote token_1 chain_1", async () => {
-        await bridge.methods
-          .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
     });
 
     describe("Sender config is deleted", () => {
       before("Delete sender config", async function () {
-        await bridge.methods
-          .unsetSenderConfig(sender.publicKey)
-          .accountsPartial({
-            admin: admin.publicKey,
-            config: bridgeConfigPDA,
-            senderConfig: senderConfigPDA
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .unsetSenderConfig(sender.publicKey)
+            .accountsPartial({
+              admin: admin.publicKey,
+              config: bridgeConfigPDA,
+              senderConfig: senderConfigPDA
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("rejects when sending to chain_1", async () => {
@@ -1920,38 +2039,42 @@ describe("Bridge", () => {
         const amountToSend = 2000;
 
         await expect(
-          bridge.methods
-            .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-            .accountsPartial({
-              sender: sender.publicKey,
-              senderTokenAccount: senderTA,
-              tokenProgram: spl.TOKEN_PROGRAM_ID,
-              config: bridgeConfigPDA,
-              senderConfig: senderConfigPDA,
-              remoteBridgeConfig: remoteBridgeConfigPDA,
-              localTokenConfig: localTokenConfigPDA,
-              remoteTokenConfig: remoteTokenConfigPDA11,
-              mint: mint,
-              mailbox: mailbox.programId,
-              mailboxConfig: mailboxConfigPDA,
-              outboundMessage: outboundMessagePDA,
-              outboundMessagePath: outboundMessagePathPDA,
-              mailboxSenderConfig: bridgeSenderConfigPDA,
-              treasury: treasury.publicKey
-            })
-            .signers([sender])
-            .rpc({ commitment: "confirmed" })
+          withBlockhashRetry(() =>
+            bridge.methods
+              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+              .accountsPartial({
+                sender: sender.publicKey,
+                senderTokenAccount: senderTA,
+                tokenProgram: spl.TOKEN_PROGRAM_ID,
+                config: bridgeConfigPDA,
+                senderConfig: senderConfigPDA,
+                remoteBridgeConfig: remoteBridgeConfigPDA,
+                localTokenConfig: localTokenConfigPDA,
+                remoteTokenConfig: remoteTokenConfigPDA11,
+                mint: mint,
+                mailbox: mailbox.programId,
+                mailboxConfig: mailboxConfigPDA,
+                outboundMessage: outboundMessagePDA,
+                outboundMessagePath: outboundMessagePathPDA,
+                mailboxSenderConfig: bridgeSenderConfigPDA,
+                treasury: treasury.publicKey
+              })
+              .signers([sender])
+              .rpc({ commitment: "confirmed" })
+          )
         ).to.be.rejectedWith("sender_config. Error Code: AccountNotInitialized");
       });
 
       after("Set sender config", async function () {
-        await bridge.methods
-          .setSenderConfig(sender.publicKey, new BN(0), true)
-          .accounts({
-            admin: admin.publicKey
-          })
-          .signers([admin])
-          .rpc({ commitment: "confirmed" });
+        await withBlockhashRetry(() =>
+          bridge.methods
+            .setSenderConfig(sender.publicKey, new BN(0), true)
+            .accounts({
+              admin: admin.publicKey
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+        );
       });
     });
 
@@ -2128,90 +2251,92 @@ describe("Bridge", () => {
           )[0];
 
           await expect(
-            mailbox.methods
-              .handleMessage(payloadHashBytes)
-              .accounts({
-                handler: payer.publicKey,
-                recipientProgram: bridge.programId
-              })
-              .remainingAccounts([
-                {
-                  pubkey: payer.publicKey,
-                  isWritable: true,
-                  isSigner: true
-                },
-                {
-                  pubkey: bridgeConfigPDA,
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  pubkey: receiverMessageHandledPDA,
-                  isWritable: true,
-                  isSigner: false
-                },
-                {
-                  // token_program
-                  pubkey: spl.TOKEN_PROGRAM_ID,
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  // recipient
-                  pubkey: arg.receiverTokeAccount(),
-                  isWritable: true,
-                  isSigner: false
-                },
-                {
-                  // mint
-                  pubkey: arg.localToken(),
-                  isWritable: true,
-                  isSigner: false
-                },
-                {
-                  // mint_authority
-                  pubkey: multisig, // or tokenAuth
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  // token_authority
-                  pubkey: tokenAuth,
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  // remote_bridge_config
-                  pubkey: arg.remoteBridgeConfigPDA(),
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  // local_token_config
-                  pubkey: arg.localTokenConfig(),
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  // remote_token_config
-                  pubkey: arg.remoteTokenConfigPDA(),
-                  isWritable: true,
-                  isSigner: false
-                },
-                {
-                  // inbound_message_path
-                  pubkey: arg.inboundMessagePathPDA(),
-                  isWritable: false,
-                  isSigner: false
-                },
-                {
-                  pubkey: SystemProgram.programId,
-                  isWritable: false,
-                  isSigner: false
-                }
-              ])
-              .signers([payer])
-              .rpc({ commitment: "confirmed" })
+            withBlockhashRetry(() =>
+              mailbox.methods
+                .handleMessage(payloadHashBytes)
+                .accounts({
+                  handler: payer.publicKey,
+                  recipientProgram: bridge.programId
+                })
+                .remainingAccounts([
+                  {
+                    pubkey: payer.publicKey,
+                    isWritable: true,
+                    isSigner: true
+                  },
+                  {
+                    pubkey: bridgeConfigPDA,
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    pubkey: receiverMessageHandledPDA,
+                    isWritable: true,
+                    isSigner: false
+                  },
+                  {
+                    // token_program
+                    pubkey: spl.TOKEN_PROGRAM_ID,
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    // recipient
+                    pubkey: arg.receiverTokeAccount(),
+                    isWritable: true,
+                    isSigner: false
+                  },
+                  {
+                    // mint
+                    pubkey: arg.localToken(),
+                    isWritable: true,
+                    isSigner: false
+                  },
+                  {
+                    // mint_authority
+                    pubkey: multisig, // or tokenAuth
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    // token_authority
+                    pubkey: tokenAuth,
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    // remote_bridge_config
+                    pubkey: arg.remoteBridgeConfigPDA(),
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    // local_token_config
+                    pubkey: arg.localTokenConfig(),
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    // remote_token_config
+                    pubkey: arg.remoteTokenConfigPDA(),
+                    isWritable: true,
+                    isSigner: false
+                  },
+                  {
+                    // inbound_message_path
+                    pubkey: arg.inboundMessagePathPDA(),
+                    isWritable: false,
+                    isSigner: false
+                  },
+                  {
+                    pubkey: SystemProgram.programId,
+                    isWritable: false,
+                    isSigner: false
+                  }
+                ])
+                .signers([payer])
+                .rpc({ commitment: "confirmed" })
+            )
           ).to.be.rejectedWith(arg.error);
         });
       });
@@ -2295,29 +2420,31 @@ describe("Bridge", () => {
           const amountToSend = 2000;
 
           await expect(
-            bridge.methods
-              .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-              .accountsPartial({
-                mailbox: mailbox.programId,
-                mailboxConfig: mailboxConfigPDA,
-                sender: arg.sender().publicKey,
-                senderTokenAccount: arg.senderTA(),
-                mailboxSenderConfig: bridgeSenderConfigPDA,
-                config: bridgeConfigPDA,
-                tokenProgram: spl.TOKEN_PROGRAM_ID,
-                senderConfig: senderConfigPDA,
+            withBlockhashRetry(() =>
+              bridge.methods
+                .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+                .accountsPartial({
+                  mailbox: mailbox.programId,
+                  mailboxConfig: mailboxConfigPDA,
+                  sender: arg.sender().publicKey,
+                  senderTokenAccount: arg.senderTA(),
+                  mailboxSenderConfig: bridgeSenderConfigPDA,
+                  config: bridgeConfigPDA,
+                  tokenProgram: spl.TOKEN_PROGRAM_ID,
+                  senderConfig: senderConfigPDA,
 
-                outboundMessagePath: arg.outboundMessagePathPDA(),
-                outboundMessage: outboundMessagePDA,
-                remoteBridgeConfig: arg.remoteBridgeConfig(),
-                remoteTokenConfig: arg.remoteTokenConfig(),
-                localTokenConfig: arg.localTokenConfig(),
-                mint: arg.mint(),
+                  outboundMessagePath: arg.outboundMessagePathPDA(),
+                  outboundMessage: outboundMessagePDA,
+                  remoteBridgeConfig: arg.remoteBridgeConfig(),
+                  remoteTokenConfig: arg.remoteTokenConfig(),
+                  localTokenConfig: arg.localTokenConfig(),
+                  mint: arg.mint(),
 
-                treasury: treasury.publicKey
-              })
-              .signers([arg.sender()])
-              .rpc({ commitment: "confirmed" })
+                  treasury: treasury.publicKey
+                })
+                .signers([arg.sender()])
+                .rpc({ commitment: "confirmed" })
+            )
           ).to.be.rejectedWith(arg.error);
         });
       });
@@ -2329,19 +2456,21 @@ describe("Bridge", () => {
     const recoveryRate = 100; //100 a second
 
     it("enable rate limit for token_1 from chain_1", async function () {
-      await bridge.methods
-        .setRateLimit(mint, foreignLchainIdBytes, {
-          rate: new BN(recoveryRate),
-          capacity: new BN(bridgeCapacity),
-          enabled: true
-        })
-        .accountsPartial({
-          admin: admin.publicKey,
-          config: bridgeConfigPDA,
-          remoteTokenConfig: remoteTokenConfigPDA11
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRateLimit(mint, foreignLchainIdBytes, {
+            rate: new BN(recoveryRate),
+            capacity: new BN(bridgeCapacity),
+            enabled: true
+          })
+          .accountsPartial({
+            admin: admin.publicKey,
+            config: bridgeConfigPDA,
+            remoteTokenConfig: remoteTokenConfigPDA11
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const timeNow = Math.round(Date.now() / 1000);
 
@@ -2381,90 +2510,92 @@ describe("Bridge", () => {
         bridge.programId
       )[0];
 
-      await mailbox.methods
-        .handleMessage(payloadHashBytes)
-        .accounts({
-          handler: payer.publicKey,
-          recipientProgram: bridge.programId
-        })
-        .remainingAccounts([
-          {
-            pubkey: payer.publicKey,
-            isWritable: true,
-            isSigner: true
-          },
-          {
-            pubkey: bridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: receiverMessageHandledPDA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // token_program
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // recipient
-            pubkey: userTA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint
-            pubkey: mint,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint_authority
-            pubkey: multisig, // or tokenAuth
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // token_authority
-            pubkey: tokenAuth,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_bridge_config
-            pubkey: remoteBridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // local_token_config
-            pubkey: localTokenConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_token_config
-            pubkey: remoteTokenConfigPDA11,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // inbound_message_path
-            pubkey: inboundMessagePathPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false
-          }
-        ])
-        .signers([payer])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .handleMessage(payloadHashBytes)
+          .accounts({
+            handler: payer.publicKey,
+            recipientProgram: bridge.programId
+          })
+          .remainingAccounts([
+            {
+              pubkey: payer.publicKey,
+              isWritable: true,
+              isSigner: true
+            },
+            {
+              pubkey: bridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: receiverMessageHandledPDA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // token_program
+              pubkey: spl.TOKEN_PROGRAM_ID,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // recipient
+              pubkey: userTA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint
+              pubkey: mint,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint_authority
+              pubkey: multisig, // or tokenAuth
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // token_authority
+              pubkey: tokenAuth,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_bridge_config
+              pubkey: remoteBridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // local_token_config
+              pubkey: localTokenConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_token_config
+              pubkey: remoteTokenConfigPDA11,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // inbound_message_path
+              pubkey: inboundMessagePathPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: SystemProgram.programId,
+              isWritable: false,
+              isSigner: false
+            }
+          ])
+          .signers([payer])
+          .rpc({ commitment: "confirmed" })
+      );
       const timeNow = Math.round(Date.now() / 1000);
 
       const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
@@ -2507,90 +2638,92 @@ describe("Bridge", () => {
         bridge.programId
       )[0];
 
-      await mailbox.methods
-        .handleMessage(payloadHashBytes)
-        .accounts({
-          handler: payer.publicKey,
-          recipientProgram: bridge.programId
-        })
-        .remainingAccounts([
-          {
-            pubkey: payer.publicKey,
-            isWritable: true,
-            isSigner: true
-          },
-          {
-            pubkey: bridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: receiverMessageHandledPDA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // token_program
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // recipient
-            pubkey: userTA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint
-            pubkey: mint,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint_authority
-            pubkey: multisig, // or tokenAuth
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // token_authority
-            pubkey: tokenAuth,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_bridge_config
-            pubkey: remoteBridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // local_token_config
-            pubkey: localTokenConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_token_config
-            pubkey: remoteTokenConfigPDA11,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // inbound_message_path
-            pubkey: inboundMessagePathPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false
-          }
-        ])
-        .signers([payer])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .handleMessage(payloadHashBytes)
+          .accounts({
+            handler: payer.publicKey,
+            recipientProgram: bridge.programId
+          })
+          .remainingAccounts([
+            {
+              pubkey: payer.publicKey,
+              isWritable: true,
+              isSigner: true
+            },
+            {
+              pubkey: bridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: receiverMessageHandledPDA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // token_program
+              pubkey: spl.TOKEN_PROGRAM_ID,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // recipient
+              pubkey: userTA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint
+              pubkey: mint,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint_authority
+              pubkey: multisig, // or tokenAuth
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // token_authority
+              pubkey: tokenAuth,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_bridge_config
+              pubkey: remoteBridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // local_token_config
+              pubkey: localTokenConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_token_config
+              pubkey: remoteTokenConfigPDA11,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // inbound_message_path
+              pubkey: inboundMessagePathPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: SystemProgram.programId,
+              isWritable: false,
+              isSigner: false
+            }
+          ])
+          .signers([payer])
+          .rpc({ commitment: "confirmed" })
+      );
       const timeNow = Math.round(Date.now() / 1000);
 
       const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
@@ -2630,6 +2763,120 @@ describe("Bridge", () => {
       )[0];
 
       await expect(
+        withBlockhashRetry(() =>
+          mailbox.methods
+            .handleMessage(payloadHashBytes)
+            .accounts({
+              handler: payer.publicKey,
+              recipientProgram: bridge.programId
+            })
+            .remainingAccounts([
+              {
+                pubkey: payer.publicKey,
+                isWritable: true,
+                isSigner: true
+              },
+              {
+                pubkey: bridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: receiverMessageHandledPDA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // recipient
+                pubkey: userTA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint
+                pubkey: mint,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint_authority
+                pubkey: multisig, // or tokenAuth
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // token_authority
+                pubkey: tokenAuth,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_bridge_config
+                pubkey: remoteBridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // local_token_config
+                pubkey: localTokenConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_token_config
+                pubkey: remoteTokenConfigPDA11,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // inbound_message_path
+                pubkey: inboundMessagePathPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: SystemProgram.programId,
+                isWritable: false,
+                isSigner: false
+              }
+            ])
+            .signers([payer])
+            .rpc({ commitment: "confirmed" })
+        )
+      ).to.be.rejectedWith("RateLimit: rate limit reached");
+    });
+
+    it("receive token_1 from chain_2 while rate limit for chain_1 is spent", async () => {
+      const bridgePayload = new BridgePayload(mint.toBytes(), remoteSenderBytes, userTA.toBytes(), bridgeCapacity);
+      const message = messageV1(
+        inboundMessagePath2,
+        nonceForeignChain++,
+        foreignBridgeAddress,
+        bridge.programId.toBuffer(),
+        payer.publicKey.toBuffer(),
+        bridgePayload.bytes()
+      );
+
+      const { payloadHash, payloadHashBytes } = await mailboxUtilities.deliverMessage(
+        foreignMailboxAddress,
+        foreignLchainId2,
+        payer,
+        message
+      );
+
+      const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
+
+      const receiverMessageHandledPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from("message_handled"), payloadHash],
+        bridge.programId
+      )[0];
+      await withBlockhashRetry(() =>
         mailbox.methods
           .handleMessage(payloadHashBytes)
           .accounts({
@@ -2684,7 +2931,7 @@ describe("Bridge", () => {
             },
             {
               // remote_bridge_config
-              pubkey: remoteBridgeConfigPDA,
+              pubkey: remoteBridgeConfigPDA2,
               isWritable: false,
               isSigner: false
             },
@@ -2696,13 +2943,13 @@ describe("Bridge", () => {
             },
             {
               // remote_token_config
-              pubkey: remoteTokenConfigPDA11,
+              pubkey: remoteTokenConfigPDA21,
               isWritable: true,
               isSigner: false
             },
             {
               // inbound_message_path
-              pubkey: inboundMessagePathPDA,
+              pubkey: inboundMessagePathPDA2,
               isWritable: false,
               isSigner: false
             },
@@ -2714,117 +2961,7 @@ describe("Bridge", () => {
           ])
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("RateLimit: rate limit reached");
-    });
-
-    it("receive token_1 from chain_2 while rate limit for chain_1 is spent", async () => {
-      const bridgePayload = new BridgePayload(mint.toBytes(), remoteSenderBytes, userTA.toBytes(), bridgeCapacity);
-      const message = messageV1(
-        inboundMessagePath2,
-        nonceForeignChain++,
-        foreignBridgeAddress,
-        bridge.programId.toBuffer(),
-        payer.publicKey.toBuffer(),
-        bridgePayload.bytes()
       );
-
-      const { payloadHash, payloadHashBytes } = await mailboxUtilities.deliverMessage(
-        foreignMailboxAddress,
-        foreignLchainId2,
-        payer,
-        message
-      );
-
-      const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
-
-      const receiverMessageHandledPDA = PublicKey.findProgramAddressSync(
-        [Buffer.from("message_handled"), payloadHash],
-        bridge.programId
-      )[0];
-      await mailbox.methods
-        .handleMessage(payloadHashBytes)
-        .accounts({
-          handler: payer.publicKey,
-          recipientProgram: bridge.programId
-        })
-        .remainingAccounts([
-          {
-            pubkey: payer.publicKey,
-            isWritable: true,
-            isSigner: true
-          },
-          {
-            pubkey: bridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: receiverMessageHandledPDA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // token_program
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // recipient
-            pubkey: userTA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint
-            pubkey: mint,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint_authority
-            pubkey: multisig, // or tokenAuth
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // token_authority
-            pubkey: tokenAuth,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_bridge_config
-            pubkey: remoteBridgeConfigPDA2,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // local_token_config
-            pubkey: localTokenConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_token_config
-            pubkey: remoteTokenConfigPDA21,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // inbound_message_path
-            pubkey: inboundMessagePathPDA2,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false
-          }
-        ])
-        .signers([payer])
-        .rpc({ commitment: "confirmed" });
 
       const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
       expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(bridgeCapacity));
@@ -2844,27 +2981,29 @@ describe("Bridge", () => {
 
       const amountToSend = bridgeCapacity * 10;
 
-      await bridge.methods
-        .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
-        .accountsPartial({
-          sender: sender.publicKey,
-          senderTokenAccount: senderTA,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
-          config: bridgeConfigPDA,
-          senderConfig: senderConfigPDA,
-          remoteBridgeConfig: remoteBridgeConfigPDA,
-          localTokenConfig: localTokenConfigPDA,
-          remoteTokenConfig: remoteTokenConfigPDA11,
-          mint: mint,
-          mailbox: mailbox.programId,
-          mailboxConfig: mailboxConfigPDA,
-          outboundMessage: outboundMessagePDA,
-          outboundMessagePath: outboundMessagePathPDA,
-          mailboxSenderConfig: bridgeSenderConfigPDA,
-          treasury: treasury.publicKey
-        })
-        .signers([sender])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
+          .accountsPartial({
+            sender: sender.publicKey,
+            senderTokenAccount: senderTA,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            config: bridgeConfigPDA,
+            senderConfig: senderConfigPDA,
+            remoteBridgeConfig: remoteBridgeConfigPDA,
+            localTokenConfig: localTokenConfigPDA,
+            remoteTokenConfig: remoteTokenConfigPDA11,
+            mint: mint,
+            mailbox: mailbox.programId,
+            mailboxConfig: mailboxConfigPDA,
+            outboundMessage: outboundMessagePDA,
+            outboundMessagePath: outboundMessagePathPDA,
+            mailboxSenderConfig: bridgeSenderConfigPDA,
+            treasury: treasury.publicKey
+          })
+          .signers([sender])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const bridgeRemoteTokenConfigAfter = await bridge.account.remoteTokenConfig.fetch(remoteTokenConfigPDA11);
       expect(bridgeRemoteTokenConfigAfter).to.be.deep.eq(bridgeRemoteTokenConfigBefore);
@@ -2899,6 +3038,122 @@ describe("Bridge", () => {
       )[0];
 
       await expect(
+        withBlockhashRetry(() =>
+          mailbox.methods
+            .handleMessage(payloadHashBytes)
+            .accounts({
+              handler: payer.publicKey,
+              recipientProgram: bridge.programId
+            })
+            .remainingAccounts([
+              {
+                pubkey: payer.publicKey,
+                isWritable: true,
+                isSigner: true
+              },
+              {
+                pubkey: bridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: receiverMessageHandledPDA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // recipient
+                pubkey: userTA,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint
+                pubkey: mint,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // mint_authority
+                pubkey: multisig, // or tokenAuth
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // token_authority
+                pubkey: tokenAuth,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_bridge_config
+                pubkey: remoteBridgeConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // local_token_config
+                pubkey: localTokenConfigPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                // remote_token_config
+                pubkey: remoteTokenConfigPDA11,
+                isWritable: true,
+                isSigner: false
+              },
+              {
+                // inbound_message_path
+                pubkey: inboundMessagePathPDA,
+                isWritable: false,
+                isSigner: false
+              },
+              {
+                pubkey: SystemProgram.programId,
+                isWritable: false,
+                isSigner: false
+              }
+            ])
+            .signers([payer])
+            .rpc({ commitment: "confirmed" })
+        )
+      ).to.be.rejectedWith("RateLimit: max capacity exceeded");
+    });
+
+    it("receive tokens after rate limit replenished", async () => {
+      const amountToReceive = 1000;
+      const bridgePayload = new BridgePayload(mint.toBytes(), remoteSenderBytes, userTA.toBytes(), amountToReceive);
+      const message = messageV1(
+        inboundMessagePath,
+        nonceForeignChain++,
+        foreignBridgeAddress,
+        bridge.programId.toBuffer(),
+        payer.publicKey.toBuffer(),
+        bridgePayload.bytes()
+      );
+
+      const { payloadHash, payloadHashBytes } = await mailboxUtilities.deliverMessage(
+        foreignMailboxAddress,
+        foreignLchainId,
+        payer,
+        message
+      );
+
+      const receiverMessageHandledPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from("message_handled"), payloadHash],
+        bridge.programId
+      )[0];
+
+      const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
+
+      await withBlockhashRetry(() =>
         mailbox.methods
           .handleMessage(payloadHashBytes)
           .accounts({
@@ -2983,119 +3238,7 @@ describe("Bridge", () => {
           ])
           .signers([payer])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("RateLimit: max capacity exceeded");
-    });
-
-    it("receive tokens after rate limit replenished", async () => {
-      const amountToReceive = 1000;
-      const bridgePayload = new BridgePayload(mint.toBytes(), remoteSenderBytes, userTA.toBytes(), amountToReceive);
-      const message = messageV1(
-        inboundMessagePath,
-        nonceForeignChain++,
-        foreignBridgeAddress,
-        bridge.programId.toBuffer(),
-        payer.publicKey.toBuffer(),
-        bridgePayload.bytes()
       );
-
-      const { payloadHash, payloadHashBytes } = await mailboxUtilities.deliverMessage(
-        foreignMailboxAddress,
-        foreignLchainId,
-        payer,
-        message
-      );
-
-      const receiverMessageHandledPDA = PublicKey.findProgramAddressSync(
-        [Buffer.from("message_handled"), payloadHash],
-        bridge.programId
-      )[0];
-
-      const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
-
-      await mailbox.methods
-        .handleMessage(payloadHashBytes)
-        .accounts({
-          handler: payer.publicKey,
-          recipientProgram: bridge.programId
-        })
-        .remainingAccounts([
-          {
-            pubkey: payer.publicKey,
-            isWritable: true,
-            isSigner: true
-          },
-          {
-            pubkey: bridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: receiverMessageHandledPDA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // token_program
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // recipient
-            pubkey: userTA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint
-            pubkey: mint,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint_authority
-            pubkey: multisig, // or tokenAuth
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // token_authority
-            pubkey: tokenAuth,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_bridge_config
-            pubkey: remoteBridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // local_token_config
-            pubkey: localTokenConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_token_config
-            pubkey: remoteTokenConfigPDA11,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // inbound_message_path
-            pubkey: inboundMessagePathPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false
-          }
-        ])
-        .signers([payer])
-        .rpc({ commitment: "confirmed" });
       const timeNow = Math.round(Date.now() / 1000);
 
       const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
@@ -3112,19 +3255,21 @@ describe("Bridge", () => {
     });
 
     it("disable ratelimit for token_1", async () => {
-      await bridge.methods
-        .setRateLimit(mint, foreignLchainIdBytes, {
-          rate: new BN(0),
-          capacity: new BN(0),
-          enabled: false
-        })
-        .accountsPartial({
-          admin: admin.publicKey,
-          config: bridgeConfigPDA,
-          remoteTokenConfig: remoteTokenConfigPDA11
-        })
-        .signers([admin])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        bridge.methods
+          .setRateLimit(mint, foreignLchainIdBytes, {
+            rate: new BN(0),
+            capacity: new BN(0),
+            enabled: false
+          })
+          .accountsPartial({
+            admin: admin.publicKey,
+            config: bridgeConfigPDA,
+            remoteTokenConfig: remoteTokenConfigPDA11
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const timeNow = Math.round(Date.now() / 1000);
 
@@ -3161,90 +3306,92 @@ describe("Bridge", () => {
         [Buffer.from("message_handled"), payloadHash],
         bridge.programId
       )[0];
-      await mailbox.methods
-        .handleMessage(payloadHashBytes)
-        .accounts({
-          handler: payer.publicKey,
-          recipientProgram: bridge.programId
-        })
-        .remainingAccounts([
-          {
-            pubkey: payer.publicKey,
-            isWritable: true,
-            isSigner: true
-          },
-          {
-            pubkey: bridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: receiverMessageHandledPDA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // token_program
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // recipient
-            pubkey: userTA,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint
-            pubkey: mint,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // mint_authority
-            pubkey: multisig, // or tokenAuth
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // token_authority
-            pubkey: tokenAuth,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_bridge_config
-            pubkey: remoteBridgeConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // local_token_config
-            pubkey: localTokenConfigPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            // remote_token_config
-            pubkey: remoteTokenConfigPDA11,
-            isWritable: true,
-            isSigner: false
-          },
-          {
-            // inbound_message_path
-            pubkey: inboundMessagePathPDA,
-            isWritable: false,
-            isSigner: false
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false
-          }
-        ])
-        .signers([payer])
-        .rpc({ commitment: "confirmed" });
+      await withBlockhashRetry(() =>
+        mailbox.methods
+          .handleMessage(payloadHashBytes)
+          .accounts({
+            handler: payer.publicKey,
+            recipientProgram: bridge.programId
+          })
+          .remainingAccounts([
+            {
+              pubkey: payer.publicKey,
+              isWritable: true,
+              isSigner: true
+            },
+            {
+              pubkey: bridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: receiverMessageHandledPDA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // token_program
+              pubkey: spl.TOKEN_PROGRAM_ID,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // recipient
+              pubkey: userTA,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint
+              pubkey: mint,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // mint_authority
+              pubkey: multisig, // or tokenAuth
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // token_authority
+              pubkey: tokenAuth,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_bridge_config
+              pubkey: remoteBridgeConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // local_token_config
+              pubkey: localTokenConfigPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              // remote_token_config
+              pubkey: remoteTokenConfigPDA11,
+              isWritable: true,
+              isSigner: false
+            },
+            {
+              // inbound_message_path
+              pubkey: inboundMessagePathPDA,
+              isWritable: false,
+              isSigner: false
+            },
+            {
+              pubkey: SystemProgram.programId,
+              isWritable: false,
+              isSigner: false
+            }
+          ])
+          .signers([payer])
+          .rpc({ commitment: "confirmed" })
+      );
 
       const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
       expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amountToReceive));

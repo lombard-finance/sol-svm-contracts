@@ -1,13 +1,11 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { RatioOracle } from "../target/types/ratio_oracle";
-import { sha256 } from "js-sha256";
+import { BN, Program } from "@coral-xyz/anchor";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Registry } from "../target/types/registry";
-
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -52,7 +50,8 @@ describe("Ratio Oracle", () => {
           [Buffer.from("user_message"), payer.publicKey.toBuffer(), new BN(nonce).toBuffer("be", 4)],
           program.programId
         )[0];
-      await program.methods.postMessage(
+      await withBlockhashRetry(() =>
+        program.methods.postMessage(
           msgBytes, nonce
         )
         .accounts({
@@ -60,7 +59,8 @@ describe("Ratio Oracle", () => {
           message: messagePDA,
         })
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
       const storedMessage = await provider.connection.getAccountInfo(messagePDA);
       expect(storedMessage.data).to.be.deep.eq(msgBytes);
     });

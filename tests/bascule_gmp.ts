@@ -6,8 +6,9 @@ import { BasculeGmp } from "../target/types/bascule_gmp";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { generateSecp256k1Keypairs, signatureToBytes, publicKeyToBytes } from "./consortium_utilities";
+import { generateSecp256k1Keypairs, signatureToBytes, publicKeyToBytes } from "./utils/consortium_utilities";
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -113,24 +114,28 @@ describe("Bascule GMP", () => {
   describe("Initialize and admin", () => {
     it("initialize: fails when payer is not deployer", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .initialize(admin.publicKey, new BN(1000), trustedSignerBytes)
           .accounts({
             deployer: admin.publicKey,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejected;
+          )
+        ).to.be.rejected;
     });
 
     it("initialize: successful", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .initialize(admin.publicKey, new BN(1000), trustedSignerBytes)
         .accounts({
           deployer: provider.wallet.publicKey,
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.equal(admin.publicKey.toBase58());
@@ -141,107 +146,131 @@ describe("Bascule GMP", () => {
 
     it("transferOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .transferOwnership(other.publicKey)
           .accounts({ admin: other.publicKey })
           .signers([other])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("transferOwnership and acceptOwnership: successful", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .transferOwnership(other.publicKey)
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .acceptOwnership()
         .accounts({ acceptAdmin: other.publicKey })
         .signers([other])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.equal(other.publicKey.toBase58());
 
       // transfer back for rest of tests
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .transferOwnership(admin.publicKey)
         .accounts({ admin: other.publicKey })
         .signers([other])
-        .rpc({ commitment: "confirmed" });
-      await program.methods
+        .rpc({ commitment: "confirmed" })
+      );
+      await withBlockhashRetry(() =>
+        program.methods
         .acceptOwnership()
         .accounts({ acceptAdmin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
   });
 
   describe("Roles", () => {
     it("grantAccountRole: successful by admin (MintReporter, MintValidator, ValidationGuardian, Pauser)", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .grantAccountRole(reporter.publicKey, { mintReporter: {} })
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .grantAccountRole(validator.publicKey, { mintValidator: {} })
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .grantAccountRole(guardian.publicKey, { validationGuardian: {} })
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .grantAccountRole(pauser.publicKey, { pauser: {} })
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("grantAccountRole: rejects when called by not admin", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .grantAccountRole(other.publicKey, { mintReporter: {} })
           .accounts({
             admin: other.publicKey,
           })
           .signers([other])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("revokeAccountRoles: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .grantAccountRole(other.publicKey, { mintReporter: {} })
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .revokeAccountRoles(other.publicKey)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
   });
 
@@ -279,7 +308,8 @@ describe("Bascule GMP", () => {
       );
 
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .reportMint(mintMessage, {
             signature: wrongProof.signature,
             recoveryId: wrongProof.recoveryId
@@ -290,7 +320,8 @@ describe("Bascule GMP", () => {
           })
           .signers([reporter])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("InvalidProof");
+          )
+        ).to.be.rejectedWith("InvalidProof");
     });
 
     it("reportMint: successful with valid proof", async () => {
@@ -299,14 +330,16 @@ describe("Bascule GMP", () => {
         program.programId
       );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .reportMint(mintMessage, proof)
         .accountsPartial({
           reporter: reporter.publicKey,
           mintPayload: mintPayloadPDA,
         })
         .signers([reporter])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const mintPayload = await program.account.mintPayload.fetch(mintPayloadPDA);
       expect(mintPayload.state.reported).to.exist;
@@ -320,7 +353,8 @@ describe("Bascule GMP", () => {
       );
 
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .reportMint(mintMessage, proof)
           .accountsPartial({
             reporter: reporter.publicKey,
@@ -328,7 +362,8 @@ describe("Bascule GMP", () => {
           })
           .signers([reporter])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejected;
+          )
+        ).to.be.rejected;
     });
 
     it("validateMint: successful (Reported -> Minted, amount >= threshold)", async () => {
@@ -337,14 +372,16 @@ describe("Bascule GMP", () => {
         program.programId
       );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .validateMint(mintMessage)
         .accountsPartial({
           validator: validator.publicKey,
           mintPayload: mintPayloadPDA,
         })
         .signers([validator])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const mintPayload = await program.account.mintPayload.fetch(mintPayloadPDA);
       expect(mintPayload.state.minted).to.exist;
@@ -357,7 +394,8 @@ describe("Bascule GMP", () => {
       );
 
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .validateMint(mintMessage)
           .accountsPartial({
             validator: validator.publicKey,
@@ -365,7 +403,8 @@ describe("Bascule GMP", () => {
           })
           .signers([validator])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("AlreadyMinted");
+          )
+        ).to.be.rejectedWith("AlreadyMinted");
     });
 
     it("validateMint: direct Minted when amount < threshold", async () => {
@@ -383,14 +422,16 @@ describe("Bascule GMP", () => {
         program.programId
       );
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .validateMint(mintMessage2)
         .accountsPartial({
           validator: validator.publicKey,
           mintPayload: mintPayloadPDA2,
         })
         .signers([validator])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const mintPayload = await program.account.mintPayload.fetch(mintPayloadPDA2);
       expect(mintPayload.state.minted).to.exist;
@@ -401,24 +442,28 @@ describe("Bascule GMP", () => {
   describe("Pause and unpause", () => {
     it("pause: rejects when called by not pauser", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .pause()
           .accounts({
             pauser: other.publicKey,
           })
           .signers([other])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejected;
+          )
+        ).to.be.rejected;
     });
 
     it("pause: successful by pauser", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .pause()
         .accounts({
           pauser: pauser.publicKey,
         })
         .signers([pauser])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.paused).to.equal(true);
@@ -426,20 +471,24 @@ describe("Bascule GMP", () => {
 
     it("unpause: rejects when called by not admin", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .unpause()
           .accounts({ admin: pauser.publicKey })
           .signers([pauser])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("unpause: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .unpause()
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.paused).to.equal(false);
@@ -449,24 +498,28 @@ describe("Bascule GMP", () => {
   describe("Update validate threshold", () => {
     it("updateValidateThreshold: rejects when called by not ValidationGuardian", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .updateValidateThreshold(new BN(500))
           .accounts({
             guardian: reporter.publicKey,
           })
           .signers([reporter])
           .rpc({ commitment: "confirmed" })
-      ).to.be.rejectedWith("Unauthorized");
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("updateValidateThreshold: successful by ValidationGuardian", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .updateValidateThreshold(new BN(2000))
         .accounts({
           guardian: guardian.publicKey,
         })
         .signers([guardian])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.validateThreshold.toNumber()).to.equal(2000);
