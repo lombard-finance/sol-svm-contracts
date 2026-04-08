@@ -10,6 +10,11 @@ name = "bascule"
 
 [features]
 default = []
+mainnet = []
+gastald = []
+staging = []
+bft = []
+localnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []

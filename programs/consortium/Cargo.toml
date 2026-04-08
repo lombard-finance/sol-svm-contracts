@@ -9,11 +9,12 @@ crate-type = ["cdylib", "lib"]
 name = "consortium"
 
 [features]
-default = ["mainnet"]
+default = []
 mainnet = []
 gastald = []
 staging = []
 bft = []
+localnet = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
