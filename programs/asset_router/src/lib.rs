@@ -13,6 +13,15 @@ use state::{AccountRole, Config, TokenConfig, TokenRouteType};
 use utils::consortium_payloads::DEPOSIT_V1_PAYLOAD_LEN;
 use utils::fee::FEE_PAYLOAD_LEN;
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("Lom7TQyK45pTUjFmmsuLaBrMVQ5crggYnSuCrjm9ebr");
+#[cfg(feature = "staging")]
+declare_id!("Lomby2CBo9czSz6jeQo73mK4fNfpF5vNz1RTW22sE8o");
+#[cfg(feature = "bft")]
+declare_id!("LomVyJDZ91jeVbNnTupJXKJTQFakJVMc87CmwDHYt95");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("5enTNrkEghWJHXCbXzbbTWUTvx9YFP7nQ4n1SHgbZmLh");
 
 #[program]

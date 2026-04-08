@@ -40,6 +40,7 @@
     "gmp_mailboxSetSenderConfig": "ts-node -T scripts/gmp/mailboxSetSenderConfig.ts",
     "gmp_mailboxDeliverMessage": "ts-node -T scripts/gmp/mailboxDeliverMessage.ts",
     "gmp_mailboxHandleMessage": "ts-node -T scripts/gmp/mailboxHandleMessage.ts",
+    "gmp_mailboxGetConfig": "ts-node -T scripts/gmp/mailboxGetConfig.ts",
     "gmp_assetRouterSetTokenRoute": "ts-node -T scripts/gmp/assetRouterSetTokenRoute.ts",
     "gmp_assetRouterUnsetTokenRoute": "ts-node -T scripts/gmp/assetRouterUnsetTokenRoute.ts",
     "gmp_assetRouterSetTokenConfig": "ts-node -T scripts/gmp/assetRouterSetTokenConfig.ts",

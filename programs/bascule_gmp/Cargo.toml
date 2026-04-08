@@ -9,8 +9,11 @@ crate-type = ["cdylib", "lib"]
 name = "bascule_gmp"
 
 [features]
-default = ["devnet"]
+default = ["mainnet"]
 mainnet = []
+gastald = []
+staging = []
+bft = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []

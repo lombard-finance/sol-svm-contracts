@@ -13,6 +13,15 @@ use instructions::*;
 use crate::state::AccountRole;
 use crate::utils::message_utils::SendResult;
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("Lomu595CAtJGF6mpnfeAJ7daZfVdHeRkAdKyfqzXqom");
+#[cfg(feature = "staging")]
+declare_id!("Lom5doBNAny5AaPS9J7SRPLghVqwEQLrEmvQMhNEUqa");
+#[cfg(feature = "bft")]
+declare_id!("LomJw912MoUd7iiAesTQAgz1paLcTqi6ndG3w3pnKH9");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("3TfSFMuw31Je57m5Wcd9ZopGzjrHLHkjh292aEwXvm3h");
 
 #[program]
