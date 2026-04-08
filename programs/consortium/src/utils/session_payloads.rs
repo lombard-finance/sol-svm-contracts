@@ -29,7 +29,7 @@ impl UpdateValSetPayload {
     /// * `Ok(UpdateValSetPayload)` if the payload is a valid update valset payload.
     /// * `Err(LBTCError)` if the payload is not a valid update valset payload.
     pub fn from_session_payload(payload: &[u8]) -> Result<Self, ConsortiumError> {
-        let mut reader = BufReader::new(payload);
+        let mut reader = BufReader::with_capacity(payload.len(), payload);
 
         // check length is at least for all static fields and length of dynamic fields
         // 32 for the tuple length and 32 for each field
