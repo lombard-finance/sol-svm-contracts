@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{associated_token, token_interface::{Mint as TokenMint, TokenAccount, TokenInterface}};
+use anchor_lang::solana_program::hash::hash as sha256;
 
 use bascule_gmp::{
     cpi::{accounts::ValidateMint, validate_mint},
@@ -82,7 +83,15 @@ pub struct GMPReceive<'info> {
     pub bascule_gmp_mint_payload: Option<UncheckedAccount<'info>>,
 }
 
-pub fn gmp_receive(ctx: Context<GMPReceive>, _payload_hash: [u8; 32]) -> Result<()> {
+pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<()> {
+    let message_info = &ctx.accounts.message_info;
+
+    let computed_payload_hash = sha256(&message_info.message.to_session_payload()).to_bytes();
+    require!(
+        computed_payload_hash == payload_hash,
+        AssetRouterError::InvalidPayloadHash
+    );
+    
     require!(
         ctx.accounts.message_info.message.sender == BTC_STAKING_MODULE_ADDRESS,
         AssetRouterError::InvalidMessageSender
