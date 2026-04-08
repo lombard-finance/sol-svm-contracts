@@ -1,6 +1,5 @@
 //! Sets the first validator set on the program.
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::hash::hash as sha256;
 
 use crate::{
     constants::{self, SESSION_PAYLOAD_SEED}, errors::ConsortiumError, events::ValidatorSetUpdated, state::{Config, SessionPayload},

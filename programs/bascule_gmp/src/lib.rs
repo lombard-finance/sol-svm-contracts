@@ -10,6 +10,15 @@ pub mod state;
 use instructions::*;
 use state::{AccountRole, MintMessage, MintProof};
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "staging")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "bft")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("BDCLiRc9M9srhamK61vi739dfcUbU7GAzJ5jQcDcaf3F");
 
 #[program]

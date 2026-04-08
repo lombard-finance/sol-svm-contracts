@@ -11,6 +11,9 @@ name = "mailbox"
 [features]
 default = ["mainnet"]
 mainnet = []
+gastald = []
+staging = []
+bft = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
@@ -26,3 +29,7 @@ solana-address = { version = "2.5.0", features = ["syscalls"] }
 
 [dev-dependencies]
 hex = "0.4.3"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic", "custom-heap"))']

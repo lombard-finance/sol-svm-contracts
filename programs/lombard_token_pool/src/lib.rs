@@ -17,15 +17,21 @@ use crate::{
 };
 
 
+#[cfg(feature = "mainnet")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "gastald")]
+declare_id!("Lomi5fKsXdGrrW2M3JRbJx5DnT3zgmSEfYWMUPeNaAB");
+#[cfg(feature = "staging")]
+declare_id!("LomtioA14cDhme8bCCw5oc5a9FUDyT91z8ujtGnY5g9");
+#[cfg(feature = "bft")]
+declare_id!("LomdWAg9hHyz3VrvK5wXTap7o348Ku2QJ2j2H8Etj3C");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("51HDypJbcZ1bmqh4v16X2KaHcvc53fYi84rbb21VoN4t");
 
 pub const RECEIVE_MESSAGE_DISCRIMINATOR: [u8; 8] = [38, 144, 127, 225, 31, 225, 238, 25]; // global:receive_message
 pub const DEPOSIT_FOR_BURN_WITH_CALLER_DISCRIMINATOR: [u8; 8] =
     [167, 222, 19, 114, 85, 21, 14, 118]; // global:deposit_for_burn_with_caller
 pub const RECLAIM_EVENT_ACCOUNT_DISCRIMINATOR: [u8; 8] = [94, 198, 180, 159, 131, 236, 15, 174]; // global:reclaim_event_account
-
-// We restrict to the first version. New pool may be required for subsequent versions.
-const SUPPORTED_GMP_MESSAGE_VERSION: u32 = 0;
 
 #[program]
 pub mod lombard_token_pool {

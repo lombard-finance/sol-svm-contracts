@@ -2,7 +2,7 @@
 use crate::{
     constants,
     errors::AssetRouterError,
-    events::{OwnershipTransferInitiated, ProgramPaused},
+    events::{BasculeEnabled, BasculeGmpEnabled, OwnershipTransferInitiated, ProgramPaused},
     state::Config,
 };
 use anchor_lang::prelude::*;
@@ -23,11 +23,13 @@ pub fn transfer_ownership(ctx: Context<Admin>, new_admin: Pubkey) -> Result<()> 
 
 pub fn set_bascule(ctx: Context<Admin>, bascule: Option<Pubkey>) -> Result<()> {
     ctx.accounts.config.bascule = bascule;
+    emit!(BasculeEnabled { enabled: bascule.is_some() });
     Ok(())
 }
 
 pub fn set_bascule_gmp(ctx: Context<Admin>, bascule_gmp: Option<Pubkey>) -> Result<()> {
     ctx.accounts.config.bascule_gmp = bascule_gmp;
+    emit!(BasculeGmpEnabled { enabled: bascule_gmp.is_some() });
     Ok(())
 }
 

@@ -11,6 +11,9 @@ name = "lombard_token_pool"
 [features]
 default = ["mainnet"]
 mainnet = []
+gastald = []
+staging = []
+bft = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
@@ -34,4 +37,4 @@ build_commit = { path = "../../dependencies/ccip/crates/build-commit" }
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic"))']
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic", "custom-heap"))']
