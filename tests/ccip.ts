@@ -250,7 +250,8 @@ describe("CCIP Token Pool", () => {
 			bridge.programId
 		)[0];
 
-		await fundWallet(tokenPoolSignerPDA, 25 * LAMPORTS_PER_SOL);
+		// await fundWallet(tokenPoolSignerPDA, 25 * LAMPORTS_PER_SOL);
+		await fundWallet(cpiSignerPDA, 25 * LAMPORTS_PER_SOL);
 
 		consortiumUtility = new ConsortiumUtility(consortium);
 		consortiumUtility.generateAndAddKeypairs(3);

@@ -83,6 +83,8 @@ pub enum AssetRouterError {
     InvalidBasculeDeposit,
     #[msg("Invalid session payload account or payload")]
     InvalidSessionPayload,
+    #[msg("Invalid message path")]
+    InvalidMessagePath,
 }
 
 impl From<std::io::Error> for AssetRouterError {
