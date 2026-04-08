@@ -19,7 +19,6 @@ pub const DEPOSIT_PAYLOAD_SPENT_SEED: &[u8] = b"deposit_payload_spent";
 pub const ACCOUNT_ROLES_SEED: &[u8] = b"account_roles";
 pub const TOKEN_CONFIG_SEED: &[u8] = b"token_config";
 pub const TOKEN_ROUTE_SEED: &[u8] = b"token_route";
-pub const RATIO_SEED: &[u8] = b"ratio";
 pub const MESSAGE_HANDLED_SEED: &[u8] = b"message_handled";
 pub const MESSAGING_AUTHORITY_SEED: &[u8] = b"messaging_authority";
 pub const BASCULE_VALIDATOR_SEED: &[u8] = b"bascule_validator";

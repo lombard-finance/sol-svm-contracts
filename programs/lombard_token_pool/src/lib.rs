@@ -24,9 +24,6 @@ pub const DEPOSIT_FOR_BURN_WITH_CALLER_DISCRIMINATOR: [u8; 8] =
     [167, 222, 19, 114, 85, 21, 14, 118]; // global:deposit_for_burn_with_caller
 pub const RECLAIM_EVENT_ACCOUNT_DISCRIMINATOR: [u8; 8] = [94, 198, 180, 159, 131, 236, 15, 174]; // global:reclaim_event_account
 
-// We restrict to the first version. New pool may be required for subsequent versions.
-const SUPPORTED_GMP_MESSAGE_VERSION: u32 = 0;
-
 #[program]
 pub mod lombard_token_pool {
 
