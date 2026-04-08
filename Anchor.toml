@@ -1,6 +1,6 @@
 [toolchain]
 anchor_version = "0.31.1"
-solana_version = "2.1.21"
+solana_version = "2.3.13"
 
 [features]
 resolution = true
@@ -29,7 +29,7 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts --exit --timeout 60000"
+test = """f="${ANCHOR_MOCHA_FILES:-}"; if [ -n "$f" ]; then exec yarn run ts-mocha -p ./tsconfig.json -t 60000 "$f" --exit; else exec yarn run ts-mocha -p ./tsconfig.json -t 60000 tests/**.ts --exit; fi"""
 
 [test]
 startup_wait = 20000

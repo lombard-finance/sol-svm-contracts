@@ -1,13 +1,12 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { PublicKey } from "@solana/web3.js";
-import { keccak_256 } from "@noble/hashes/sha3";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Keypair } from "@solana/web3.js";
-import { Consortium, Consortium as ConsortiumProgram } from "../target/types/consortium";
+import { BN, Program } from "@coral-xyz/anchor";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { Consortium } from "../../target/types/consortium";
 import { ethers, sha256 } from "ethers";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
+import { withBlockhashRetry } from "./utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -37,14 +36,12 @@ export interface Signature {
 export class ConsortiumUtility {
   private readonly consortium: Program<Consortium>;
   private readonly keypairs: Secp256k1Keypair[] = [];
-  private configPDA: PublicKey;
   epoch : Number;
   height : Number;
 
 	constructor(consortium : Program<Consortium>, initialKeypairs: Secp256k1Keypair[] = []) {
 		this.keypairs = initialKeypairs;
 		this.consortium = consortium;
-		this.configPDA = PublicKey.findProgramAddressSync([Buffer.from("consortium_config")], consortium.programId)[0];
 	}
 
 	/**
@@ -281,24 +278,28 @@ export class ConsortiumUtility {
 
 		try {
 			// Step 1: Initialize the consortium program
-			const initializeTx = await program.methods
-				.initialize(admin.publicKey)
-				.accounts({
-					deployer: deployer.publicKey,
-				})
-				.signers([deployer.payer])
-				.rpc({commitment: "confirmed"});
-			
+			const initializeTx = await withBlockhashRetry(() =>
+				program.methods
+					.initialize(admin.publicKey)
+					.accounts({
+						deployer: deployer.publicKey,
+					})
+					.signers([deployer.payer])
+					.rpc({ commitment: "confirmed" })
+			);
+
 			// Step 2: Set the initial validator set
 			const valsetPayload = this.createValSetPayload(epoch, weightThreshold, height);
-			
-			const setValSetTx = await program.methods
-				.setInitialValset(valsetPayload)
-				.accounts({
-					admin: admin.publicKey,
-				})
-				.signers([admin])
-        .rpc({commitment: "confirmed"});
+
+			const setValSetTx = await withBlockhashRetry(() =>
+				program.methods
+					.setInitialValset(valsetPayload)
+					.accounts({
+						admin: admin.publicKey,
+					})
+					.signers([admin])
+					.rpc({ commitment: "confirmed" })
+			);
 
 			// Fetch the config account and check its fields
 			const configPDA = this.getConsortiumConfigPDA();
@@ -342,25 +343,29 @@ export class ConsortiumUtility {
     const chunkMaxSize = 512;
     for (let i = 0; i < valsetPayloadLength; i+=chunkMaxSize) {
       const chunk = valsetPayload.subarray(i, Math.min(i+chunkMaxSize, valsetPayloadLength));
-      await this.consortium.methods
-        .postSessionPayload(valsetPayloadHashBytes, chunk, valsetPayloadLength)
+      await withBlockhashRetry(() =>
+        this.consortium.methods
+          .postSessionPayload(valsetPayloadHashBytes, chunk, valsetPayloadLength)
+          .accounts({
+            payer: payer.publicKey,
+            sessionPayload: sessionPayloadPDA,
+          })
+          .signers([payer])
+          .rpc({ commitment: "confirmed" })
+      );
+    }
+
+    await withBlockhashRetry(() =>
+      this.consortium.methods
+        .updateValset(valsetPayloadHashBytes)
         .accounts({
           payer: payer.publicKey,
+          validatedPayload: validatedPayloadPDA,
           sessionPayload: sessionPayloadPDA,
         })
         .signers([payer])
-        .rpc({commitment: "confirmed"});
-    }
-
-    await this.consortium.methods
-      .updateValset(valsetPayloadHashBytes)
-      .accounts({
-        payer: payer.publicKey,
-        validatedPayload: validatedPayloadPDA,
-        sessionPayload: sessionPayloadPDA,
-      })
-      .signers([payer])
-      .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+    );
   }
 
 	async createAndFinalizeSession(
@@ -371,7 +376,8 @@ export class ConsortiumUtility {
 		const payloadSignatures = this.signPayload(payload);
 		const payloadHash = Buffer.from(sha256(payload).slice(2), "hex");
 		const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
-		const cfg = await this.consortium.account.config.fetch(this.configPDA);
+    const configPDA = PublicKey.findProgramAddressSync([Buffer.from("consortium_config")], this.consortium.programId)[0];
+		const cfg = await this.consortium.account.config.fetch(configPDA);
 		const currentEpoch = cfg.currentEpoch
 
 		const sessionPDA = PublicKey.findProgramAddressSync(
@@ -384,15 +390,17 @@ export class ConsortiumUtility {
 		this.consortium.programId
 			)[0];
 
-			await this.consortium.methods
-				.createSession(payloadHashBytes)
-				.accounts({
-					payer: payer.publicKey,
-					session: sessionPDA,
-					validatedPayload: validatedPayloadPDA,
-				})
-				.signers([payer])
-				.rpc({commitment: "confirmed"});
+			await withBlockhashRetry(() =>
+				this.consortium.methods
+					.createSession(payloadHashBytes)
+					.accounts({
+						payer: payer.publicKey,
+						session: sessionPDA,
+						validatedPayload: validatedPayloadPDA,
+					})
+					.signers([payer])
+					.rpc({ commitment: "confirmed" })
+			);
 
 		const indices = [];
 		for (let i = 0; i < payloadSignatures.length; i++) {
@@ -400,24 +408,32 @@ export class ConsortiumUtility {
 		indices.push(new BN(i));
 		}
 
-		await this.consortium.methods
-			.postSessionSignatures(payloadHashBytes, payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))), indices)
-			.accounts({
-				payer: payer.publicKey,
-				session: sessionPDA,
-			})
-			.signers([payer])
-			.rpc({commitment: "confirmed"});
+		await withBlockhashRetry(() =>
+			this.consortium.methods
+				.postSessionSignatures(
+					payloadHashBytes,
+					payloadSignatures.map(s => Array.from(Uint8Array.from(Buffer.concat([s.r, s.s])))),
+					indices
+				)
+				.accounts({
+					payer: payer.publicKey,
+					session: sessionPDA,
+				})
+				.signers([payer])
+				.rpc({ commitment: "confirmed" })
+		);
 
-				await this.consortium.methods
-					.finalizeSession(payloadHashBytes)
-					.accounts({
-						payer: payer.publicKey,
-						session: sessionPDA,
-						validatedPayload: validatedPayloadPDA,
-					})
-					.signers([payer])
-			.rpc({commitment: "confirmed"});
+				await withBlockhashRetry(() =>
+					this.consortium.methods
+						.finalizeSession(payloadHashBytes)
+						.accounts({
+							payer: payer.publicKey,
+							session: sessionPDA,
+							validatedPayload: validatedPayloadPDA,
+						})
+						.signers([payer])
+						.rpc({ commitment: "confirmed" })
+				);
 
 		return {
 			validatedPayloadPDA,

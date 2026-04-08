@@ -6,6 +6,7 @@ import { Consortium } from "../target/types/consortium";
 import { sha256 } from "js-sha256";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -59,14 +60,16 @@ describe("Consortium", () => {
         new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
       )[0];
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .initialize(admin.publicKey)
           .accounts({
             deployer: payer.publicKey,
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"})
-      ).to.be.rejectedWith("Unauthorized function call");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("initialize: successful", async () => {
@@ -74,13 +77,15 @@ describe("Consortium", () => {
         [program.programId.toBuffer()],
         new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
       )[0];
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .initialize(admin.publicKey)
         .accounts({
           deployer: provider.wallet.publicKey,
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+      );
       
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
@@ -88,20 +93,24 @@ describe("Consortium", () => {
 
     it("transferOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(() =>
+            program.methods
           .transferOwnership(payer.publicKey)
           .accounts({ payer: payer.publicKey})
           .signers([payer])
-          .rpc({commitment: "confirmed"})
-      ).to.be.rejectedWith("Unauthorized function call");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("transferOwnership: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .transferOwnership(payer.publicKey)
         .accounts({ payer: admin.publicKey})
         .signers([admin])
-        .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+      );
       
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
@@ -110,32 +119,40 @@ describe("Consortium", () => {
 
     it("acceptOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods.acceptOwnership().accounts({ payer: user.publicKey}).signers([user]).rpc({commitment: "confirmed"})
-      ).to.be.rejectedWith("Unauthorized function call");
+          withBlockhashRetry(() =>
+            program.methods.acceptOwnership().accounts({ payer: user.publicKey}).signers([user]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized function call");
     });
 
     it("acceptOwnership: successful by pending admin", async () => {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .acceptOwnership()
         .accounts({ payer: payer.publicKey})
         .signers([payer])
-        .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+      );
       
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(payer.publicKey.toBase58());
 
       // Reverse it for remainder of test.
-      const tx2 = await program.methods
+      const tx2 = await withBlockhashRetry(() =>
+        program.methods
         .transferOwnership(admin.publicKey)
         .accounts({ payer: payer.publicKey})
         .signers([payer])
-        .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+      );
       await provider.connection.confirmTransaction(tx2);
-      const tx3 = await program.methods
+      const tx3 = await withBlockhashRetry(() =>
+        program.methods
         .acceptOwnership()
         .accounts({ payer: admin.publicKey})
         .signers([admin])
-        .rpc({commitment: "confirmed"});
+        .rpc({ commitment: "confirmed" })
+      );
       await provider.connection.confirmTransaction(tx3);
       const cfg2 = await program.account.config.fetch(configPDA);
       expect(cfg2.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
@@ -211,24 +228,28 @@ describe("Consortium", () => {
     describe("Initial valset by admin", function () {
       it("setInitialValset: rejects when called by not admin", async () => {
         await expect(
-          program.methods
+            withBlockhashRetry(() =>
+              program.methods
             .setInitialValset(initialValset)
             .accounts({
               admin: payer.publicKey,
             })
             .signers([payer])
-            .rpc({commitment: "confirmed"})
-        ).to.be.rejectedWith("An address constraint was violated");
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith("An address constraint was violated");
       });
 
       it("setInitialValset: successful by admin", async () => {
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
             .setInitialValset(initialValset)
             .accounts({
                 admin: admin.publicKey,
             })
           .signers([admin])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
         
 
         const cfg = await program.account.config.fetch(configPDA);
@@ -240,12 +261,14 @@ describe("Consortium", () => {
 
       it("setInitialValset: rejects when already set", async () => {
         await expect(
-          program.methods
+            withBlockhashRetry(() =>
+              program.methods
             .setInitialValset(initialValset)
             .accounts({ admin: admin.publicKey})
             .signers([admin])
-            .rpc({commitment: "confirmed"})
-        ).to.be.rejectedWith("Validator set already set");
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith("Validator set already set");
       });
     });
 
@@ -274,7 +297,8 @@ describe("Consortium", () => {
       });
 
       it("create session", async () => {
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
             .createSession(nextValsetHashBz)
             .accounts({
               payer: payer.publicKey,
@@ -282,27 +306,31 @@ describe("Consortium", () => {
               validatedPayload: validatedPayloadPDA,
             })
             .signers([payer])
-            .rpc({commitment: "confirmed"});
+            .rpc({ commitment: "confirmed" })
+        );
         
         // TODO: check session is created
       });
 
       it("post session signatures", async () => {
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
           .postSessionSignatures(nextValsetHashBz, sigs, [new BN(0), new BN(1)])
           .accounts({
             payer: payer.publicKey,
             session: sessionPDA
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
         
 
         // TODO: check session is signed
       });
 
       it("finalize session", async () => {
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
           .finalizeSession(nextValsetHashBz)
           .accounts({
             payer: payer.publicKey,
@@ -310,7 +338,8 @@ describe("Consortium", () => {
             validatedPayload: validatedPayloadPDA,
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
         
       
         // TODO: check session account is closed
@@ -321,27 +350,32 @@ describe("Consortium", () => {
         // split it in two chunks to test chunked submission
         let nextValsetFirstChunk = Buffer.from(nextValset.subarray(0, nextValset.length / 2));
         let nextValsetSecondChunk = Buffer.from(nextValset.subarray(nextValset.length / 2, nextValset.length));
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
           .postSessionPayload(nextValsetHashBz, nextValsetFirstChunk, nextValset.length)
           .accounts({
             payer: payer.publicKey,
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
         
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
           .postSessionPayload(nextValsetHashBz, nextValsetSecondChunk, nextValset.length)
           .accounts({
             payer: payer.publicKey,
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
       });
 
       it("update valset", async () => {
-        await program.methods
+        await withBlockhashRetry(() =>
+          program.methods
           .updateValset(nextValsetHashBz)
           .accounts({
             payer: payer.publicKey,
@@ -349,7 +383,8 @@ describe("Consortium", () => {
             sessionPayload: sessionPayloadPDA,
           })
           .signers([payer])
-          .rpc({commitment: "confirmed"});
+          .rpc({ commitment: "confirmed" })
+        );
         
         const cfg = await program.account.config.fetch(configPDA);
         expect(cfg.currentEpoch.toString()).to.be.eq("2");

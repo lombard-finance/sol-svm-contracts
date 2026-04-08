@@ -1,20 +1,21 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
+import { BN, Program } from "@coral-xyz/anchor";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
 import { Consortium } from "../target/types/consortium";
 import { Mailbox } from "../target/types/mailbox";
 import { sha256 } from "js-sha256";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { ConsortiumUtility } from "./consortium_utilities";
-import { AbiCoder, ethers, keccak256 } from "ethers";
-import { MailboxUtilities, messageV1 } from "./mailbox_utilities";
+import { ConsortiumUtility } from "./utils/consortium_utilities";
+import { ethers, keccak256 } from "ethers";
+import { MailboxUtilities, messageV1 } from "./utils/mailbox_utilities";
 import { Bridge } from "../target/types/bridge";
 import { LombardTokenPool } from "../target/types/lombard_token_pool";
 import { MockCcipOfframp } from "../target/types/mock_ccip_offramp";
 import { MockCcipRmn } from "../target/types/mock_ccip_rmn";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -113,7 +114,8 @@ describe("CCIP Token Pool", () => {
 	let bridgeRemoteTokenConfigPDA: PublicKey;
 	let bridgeRemoteTokenConfigPDA2: PublicKey;
 	let bridgeRemoteTokenConfigPDA3: PublicKey;
-	
+	let bridgeSenderConfigPDA:PublicKey;
+
 	let mockCcipOfframpConfigPDA: PublicKey;
 	let cpiSignerPDA: PublicKey;
 	let ccipAllowedOfframpPDA: PublicKey;
@@ -185,10 +187,6 @@ describe("CCIP Token Pool", () => {
 	const foreignChainSelector = new BN('1234567');
 	const foreignPoolData = Buffer.from(sha256("some-source-pool-data"), "hex");
 	const foreignPoolDataBytes = Array.from(Uint8Array.from(foreignPoolData));
-	const bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
-	[Buffer.from("sender_config"), bridge.programId.toBuffer()],
-	mailbox.programId
-	)[0];
 	const tokenPoolProgramData = PublicKey.findProgramAddressSync(
 		[tokenPool.programId.toBuffer()],
 		new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
@@ -234,6 +232,10 @@ describe("CCIP Token Pool", () => {
 		[Buffer.from("sender_config"), tokenPoolSignerPDA.toBuffer()],
 		bridge.programId
 		)[0];
+		bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
+		[Buffer.from("sender_config"), bridge.programId.toBuffer()],
+		mailbox.programId
+		)[0];
 
 		[mockCcipOfframpConfigPDA] = PublicKey.findProgramAddressSync([Buffer.from("ccip_mock_config")], mockCcipOfframp.programId);
 		[rmnCursesPDA] = PublicKey.findProgramAddressSync([Buffer.from("curses")], mockCcipRmn.programId);
@@ -259,21 +261,25 @@ describe("CCIP Token Pool", () => {
 
 		mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
 
-		await mailbox.methods
+		await withBlockhashRetry(() =>
+		  mailbox.methods
 			.initialize(admin.publicKey, consortium.programId, treasury.publicKey, defaultMaxPayloadSize, feePerByte)
 			.accounts({
 				deployer: provider.wallet.publicKey
 			})
 			.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-			.rpc({ commitment: "confirmed" });
-		await bridge.methods
+			.rpc({ commitment: "confirmed" })
+		);
+		await withBlockhashRetry(() =>
+		  bridge.methods
 			.initialize(admin.publicKey, mailbox.programId)
 			.accounts({
 				deployer: provider.wallet.publicKey,
 				mint
 			})
 			.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-			.rpc({ commitment: "confirmed" });
+			.rpc({ commitment: "confirmed" })
+		);
 		
 		userTA = await spl.createAssociatedTokenAccount(provider.connection, user, mint, user.publicKey);
 		payerTA = await spl.createAssociatedTokenAccount(provider.connection, payer, mint, payer.publicKey);
@@ -282,7 +288,8 @@ describe("CCIP Token Pool", () => {
 	describe("Initialize token pool", function () {
 		it("initialize: initGlobalConfig fails when payer is not deployer", async () => {
 			await expect(
-				tokenPool.methods
+				  withBlockhashRetry(() =>
+				    tokenPool.methods
 				.initGlobalConfig()
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -290,12 +297,14 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([payer])
-				.rpc()
-			).to.be.rejectedWith("Unauthorized.");
+				.rpc({ commitment: "processed" })
+				  )
+				).to.be.rejectedWith("Unauthorized.");
 		});
 
 		it("initialize: fails when payer is not deployer", async () => {
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initGlobalConfig()
 				.accountsPartial({
 					programData: tokenPoolProgramData,
@@ -303,9 +312,11 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			await expect(
-				tokenPool.methods
+				  withBlockhashRetry(() =>
+				    tokenPool.methods
 				.initialize(mockCcipOfframp.programId, mockCcipRmn.programId, bridge.programId)
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -315,13 +326,15 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([payer])
-				.rpc()
-			).to.be.rejectedWith("Unauthorized.");
+				.rpc({ commitment: "confirmed" })
+				  )
+				).to.be.rejectedWith("Unauthorized.");
 		});
 
 		it("initialize: successful", async () => {
 			// This test presumes that `initGlobalConfig` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initialize(mockCcipOfframp.programId, mockCcipRmn.programId, bridge.programId)
 				.accountsPartial({
 					state: tokenPoolStatePDA,
@@ -330,7 +343,8 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -338,7 +352,8 @@ describe("CCIP Token Pool", () => {
 
 		it("initialize remote chain config: successful", async () => {
 			// This test presumes that `initGlobalConfig` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initChainRemoteConfig(foreignChainSelector, mint, {
 					poolAddresses: [],
 					tokenAddress: {address: foreignToken},
@@ -350,7 +365,8 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -358,7 +374,8 @@ describe("CCIP Token Pool", () => {
 
 		it("append remote pool address: successful", async () => {
 			// This test presumes that `appendRemotePoolAddresses` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.appendRemotePoolAddresses(foreignChainSelector, mint, [{address: foreignPoolAddress}])
 				.accountsPartial({
 					state: tokenPoolStatePDA,
@@ -366,7 +383,8 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -377,42 +395,53 @@ describe("CCIP Token Pool", () => {
 
 		// enable inbound message path before the test
 		before(async () => {
-			await mailbox.methods
+			await withBlockhashRetry(() =>
+			  mailbox.methods
 				.enableInboundMessagePath(foreignLchainIdBytes, foreignMailboxAddressBytes)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setLocalTokenConfig(mint)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipOfframp.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.addOfframp(foreignChainSelector, mockCcipOfframp.programId)
 				.accounts({
 					authority:admin.publicKey,
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipOfframp.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.initialize(tokenPool.programId)
 				.accountsPartial({
 					deployer: provider.wallet.publicKey,
@@ -420,8 +449,10 @@ describe("CCIP Token Pool", () => {
 					config: mockCcipOfframpConfigPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipRmn.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipRmn.methods
 				.initialize()
 				.accountsPartial({
 					deployer: provider.wallet.publicKey,
@@ -430,7 +461,8 @@ describe("CCIP Token Pool", () => {
 					curses: rmnCursesPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 		})
 
 		after(async () => {
@@ -479,7 +511,8 @@ describe("CCIP Token Pool", () => {
 				amount: amountLeBytes,
 			}
 			const offRampDataPDA = PublicKey.findProgramAddressSync([Buffer.from("offramp_data"), nonceBuf], mockCcipOfframp.programId)[0];
-			await mockCcipOfframp.methods
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.initOfframp(nonce, mintArg)
 				.accountsPartial({
 					payer: payer.publicKey,
@@ -487,9 +520,11 @@ describe("CCIP Token Pool", () => {
 					systemProgram: SystemProgram.programId,
 				})
 				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
-			await mockCcipOfframp.methods
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.executeOfframp(nonce)
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -626,7 +661,8 @@ describe("CCIP Token Pool", () => {
 					}
 				])
 				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 
 			const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
     		expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amount));
@@ -641,27 +677,33 @@ describe("CCIP Token Pool", () => {
 
 		// enable outbound message path before the test
 		before(async () => {
-			await mailbox.methods
+			await withBlockhashRetry(() =>
+			  mailbox.methods
 				.enableOutboundMessagePath(foreignLchainIdBytes)
 				.accounts({
 					admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mailbox.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mailbox.methods
 				.setSenderConfig(bridge.programId, customMaxPayloadSize, true)
 				.accounts({
 					admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setSenderConfig(tokenPoolSignerPDA, new BN(10000), true) // No bridge fee for the token pool
 				.accounts({
 					admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 
 			await spl.mintTo(provider.connection, minter, mint, payerTA, multisig, 100000000, [minter]);
 
@@ -691,7 +733,8 @@ describe("CCIP Token Pool", () => {
 			// const balanceBefore = await provider.connection.getBalance(payerFeeExempt.publicKey);
 			const amountToSend = 1000;
 
-			await mockCcipOfframp.methods
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.executeOnramp(recipient, foreignChainSelector, user.publicKey, new BN(amountToSend), new BN(nonceForeignChain++))
 				.accountsPartial({
 					sender: payer.publicKey,
@@ -811,7 +854,8 @@ describe("CCIP Token Pool", () => {
 					}
 				])
 				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 
 			const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
 			const expecedGmpMessage = messageV1(

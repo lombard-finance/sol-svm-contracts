@@ -1,14 +1,7 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, BorshCoder, EventManager, Program } from "@coral-xyz/anchor";
-import {
-  Ed25519Program,
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  TransactionInstruction
-} from "@solana/web3.js";
+import { Ed25519Program, Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
 import { AssetRouter } from "../target/types/asset_router";
 import { sha256 } from "js-sha256";
@@ -16,9 +9,9 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Mailbox } from "../target/types/mailbox";
 import { ethers, keccak256 } from "ethers";
-import { ConsortiumUtility, PayloadDepositV1, randomNumber } from "./consortium_utilities";
+import { ConsortiumUtility, PayloadDepositV1, randomNumber } from "./utils/consortium_utilities";
 import { Consortium } from "../target/types/consortium";
-import { MailboxUtilities, messageV1 } from "./mailbox_utilities";
+import { MailboxUtilities, messageV1 } from "./utils/mailbox_utilities";
 import {
   ASSETS_MODULE_ADDRESS,
   BITCOIN_LCHAIN_ID,
@@ -37,7 +30,8 @@ import {
   MintMsg,
   REDEEM_SELECTOR,
   RedeemMsg
-} from "./asset_router_utilities";
+} from "./utils/asset_router_utilities";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -79,7 +73,6 @@ describe("Asset Router", () => {
 
   const consortium = anchor.workspace.Consortium as Program<Consortium>;
   const consortiumUtility = new ConsortiumUtility(consortium);
-  consortiumUtility.generateAndAddKeypairs(3);
 
   const nativeMintKeypair = Keypair.fromSeed(Uint8Array.from(Array(32).fill(5)));
   const stakedMintKeypair = Keypair.fromSeed(Uint8Array.from(Array(32).fill(6)));
@@ -92,6 +85,10 @@ describe("Asset Router", () => {
   )[0];
   const stakedTokenConfigPDA = PublicKey.findProgramAddressSync(
     [Buffer.from("token_config"), stakedMintKeypair.publicKey.toBuffer()],
+    program.programId
+  )[0];
+  const messagingAuthorityPDA = PublicKey.findProgramAddressSync(
+    [Buffer.from("messaging_authority")],
     program.programId
   )[0];
   const tokenAuth = PublicKey.findProgramAddressSync(
@@ -221,6 +218,7 @@ describe("Asset Router", () => {
       staker2.publicKey
     );
 
+    consortiumUtility.generateAndAddKeypairs(3);
     await consortiumUtility.initializeConsortiumProgram(admin);
 
     mailboxUtilities = new MailboxUtilities(consortiumUtility, LCHAIN_ID, admin, treasury.publicKey);
@@ -233,7 +231,8 @@ describe("Asset Router", () => {
   describe("Initialize", function () {
     it("initialize: fails when payer is not deployer", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .initialize({
             admin: provider.wallet.publicKey,
             pendingAdmin: new PublicKey(0), // these are ignored
@@ -251,12 +250,14 @@ describe("Asset Router", () => {
             deployer: payer.publicKey
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("ConstraintRaw");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("ConstraintRaw");
     });
 
     it("initialize: successful", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .initialize({
           admin: provider.wallet.publicKey,
           pendingAdmin: new PublicKey(0), // these are ignored
@@ -274,7 +275,8 @@ describe("Asset Router", () => {
           deployer: provider.wallet.publicKey
         })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.eq(provider.wallet.publicKey.toBase58());
@@ -289,7 +291,8 @@ describe("Asset Router", () => {
     });
 
     /*    it("changeMintAuth: successful when called by admin", async () => {
-          await program.methods
+          await withBlockhashRetry(async () =>
+            program.methods
             .changeMintAuth(payer.publicKey)
             .accounts({
               payer: admin.publicKey,
@@ -300,7 +303,8 @@ describe("Asset Router", () => {
               tokenAuthority: tokenAuth
             })
             .signers([admin])
-            .rpc({commitment: "confirmed"});
+            .rpc({ commitment: "confirmed" })
+          );
 
           const info = await spl.getMint(provider.connection, mint);
           expect(info.mintAuthority.toBase58()).to.be.equal(payer.publicKey.toBase58());
@@ -323,16 +327,20 @@ describe("Asset Router", () => {
   describe("Ownership", function () {
     it("transferOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods.transferOwnership(admin.publicKey).accounts({ payer: admin.publicKey }).signers([admin]).rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          withBlockhashRetry(async () =>
+            program.methods.transferOwnership(admin.publicKey).accounts({ payer: admin.publicKey }).signers([admin]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("transferOwnership: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .transferOwnership(admin.publicKey)
         .accounts({ payer: provider.wallet.publicKey })
         .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(provider.wallet.publicKey.toBase58());
@@ -341,20 +349,24 @@ describe("Asset Router", () => {
 
     it("acceptOwnership: failure from unauthorized party", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .acceptOwnership()
           .accounts({ payer: provider.wallet.publicKey })
           .signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-          .rpc()
-      ).to.be.rejectedWith("ConstraintAddress");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("ConstraintAddress");
     });
 
     it("acceptOwnership: successful by pending admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .acceptOwnership()
         .accounts({ payer: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const cfg = await program.account.config.fetch(configPDA);
       expect(cfg.admin.toBase58()).to.be.equal(admin.publicKey.toBase58());
@@ -393,13 +405,15 @@ describe("Asset Router", () => {
         toNativeCommission: nativeToNativeCommission,
         ledgerRedeemHandler: ASSETS_MODULE_ADDRESS
       };
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenConfig(nativeMintKeypair.publicKey, config)
         .accounts({
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenConfig = await program.account.tokenConfig.fetch(nativeTokenConfigPDA);
       expect(tokenConfig.redeemFee.eq(config.redeemFee));
@@ -425,13 +439,15 @@ describe("Asset Router", () => {
         toNativeCommission: nativeToNativeCommission,
         ledgerRedeemHandler: ASSETS_MODULE_ADDRESS
       };
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenConfig(nativeMintKeypair.publicKey, config)
         .accounts({
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenConfig = await program.account.tokenConfig.fetch(nativeTokenConfigPDA);
       expect(tokenConfig.redeemFee.eq(config.redeemFee));
@@ -450,14 +466,16 @@ describe("Asset Router", () => {
         ledgerRedeemHandler: ASSETS_MODULE_ADDRESS
       };
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .setTokenConfig(nativeMintKeypair.publicKey, config)
           .accounts({
             payer: staker1.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("setTokenConfig: successful by admin (staked mint)", async () => {
@@ -468,13 +486,15 @@ describe("Asset Router", () => {
         toNativeCommission: stakedToNativeCommission,
         ledgerRedeemHandler: BTCSTAKING_MODULE_ADDRESS_BZ
       };
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenConfig(stakedMintKeypair.publicKey, config)
         .accounts({
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenConfig = await program.account.tokenConfig.fetch(stakedTokenConfigPDA);
       expect(tokenConfig.redeemFee.eq(config.redeemFee));
@@ -525,13 +545,15 @@ describe("Asset Router", () => {
     });
 
     it("setTokenRoute: successful by admin to redeem staked to self chain", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenRoute(LCHAIN_ID_BZ, mintStakedAsBytes, LCHAIN_ID_BZ, mintNativeAsBytes, { redeem: {} })
         .accounts({
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenRoute = await program.account.tokenRoute.fetch(redeemTokenRoutePDA);
       expect(tokenRoute.routeType).to.be.deep.equal({ redeem: {} });
@@ -545,13 +567,15 @@ describe("Asset Router", () => {
     });
 
     it("setTokenRoute: successful by admin to deposit to self chain", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenRoute(LCHAIN_ID_BZ, mintNativeAsBytes, LCHAIN_ID_BZ, mintStakedAsBytes, { deposit: {} })
         .accounts({
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenRoute = await program.account.tokenRoute.fetch(depositTokenRoutePDA);
       expect(tokenRoute.routeType).to.be.deep.equal({ deposit: {} });
@@ -565,7 +589,8 @@ describe("Asset Router", () => {
     });
 
     it("setTokenRoute: successful by admin to redeem staked for Bitcoin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenRoute(
           LCHAIN_ID_BZ,
           mintStakedAsBytes,
@@ -577,7 +602,8 @@ describe("Asset Router", () => {
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenRoute = await program.account.tokenRoute.fetch(redeemBtcTokenRoutePDA);
       expect(tokenRoute.routeType).to.be.deep.equal({ redeem: {} });
@@ -593,7 +619,8 @@ describe("Asset Router", () => {
     });
 
     it("setTokenRoute: successful by admin to redeem native for Bitcoin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenRoute(
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
@@ -605,7 +632,8 @@ describe("Asset Router", () => {
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenRoute = await program.account.tokenRoute.fetch(redeemBtcNativeTokenRoutePDA);
       expect(tokenRoute.routeType).to.be.deep.equal({ redeem: {} });
@@ -622,7 +650,8 @@ describe("Asset Router", () => {
 
     it("unsetTokenRoute rejects when called by not admin", async function () {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .unsetTokenRoute(
             LCHAIN_ID_BZ,
             mintNativeAsBytes,
@@ -633,12 +662,14 @@ describe("Asset Router", () => {
             payer: payer.publicKey
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("unsetTokenRoute: successful by admin", async function () {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .unsetTokenRoute(
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
@@ -649,7 +680,8 @@ describe("Asset Router", () => {
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(TokenRouteRemovedEvents[0]).to.be.not.undefined;
       expect(TokenRouteRemovedEvents[0].fromChainId).to.be.deep.eq(LCHAIN_ID_BZ);
@@ -665,7 +697,8 @@ describe("Asset Router", () => {
 
     it("setTokenRoute rejects when called by not admin", async function () {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .setTokenRoute(
             LCHAIN_ID_BZ,
             mintNativeAsBytes,
@@ -677,13 +710,15 @@ describe("Asset Router", () => {
             payer: payer.publicKey
           })
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("setTokenRoute: rejects when non of the chains is solana", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .setTokenRoute(
             BITCOIN_LCHAIN_ID_BZ,
             mintNativeAsBytes,
@@ -695,12 +730,14 @@ describe("Asset Router", () => {
             payer: admin.publicKey
           })
           .signers([admin])
-          .rpc()
-      ).to.be.rejectedWith("InvalidChainID");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidChainID");
     });
 
     it("setTokenRoute again after unset", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTokenRoute(
           LCHAIN_ID_BZ,
           mintNativeAsBytes,
@@ -712,7 +749,8 @@ describe("Asset Router", () => {
           payer: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenRoute = await program.account.tokenRoute.fetch(redeemBtcNativeTokenRoutePDA);
       expect(tokenRoute.routeType).to.be.deep.equal({ redeem: {} });
@@ -735,7 +773,7 @@ describe("Asset Router", () => {
           .setBascule(mailboxAddress) // any pubkey
           .accounts({ payer: pauser.publicKey })
           .signers([pauser])
-          .rpc()
+          .rpc({ commitment: "confirmed" })
       ).to.be.rejectedWith("Unauthorized");
     });
 
@@ -804,16 +842,20 @@ describe("Asset Router", () => {
 
     it("setTreasury rejects when called by not admin", async () => {
       await expect(
-        program.methods.setTreasury(staker1.publicKey).accounts({ payer: staker1.publicKey }).signers([staker1]).rpc()
-      ).to.be.rejectedWith("ConstraintAddress");
+          withBlockhashRetry(async () =>
+            program.methods.setTreasury(staker1.publicKey).accounts({ payer: staker1.publicKey }).signers([staker1]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("ConstraintAddress");
     });
 
     it("setTreasury successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setTreasury(treasury.publicKey)
         .accounts({ payer: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(TreasuryEvents[0]).to.be.not.undefined;
       expect(TreasuryEvents[0].address).to.be.deep.eq(treasury.publicKey);
@@ -852,11 +894,13 @@ describe("Asset Router", () => {
     });
 
     it("grantAccountRole: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .grantAccountRole(claimer.publicKey, { claimer: {} })
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(RoleGrants[0]).to.be.not.undefined;
       expect(RoleGrants[0].account.toBase58()).to.be.eq(claimer.publicKey.toBase58());
@@ -865,40 +909,48 @@ describe("Asset Router", () => {
 
     it("grantAccountRole: rejects when role is already granted", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .grantAccountRole(claimer.publicKey, { claimer: {} })
           .accounts({ admin: admin.publicKey })
           .signers([admin])
-          .rpc()
-      ).to.be.rejectedWith("AccountRoleAlreadyGranted");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("AccountRoleAlreadyGranted");
     });
 
     it("grantAccountRole: rejects when called by not admin", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .grantAccountRole(staker1.publicKey, { claimer: {} })
           .accounts({ admin: claimer.publicKey })
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("revokeAccountRoles: rejects when called by not admin", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .revokeAccountRoles(claimer.publicKey)
           .accounts({ admin: claimer.publicKey })
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("revokeAccountRoles: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .revokeAccountRoles(claimer.publicKey)
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(RoleRevokes[0]).to.be.not.undefined;
       expect(RoleRevokes[0].account.toBase58()).to.be.eq(claimer.publicKey.toBase58());
@@ -929,25 +981,31 @@ describe("Asset Router", () => {
     });
 
     it("Grant pauser role: successful by admin", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .grantAccountRole(pauser.publicKey, { pauser: {} })
         .accounts({ admin: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     it("Pause rejects when called by not pauser", async () => {
       await expect(
-        program.methods.pause().accounts({ payer: payer.publicKey }).signers([payer]).rpc()
-      ).to.be.rejectedWith("AccountNotInitialized");
+          withBlockhashRetry(async () =>
+            program.methods.pause().accounts({ payer: payer.publicKey }).signers([payer]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("AccountNotInitialized");
     });
 
     it("Pauser can set on pause", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .pause()
         .accounts({ payer: pauser.publicKey })
         .signers([pauser])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(PauseEvents[0]).to.be.not.undefined;
       expect(PauseEvents[0].paused).to.be.true;
@@ -955,8 +1013,10 @@ describe("Asset Router", () => {
 
     it("Pause rejects when contract is already paused", async () => {
       await expect(
-        program.methods.pause().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc()
-      ).to.be.rejectedWith("Paused");
+          withBlockhashRetry(async () =>
+            program.methods.pause().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     //Mint
@@ -976,7 +1036,8 @@ describe("Asset Router", () => {
       )[0];
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintFromPayload(payload.toBytes(), payload.toHashBytes())
           .accounts(
             withOptionalBasculeNull({
@@ -990,15 +1051,17 @@ describe("Asset Router", () => {
             })
           )
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("Paused");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     it("Deposit native to staked gets rejected when contract is on pause", async () => {
       const amount = BigInt(100000);
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .deposit(
             LCHAIN_ID_BZ,
             mintStakedAsBytes,
@@ -1017,8 +1080,9 @@ describe("Asset Router", () => {
             treasury: null
           })
           .signers([staker1])
-          .rpc()
-      ).to.be.rejectedWith("Paused");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     //Asset router pause does not stop message delivery
@@ -1028,7 +1092,8 @@ describe("Asset Router", () => {
       const amount = BigInt(100000);
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeem(LCHAIN_ID_BZ, mintNativeAsBytes, recipientBz, new BN(amount.toString()))
           .accounts({
             payer: staker1.publicKey,
@@ -1043,8 +1108,9 @@ describe("Asset Router", () => {
             treasury: null
           })
           .signers([staker1])
-          .rpc()
-      ).to.be.rejectedWith("Paused");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     it("Redeem for BTC gets rejected when contract is on pause", async () => {
@@ -1052,7 +1118,8 @@ describe("Asset Router", () => {
       const amount = BigInt(100000);
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, new BN(amount.toString()))
           .accounts({
             payer: staker1.publicKey,
@@ -1068,22 +1135,27 @@ describe("Asset Router", () => {
             treasury: null
           })
           .signers([staker1])
-          .rpc()
-      ).to.be.rejectedWith("Paused");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
     });
 
     it("Pauser can not disable pause", async () => {
       await expect(
-        program.methods.unpause().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc()
-      ).to.be.rejectedWith("Unauthorized");
+          withBlockhashRetry(async () =>
+            program.methods.unpause().accounts({ payer: pauser.publicKey }).signers([pauser]).rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Unauthorized");
     });
 
     it("Admin can disable pause", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .unpause()
         .accounts({ payer: admin.publicKey })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       expect(PauseEvents[0]).to.be.not.undefined;
       expect(PauseEvents[0].paused).to.be.false;
@@ -1102,13 +1174,15 @@ describe("Asset Router", () => {
         })
       );
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .grantAccountRole(operator.publicKey, { operator: {} })
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
     });
 
     afterEach(async function () {
@@ -1124,14 +1198,16 @@ describe("Asset Router", () => {
     it("setMintFee successful for native by operator", async () => {
       mintFee = new BN(randomNumber(3));
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setMintFee(mintFee)
         .accounts({
           operator: operator.publicKey,
           tokenConfig: nativeTokenConfigPDA
         })
         .signers([operator])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const tokenConfig = await program.account.tokenConfig.fetch(nativeTokenConfigPDA);
       expect(tokenConfig.maxMintCommission.toBigInt()).to.be.eq(mintFee.toBigInt());
@@ -1142,28 +1218,32 @@ describe("Asset Router", () => {
 
     it("setMintFee rejects when fee > MAX_FEE", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .setMintFee(new BN(100001))
           .accounts({
             operator: operator.publicKey,
             tokenConfig: nativeTokenConfigPDA
           })
           .signers([operator])
-          .rpc()
-      ).to.be.rejectedWith("FeeTooHigh");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("FeeTooHigh");
     });
 
     it("setMintFee rejects when called not by operator", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .setMintFee(new BN(randomNumber(3)))
           .accounts({
             operator: admin.publicKey,
             tokenConfig: nativeTokenConfigPDA
           })
           .signers([admin])
-          .rpc()
-      ).to.be.rejectedWith("AccountNotInitialized");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("AccountNotInitialized");
     });
   });
 
@@ -1186,14 +1266,16 @@ describe("Asset Router", () => {
         [Buffer.from("session_payload"), poster.publicKey.toBuffer(), payloadHash],
         consortium.programId
       )[0];
-      await consortium.methods
+      await withBlockhashRetry(async () =>
+        consortium.methods
         .postSessionPayload(Array.from(Uint8Array.from(payloadHash)), payload, payload.length)
         .accounts({
           payer: poster.publicKey,
           sessionPayload: pda
         })
         .signers([poster])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
       return pda;
     }
 
@@ -1206,13 +1288,15 @@ describe("Asset Router", () => {
       );
 
       //Grand claimer role
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .grantAccountRole(claimer.publicKey, { claimer: {} })
         .accounts({
           admin: admin.publicKey
         })
         .signers([admin])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       validNativeMintPayload = new PayloadDepositV1(
         LCHAIN_ID,
@@ -1367,7 +1451,8 @@ describe("Asset Router", () => {
         await consortiumUtility.createAndFinalizeSession(payer, mintPayload);
 
         await expect(
-          program.methods
+            withBlockhashRetry(async () =>
+              program.methods
             .mintFromPayload(Array.from(Uint8Array.from(mintPayload)), Array.from(Uint8Array.from(hash)))
             .accounts(
               withOptionalBasculeNull({
@@ -1381,13 +1466,15 @@ describe("Asset Router", () => {
               })
             )
             .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith(new RegExp(arg.errorMessage));
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith(new RegExp(arg.errorMessage));
       });
     });
 
     it("successful without fee", async () => {
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .mintFromPayload(validNativeMintPayload.toBytes(), validNativeMintPayload.toHashBytes())
         .accounts(
           withOptionalBasculeNull({
@@ -1401,7 +1488,8 @@ describe("Asset Router", () => {
           })
         )
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1NativeTA);
       expect(balanceAfter.amount).eq(validNativeMintPayload.amount);
@@ -1413,7 +1501,8 @@ describe("Asset Router", () => {
 
     it("mintFromPayload: rejects when payload has been used", async () => {
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintFromPayload(validNativeMintPayload.toBytes(), validNativeMintPayload.toHashBytes())
           .accounts(
             withOptionalBasculeNull({
@@ -1427,8 +1516,9 @@ describe("Asset Router", () => {
             })
           )
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith(
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith(
         new RegExp(
           `Allocate: account Address \{ address: ${depositPayloadSpentPDA.toBase58()}, base: None \} already in use`
         )
@@ -1440,14 +1530,16 @@ describe("Asset Router", () => {
       const treasuryBalanceBefore = await spl.getAccount(provider.connection, treasuryNativeTA);
       mintFee = new BN((feePermit.maxFeesBigInt() - 10n).toString(10));
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setMintFee(mintFee)
         .accounts({
           operator: operator.publicKey,
           tokenConfig: nativeTokenConfigPDA
         })
         .signers([operator])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const validNativeMintPayload = new PayloadDepositV1(
         LCHAIN_ID,
@@ -1464,7 +1556,8 @@ describe("Asset Router", () => {
         program.programId
       )[0];
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
         .accounts(
           withOptionalBasculeNull({
@@ -1481,7 +1574,8 @@ describe("Asset Router", () => {
         )
         .preInstructions([ed25519Instruction])
         .signers([claimer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1NativeTA);
       expect(balanceAfter.amount - balanceBefore.amount).eq(validNativeMintPayload.amount - mintFee.toBigInt());
@@ -1495,14 +1589,16 @@ describe("Asset Router", () => {
       const treasuryBalanceBefore = await spl.getAccount(provider.connection, treasuryNativeTA);
       mintFee = new BN((feePermit.maxFeesBigInt() + 10n).toString(10));
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .setMintFee(mintFee)
         .accounts({
           operator: operator.publicKey,
           tokenConfig: nativeTokenConfigPDA
         })
         .signers([operator])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const validNativeMintPayload = new PayloadDepositV1(
         LCHAIN_ID,
@@ -1519,7 +1615,8 @@ describe("Asset Router", () => {
         program.programId
       )[0];
 
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
         .accounts(
           withOptionalBasculeNull({
@@ -1536,7 +1633,8 @@ describe("Asset Router", () => {
         )
         .preInstructions([ed25519Instruction])
         .signers([claimer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1NativeTA);
       expect(balanceAfter.amount - balanceBefore.amount).eq(validNativeMintPayload.amount - feePermit.maxFeesBigInt());
@@ -1561,7 +1659,8 @@ describe("Asset Router", () => {
       )[0];
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
           .accounts(
             withOptionalBasculeNull({
@@ -1578,8 +1677,9 @@ describe("Asset Router", () => {
           )
           .preInstructions([ed25519Instruction])
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("InvalidPublicKey");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidPublicKey");
     });
 
     it("mintWithFee rejects when destination chain is different", async () => {
@@ -1608,7 +1708,8 @@ describe("Asset Router", () => {
       )[0];
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
           .accounts(
             withOptionalBasculeNull({
@@ -1625,8 +1726,9 @@ describe("Asset Router", () => {
           )
           .preInstructions([ed25519Instruction])
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("InvalidChainID");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidChainID");
     });
 
     it("mintWithFee rejects when fee approval is different from signed", async () => {
@@ -1660,7 +1762,8 @@ describe("Asset Router", () => {
       )[0];
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintWithFee(validNativeMintPayload.toHashBytes(), Array.from(feePermit.bytes()), Array.from(feeSignature))
           .accounts(
             withOptionalBasculeNull({
@@ -1677,8 +1780,9 @@ describe("Asset Router", () => {
           )
           .preInstructions([ed25519Instruction])
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("InvalidMessage");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidMessage");
     });
 
     it("mintWithFee rejects when fee approval prefix is invalid", async () => {
@@ -1713,7 +1817,8 @@ describe("Asset Router", () => {
       )[0];
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
           .accounts(
             withOptionalBasculeNull({
@@ -1730,8 +1835,9 @@ describe("Asset Router", () => {
           )
           .preInstructions([ed25519Instruction])
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("InvalidFeeAction");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidFeeAction");
     });
 
     it("mintWithFee rejects when permit has expired", async () => {
@@ -1755,7 +1861,8 @@ describe("Asset Router", () => {
       await new Promise(resolve => setTimeout(resolve, timeWait * 1000));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .mintWithFee(validNativeMintPayload.toHashBytes(), feePayload, Array.from(feeSignature))
           .accounts(
             withOptionalBasculeNull({
@@ -1772,8 +1879,9 @@ describe("Asset Router", () => {
           )
           .preInstructions([ed25519Instruction])
           .signers([claimer])
-          .rpc()
-      ).to.be.rejectedWith("FeeApprovalExpired");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("FeeApprovalExpired");
     });
   });
 
@@ -1806,7 +1914,8 @@ describe("Asset Router", () => {
 
       const balanceBefore = await spl.getAccount(provider.connection, staker1NativeTA);
 
-      await mailbox.methods
+      await withBlockhashRetry(async () =>
+        mailbox.methods
         .handleMessage(gmpMessageHashBz)
         .accounts({
           handler: payer.publicKey,
@@ -1885,7 +1994,8 @@ describe("Asset Router", () => {
           }
         ])
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1NativeTA);
       expect(balanceAfter.amount).eq(balanceBefore.amount + toMintAmount);
@@ -1917,7 +2027,8 @@ describe("Asset Router", () => {
 
       const balanceBefore = await spl.getAccount(provider.connection, staker1StakedTA);
 
-      await mailbox.methods
+      await withBlockhashRetry(async () =>
+        mailbox.methods
         .handleMessage(gmpMessageHashBz)
         .accounts({
           handler: payer.publicKey,
@@ -1976,7 +2087,8 @@ describe("Asset Router", () => {
           { pubkey: program.programId, isWritable: false, isSigner: false }
         ])
         .signers([payer])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const balanceAfter = await spl.getAccount(provider.connection, staker1StakedTA);
       expect(balanceAfter.amount).eq(balanceBefore.amount + toMintAmount);
@@ -2043,7 +2155,8 @@ describe("Asset Router", () => {
         await mailboxUtilities.deliverMessage(LEDGER_MAILBOX_ADDRESS, LEDGER_LCHAIN_ID, payer, gmpMessage);
 
         await expect(
-          mailbox.methods
+            withBlockhashRetry(async () =>
+              mailbox.methods
             .handleMessage(gmpMessageHashBz)
             .accounts({
               handler: payer.publicKey,
@@ -2102,8 +2215,9 @@ describe("Asset Router", () => {
               { pubkey: program.programId, isWritable: false, isSigner: false }
             ])
             .signers([payer])
-            .rpc()
-        ).to.be.rejectedWith(arg.error);
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith(arg.error);
       });
     });
 
@@ -2137,7 +2251,8 @@ describe("Asset Router", () => {
       await mailboxUtilities.deliverMessage(LEDGER_MAILBOX_ADDRESS, LEDGER_LCHAIN_ID, payer, gmpMessage);
 
       await expect(
-        mailbox.methods
+          withBlockhashRetry(async () =>
+            mailbox.methods
           .handleMessage(gmpMessageHashBz)
           .accounts({
             handler: payer.publicKey,
@@ -2196,8 +2311,9 @@ describe("Asset Router", () => {
             { pubkey: program.programId, isWritable: false, isSigner: false }
           ])
           .signers([payer])
-          .rpc()
-      ).to.be.rejectedWith("InvalidMessageSelector");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidMessageSelector");
     });
   });
 
@@ -2244,7 +2360,8 @@ describe("Asset Router", () => {
         const treasurySolBalanceBefore = await provider.connection.getBalance(treasury.publicKey);
 
         const amount = BigInt(arg.amount);
-        await program.methods
+        await withBlockhashRetry(async () =>
+          program.methods
           .redeemForBtc(arg.scriptPubkey, new BN(amount.toString()))
           .accounts({
             payer: staker1.publicKey,
@@ -2262,7 +2379,8 @@ describe("Asset Router", () => {
             treasury: null
           })
           .signers([staker1])
-          .rpc({ commitment: "confirmed" });
+          .rpc({ commitment: "confirmed" })
+        );
 
         const stakerSolBalanceAfter = await provider.connection.getBalance(staker1.publicKey);
         const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -2308,7 +2426,8 @@ describe("Asset Router", () => {
       const amount = stakedRedeemFee.add(stakedToNativeCommission);
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2324,8 +2443,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("FeeGTEAmount");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("FeeGTEAmount");
     });
 
     it("redeemForBtc from native rejects when amount = fee", async function () {
@@ -2333,7 +2453,8 @@ describe("Asset Router", () => {
       const amount = stakedToNativeCommission;
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2349,17 +2470,19 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("FeeGTEAmount");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("FeeGTEAmount");
     });
 
     it("redeemForBtc from staked rejects when amount below dust limit", async function () {
       const scriptPubkey = Buffer.from("5120e4ac542bbca2e12bc615744b8f755b30d9e345a2fc8622704031e2e6cdfc2f8e", "hex");
-      const totalFee = stakedRedeemFee.add(stakedToNativeCommission);
+      const totalFee = stakedRedeemFee.add(stakedToNativeCommission.sub(new BN(1)));
       const amount = totalFee.add(redeemForBtcMinAmount);
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2375,16 +2498,18 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("AmountBelowDustLimit");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("AmountBelowDustLimit");
     });
 
     it("redeemForBtc from native rejects when amount below dust limit", async function () {
       const scriptPubkey = Buffer.from("5120e4ac542bbca2e12bc615744b8f755b30d9e345a2fc8622704031e2e6cdfc2f8e", "hex");
-      const amount = stakedToNativeCommission.add(redeemForBtcMinAmount);
+      const amount = stakedToNativeCommission.add(redeemForBtcMinAmount.sub(new BN(1)));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2400,8 +2525,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("AmountBelowDustLimit");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("AmountBelowDustLimit");
     });
 
     it("redeemForBtc rejects when recipient is P2SH", async function () {
@@ -2409,7 +2535,8 @@ describe("Asset Router", () => {
       const amount = new BN(randomNumber(5));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2425,8 +2552,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("UnsupportedRedeemAddress");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("UnsupportedRedeemAddress");
     });
 
     it("redeemForBtc rejects when recipient is P2PKH", async function () {
@@ -2434,7 +2562,8 @@ describe("Asset Router", () => {
       const amount = new BN(randomNumber(5));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2450,8 +2579,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("UnsupportedRedeemAddress");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("UnsupportedRedeemAddress");
     });
 
     it("redeemForBtc rejects when recipient is P2PK", async function () {
@@ -2462,7 +2592,8 @@ describe("Asset Router", () => {
       const amount = new BN(randomNumber(5));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2478,8 +2609,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("UnsupportedRedeemAddress");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("UnsupportedRedeemAddress");
     });
 
     it("redeemForBtc rejects when recipient is P2MS", async function () {
@@ -2490,7 +2622,8 @@ describe("Asset Router", () => {
       const amount = new BN(randomNumber(5));
 
       await expect(
-        program.methods
+          withBlockhashRetry(async () =>
+            program.methods
           .redeemForBtc(scriptPubkey, amount)
           .accounts({
             payer: staker1.publicKey,
@@ -2506,8 +2639,9 @@ describe("Asset Router", () => {
             treasury: treasury.publicKey
           })
           .signers([staker1])
-          .rpc()
-      ).to.rejectedWith("UnsupportedRedeemAddress");
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.rejectedWith("UnsupportedRedeemAddress");
     });
   });
 
@@ -2531,7 +2665,8 @@ describe("Asset Router", () => {
       )[0];
 
       const amount = BigInt(100000);
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .redeem(LCHAIN_ID_BZ, mintNativeAsBytes, Array.from(staker1NativeTA.toBuffer()), new BN(amount.toString()))
         .accounts({
           payer: staker1.publicKey,
@@ -2546,7 +2681,8 @@ describe("Asset Router", () => {
           treasury: null
         })
         .signers([staker1])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const stakerSolBalanceAfter = await provider.connection.getBalance(staker1.publicKey);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -2628,7 +2764,8 @@ describe("Asset Router", () => {
         const amount = await arg.amount();
 
         await expect(
-          program.methods
+            withBlockhashRetry(async () =>
+              program.methods
             .redeem(dChain, dToken, recipientTA, amount)
             .accounts({
               payer: staker1.publicKey,
@@ -2643,8 +2780,9 @@ describe("Asset Router", () => {
               treasury: null
             })
             .signers([staker1])
-            .rpc()
-        ).to.be.rejectedWith(arg.error);
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith(arg.error);
       });
     });
   });
@@ -2668,7 +2806,8 @@ describe("Asset Router", () => {
       )[0];
 
       const amount = BigInt(100000);
-      await program.methods
+      await withBlockhashRetry(async () =>
+        program.methods
         .deposit(
           LCHAIN_ID_BZ,
           mintStakedAsBytes,
@@ -2687,7 +2826,8 @@ describe("Asset Router", () => {
           treasury: null
         })
         .signers([staker1])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed" })
+      );
 
       const stakerSolBalanceAfter = await provider.connection.getBalance(staker1.publicKey);
       const treasurySolBalanceAfter = await provider.connection.getBalance(treasury.publicKey);
@@ -2767,7 +2907,8 @@ describe("Asset Router", () => {
         const amount = await arg.amount();
 
         await expect(
-          program.methods
+            withBlockhashRetry(async () =>
+              program.methods
             .deposit(dChain, dToken, recipientTA, amount)
             .accounts({
               payer: staker1.publicKey,
@@ -2781,8 +2922,9 @@ describe("Asset Router", () => {
               treasury: null
             })
             .signers([staker1])
-            .rpc()
-        ).to.be.rejectedWith(arg.error);
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith(arg.error);
       });
     });
   });

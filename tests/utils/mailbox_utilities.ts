@@ -1,11 +1,12 @@
-import { Mailbox } from "../target/types/mailbox";
+import { Mailbox } from "../../target/types/mailbox";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { keccak256, sha256, ethers } from "ethers";
+import { ethers, sha256 } from "ethers";
 import { ConsortiumUtility } from "./consortium_utilities";
-import { Consortium } from "../target/types/consortium";
+import { Consortium } from "../../target/types/consortium";
 import { ZERO_BUFFER32 } from "./asset_router_utilities";
+import { withBlockhashRetry } from "./utils";
 
 const consortium = anchor.workspace.Consortium as Program<Consortium>;
 const mailbox = anchor.workspace.Mailbox as Program<Mailbox>;
@@ -28,18 +29,21 @@ export class MailboxUtilities {
   async initialize() {
     const defaultMaxPayloadSize = 1000;
     const feePerByte = new BN(1000);
-    const tx = await mailbox.methods
+    const tx = await withBlockhashRetry(() =>
+      mailbox.methods
       .initialize(this.admin.publicKey, consortium.programId, this.treasury, defaultMaxPayloadSize, feePerByte)
       .accounts({
         deployer: consortium.provider.wallet.publicKey
       })
       .signers([Keypair.fromSecretKey(consortium.provider.wallet.payer.secretKey)])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await consortium.provider.connection.confirmTransaction(tx);
   }
 
   async enableInboundMessagePath(foreignMailboxAddress: Buffer, foreignLchainId: Buffer) {
-    const tx = await mailbox.methods
+    const tx = await withBlockhashRetry(() =>
+      mailbox.methods
       .enableInboundMessagePath(
         Array.from(Uint8Array.from(foreignLchainId)),
         Array.from(Uint8Array.from(foreignMailboxAddress))
@@ -48,18 +52,21 @@ export class MailboxUtilities {
         admin: this.admin.publicKey,
       })
       .signers([this.admin])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await consortium.provider.connection.confirmTransaction(tx);
   }
 
   async enableOutboundMessagePath(targetChainId: Buffer) {
-    const tx = await mailbox.methods
+    const tx = await withBlockhashRetry(() =>
+      mailbox.methods
       .enableOutboundMessagePath(Array.from(Uint8Array.from(targetChainId)))
       .accounts({
         admin: this.admin.publicKey,
       })
       .signers([this.admin])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await consortium.provider.connection.confirmTransaction(tx);
   }
 
@@ -82,17 +89,24 @@ export class MailboxUtilities {
   }
 
   async setSenderConfig(sender: PublicKey, maxPayload: number, feeDisabled: boolean) {
-    const tx = await mailbox.methods
+    const tx = await withBlockhashRetry(() =>
+      mailbox.methods
       .setSenderConfig(sender, maxPayload, feeDisabled)
       .accounts({
         admin: this.admin.publicKey
       })
       .signers([this.admin])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await consortium.provider.connection.confirmTransaction(tx);
   }
 
-  async deliverMessage(fromMailboxAddress: Buffer, fromLchainId: Buffer, payer: Keypair, message: Buffer): Promise<{payloadHash: Buffer<ArrayByuffer>, payloadHashBytes: number[]}> {
+  async deliverMessage(
+    fromMailboxAddress: Buffer,
+    fromLchainId: Buffer,
+    payer: Keypair,
+    message: Buffer
+  ): Promise<{ payloadHash: Buffer; payloadHashBytes: number[] }> {
     await this.consortiumUtility.createAndFinalizeSession(payer, message);
     const payloadHash = Buffer.from(sha256(message).slice(2), "hex");
     const payloadHashBytes = Array.from(Uint8Array.from(payloadHash));
@@ -100,17 +114,20 @@ export class MailboxUtilities {
       [Buffer.from("session_payload"), payer.publicKey.toBuffer(), payloadHash],
       consortium.programId
     )[0];
-    const postSessionPayloadTx = await consortium.methods
+    const postSessionPayloadTx = await withBlockhashRetry(() =>
+      consortium.methods
       .postSessionPayload(payloadHashBytes, message, message.length)
       .accounts({
         payer: payer.publicKey,
         sessionPayload: sessionPayloadPDA
       })
       .signers([payer])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await consortium.provider.connection.confirmTransaction(postSessionPayloadTx);
 
-    const deliverMessageTx = await mailbox.methods
+    const deliverMessageTx = await withBlockhashRetry(() =>
+      mailbox.methods
       .deliverMessage(payloadHashBytes)
       .accounts({
         deliverer: payer.publicKey,
@@ -119,7 +136,8 @@ export class MailboxUtilities {
         consortiumValidatedPayload: this.consortiumUtility.getValidatedPayloadPDA(payloadHash)
       })
       .signers([payer])
-      .rpc();
+      .rpc({ commitment: "confirmed" })
+    );
     await mailbox.provider.connection.confirmTransaction(deliverMessageTx);
     return {payloadHash, payloadHashBytes};
   }

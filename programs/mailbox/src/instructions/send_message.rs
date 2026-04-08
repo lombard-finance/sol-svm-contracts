@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::system_instruction::transfer;
+use solana_address::bytes_are_curve_point;
 
 use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
@@ -44,7 +45,14 @@ pub struct SendMessage<'info> {
     pub treasury: Option<UncheckedAccount<'info>>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, &sender_authority.owner.to_bytes()],
+        seeds = [
+            SENDER_CONFIG_SEED,
+            if bytes_are_curve_point(sender_authority.key.as_ref()) || sender_authority.data_is_empty() {
+                sender_authority.key.as_ref()
+            } else {
+                sender_authority.owner.as_ref()
+            }
+        ],
         bump
     )]
     pub sender_config: Option<Account<'info, SenderConfig>>,
@@ -76,13 +84,19 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
+    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) ||
+        ctx.accounts.sender_authority.data_is_empty() {
+        true => ctx.accounts.sender_authority.key.to_bytes(),
+        false => ctx.accounts.sender_authority.owner.to_bytes(),
+    };
+
     let message = MessageV1 {
         nonce: config.global_nonce,
         body: message_body,
         destination_caller: destination_caller,
         recipient: recipient,
         message_path_identifier: ctx.accounts.outbound_message_path.identifier,
-        sender: ctx.accounts.sender_authority.owner.to_bytes(),
+        sender: sender,
     };
 
     if !fee_disabled {

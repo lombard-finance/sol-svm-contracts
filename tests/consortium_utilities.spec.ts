@@ -1,11 +1,18 @@
-import { generateSecp256k1Keypairs, signPayload, verifySignature, signatureToBytes, publicKeyToBytes, signPayloadWithMultipleKeys } from "./consortium_utilities";
+import {
+  ConsortiumUtility,
+  generateSecp256k1Keypairs,
+  publicKeyToBytes,
+  signatureToBytes,
+  signPayload,
+  signPayloadWithMultipleKeys,
+  verifySignature
+} from "./utils/consortium_utilities";
 import { expect } from "chai";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Keypair } from "@solana/web3.js";
-import { Consortium, Consortium as ConsortiumProgram } from "../target/types/consortium";
-import { ConsortiumUtility } from "./consortium_utilities";
-import { fundWallet } from "./asset_router_utilities";
+import { Consortium } from "../target/types/consortium";
+import { fundWallet } from "./utils/asset_router_utilities";
 
 
 /**
