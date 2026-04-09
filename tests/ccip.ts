@@ -594,6 +594,11 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
+					{ // receiverTokenAccaunt
+						pubkey: userTA,
+						isWritable: true,
+						isSigner: false
+					},
 					{ // mintAuthority
 						pubkey: multisig,
 						isWritable: false,
@@ -631,11 +636,6 @@ describe("CCIP Token Pool", () => {
 					},
 					{ // messageHandled
 						pubkey: messageHandledPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // receiverTokenAccaunt
-						pubkey: userTA,
 						isWritable: true,
 						isSigner: false
 					},

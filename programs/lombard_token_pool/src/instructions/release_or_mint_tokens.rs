@@ -129,6 +129,9 @@ pub struct TokenOfframp<'info> {
         seeds::program = state.config.rmn_remote,
     )]
     pub rmn_remote_config: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(mut)]
+    pub receiver_token_account: UncheckedAccount<'info>,
 
     // Lombard GMP-specific accounts
     /// CHECK: This will be verified by the mailbox program
@@ -154,9 +157,6 @@ pub struct TokenOfframp<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub message_handled: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
-    pub receiver_token_account: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
