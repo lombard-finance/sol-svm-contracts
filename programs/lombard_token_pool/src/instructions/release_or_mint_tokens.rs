@@ -131,12 +131,23 @@ pub struct TokenOfframp<'info> {
     pub rmn_remote_config: UncheckedAccount<'info>,
 
     // Lombard GMP-specific accounts
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub mint_authority: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub token_authority: UncheckedAccount<'info>,
     #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
     pub bridge: Program<'info, Bridge>,
-
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the bridge program
     #[account()]
     pub mailbox: Option<Program<'info, Mailbox>>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub message_info: UncheckedAccount<'info>,
@@ -144,20 +155,8 @@ pub struct TokenOfframp<'info> {
     #[account(mut)]
     pub message_handled: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub mailbox_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub bridge_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub receiver_token_account: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub mint_authority: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub token_authority: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch

@@ -594,14 +594,34 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
+					{ // mintAuthority
+						pubkey: multisig,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // tokenAuthority
+						pubkey: tokenAuth,
+						isWritable: false,
+						isSigner: false
+					},
 					{ // bridge
 						pubkey: bridge.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // bridgeConfig
+						pubkey: bridgeConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
 					{ // mailbox
 						pubkey: mailbox.programId,
 						isWritable: false,
+						isSigner: false
+					},
+					{ // mailboxConfig
+						pubkey: mailboxConfigPDA,
+						isWritable: true,
 						isSigner: false
 					},
 					{ // messageInfo
@@ -614,29 +634,9 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // mailboxConfig
-						pubkey: mailboxConfigPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // bridgeConfig
-						pubkey: bridgeConfigPDA,
-						isWritable: false,
-						isSigner: false
-					},
 					{ // receiverTokenAccaunt
 						pubkey: userTA,
 						isWritable: true,
-						isSigner: false
-					},
-					{ // mintAuthority
-						pubkey: multisig,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // tokenAuthority
-						pubkey: tokenAuth,
-						isWritable: false,
 						isSigner: false
 					},
 					{ // remoteBridgeConfig
