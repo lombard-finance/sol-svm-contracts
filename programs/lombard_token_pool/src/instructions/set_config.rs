@@ -10,9 +10,6 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct Empty {}
-
-#[derive(Accounts)]
 pub struct SetConfig<'info> {
     #[account(
         mut,

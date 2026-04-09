@@ -4,6 +4,7 @@ use base_token_pool::common::*;
 use base_token_pool::rate_limiter::*;
 
 pub mod constants;
+pub mod context;
 pub mod errors;
 pub mod events;
 pub mod instructions;
@@ -13,6 +14,7 @@ pub mod state;
 use instructions::*;
 
 use crate::{
+    context::*,
     state::LombardChain
 };
 
@@ -172,6 +174,14 @@ pub mod lombard_token_pool {
         release_or_mint: ReleaseOrMintInV1,
     ) -> Result<ReleaseOrMintOutV1> {
         instructions::release_or_mint_tokens(ctx, release_or_mint)
+    }
+
+    pub fn derive_accounts_release_or_mint_tokens<'info>(
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        stage: String,
+        release_or_mint: ReleaseOrMintInV1,
+    ) -> Result<DeriveAccountsResponse> {
+        instructions::derive_accounts_release_or_mint_tokens(ctx, stage, release_or_mint)
     }
 
     pub fn lock_or_burn_tokens(

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -23,7 +25,9 @@ use mailbox::{
 
 use crate::{
     constants::*,
+    context::*,
     errors::LombardTokenPoolError,
+    instructions::derive_accounts,
     state::{ChainConfig, State}
 };
 
@@ -272,4 +276,23 @@ fn mailbox_receive_message<'info>(
     };
 
     Ok(Some(response))
+}
+
+
+pub fn derive_accounts_release_or_mint_tokens<'info>(
+    ctx: Context<'_, '_, 'info, 'info, Empty>,
+    stage: String,
+    release_or_mint: ReleaseOrMintInV1,
+) -> Result<DeriveAccountsResponse> {
+    msg!("Stage: {}", stage);
+    let stage = derive_accounts::release_or_mint::OfframpDeriveStage::from_str(&stage)?;
+
+    match stage {
+        derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveChainConfig => {
+            derive_accounts::release_or_mint::retrieve_chain_config(&release_or_mint)
+        }
+        derive_accounts::release_or_mint::OfframpDeriveStage::BuildDynamicAccounts => {
+            derive_accounts::release_or_mint::build_dynamic_accounts(ctx, &release_or_mint)
+        }
+    }
 }
