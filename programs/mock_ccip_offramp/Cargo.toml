@@ -28,7 +28,7 @@ anchor-spl = "0.31.1"
 spl-token-2022 = { version = "6.0.0", features = ["no-entrypoint"] }
 base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"] }
 rmn_remote = { path = "../../dependencies/ccip/programs/rmn-remote", features = ["no-entrypoint"] }
-lombard_token_pool = { path = "../lombard_token_pool", features = ["cpi"] }
+# lombard_token_pool = { path = "../lombard_token_pool", features = ["cpi"] }
 
 
 [lints.rust.unexpected_cfgs]

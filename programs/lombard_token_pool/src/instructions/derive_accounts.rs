@@ -10,6 +10,11 @@ use std::{
     str::FromStr,
 };
 
+use crate::{
+    context::{BRIDGE_PROGRAM, get_pda, Empty}, 
+    state::ChainConfig,
+};
+
 // Local helper to find a readonly CCIP meta for a given seed + program_id combo.
 // Short name for compactness.
 fn find(seeds: &[&[u8]], program_id: Pubkey) -> CcipAccountMeta {
@@ -19,8 +24,6 @@ fn find(seeds: &[&[u8]], program_id: Pubkey) -> CcipAccountMeta {
 }
 
 pub mod release_or_mint {
-
-    use crate::context::Empty;
 
     use super::*;
 
@@ -80,12 +83,12 @@ pub mod release_or_mint {
     }
 
     pub fn build_dynamic_accounts<'info>(
-        _ctx: Context<'_, '_, 'info, 'info, Empty>,
-        _release_or_mint: &ReleaseOrMintInV1,
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        release_or_mint: &ReleaseOrMintInV1,
     ) -> Result<DeriveAccountsResponse> {
-        // let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;
-        // let domain_id = chain_config.cctp.domain_id;
-        // let mint = release_or_mint.local_token;
+        let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;
+        let chain_id = chain_config.bridge.destination_chain_id;
+        let mint = release_or_mint.local_token;
         // let cctp_msg =
         //     MessageAndAttestation::try_from_slice(&release_or_mint.offchain_token_data)?.message;
         // let nonce_seed = TokenOfframpRemainingAccounts::first_nonce_seed(&cctp_msg);
@@ -96,20 +99,16 @@ pub mod release_or_mint {
 
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
-                // // cctp_event_authority
+                // // message_info
                 // get_message_transmitter_pda(&[b"__event_authority"]).readonly(),
-                // // cctp_custody_token_account
+                // // message_handled
                 // get_token_messenger_minter_pda(&[b"custody", mint.as_ref()]).writable(),
-                // // cctp_remote_token_messenger_key
-                // get_token_messenger_minter_pda(&[b"remote_token_messenger", domain_seed])
-                //     .readonly(),
-                // // cctp_token_pair
-                // get_token_messenger_minter_pda(&[
-                //     b"token_pair",
-                //     domain_seed,
-                //     &remote_token_address_bytes,
-                // ])
-                // .readonly(),
+                // remote_bridge_config
+                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
+                    .readonly(),
+                // local_token_config
+                get_pda(&[b"token_pair", mint.as_ref()], &BRIDGE_PROGRAM)
+                    .readonly(),
                 // // cctp_used_nonces
                 // get_message_transmitter_pda(&[b"used_nonces", domain_seed, nonce_seed.as_ref()])
                 //     .writable(),
@@ -122,7 +121,6 @@ pub mod release_or_mint {
 }
 
 pub mod lock_or_burn {
-    use crate::context::Empty;
 
     use super::*;
 
@@ -174,7 +172,7 @@ pub mod lock_or_burn {
     }
 
     pub fn build_dynamic_accounts<'info>(
-        _ctx: Context<'_, '_, 'info, 'info, Empty>,
+        _ctx: Context<Empty>,
         _lock_or_burn: &LockOrBurnInV1,
     ) -> Result<DeriveAccountsResponse> {
         // let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;

@@ -1432,7 +1432,6 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base-token-pool",
- "lombard_token_pool",
  "rmn_remote",
  "spl-token-2022",
 ]
@@ -1444,7 +1443,6 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base-token-pool",
- "lombard_token_pool",
  "rmn_remote",
 ]
 
