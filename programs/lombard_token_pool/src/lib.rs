@@ -15,7 +15,7 @@ use instructions::*;
 
 use crate::{
     context::*,
-    state::LombardChain
+    state::LombardChain,
 };
 
 
