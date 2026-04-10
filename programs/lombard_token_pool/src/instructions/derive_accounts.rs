@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    context::{BRIDGE_PROGRAM, get_pda, Empty}, 
+    context::{BRIDGE_PROGRAM, get_pda, Empty, MAILBOX_PROGRAM}, 
     state::ChainConfig,
 };
 
@@ -99,19 +99,22 @@ pub mod release_or_mint {
 
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
-                // // message_info
-                // get_message_transmitter_pda(&[b"__event_authority"]).readonly(),
-                // // message_handled
-                // get_token_messenger_minter_pda(&[b"custody", mint.as_ref()]).writable(),
+                // message_info
+                get_pda(&[b"message", &release_or_mint.offchain_token_data], &MAILBOX_PROGRAM).writable(),
+                // message_handled
+                get_pda(&[b"message_handled", &release_or_mint.offchain_token_data], &BRIDGE_PROGRAM).writable(),
                 // remote_bridge_config
                 get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
                 // local_token_config
-                get_pda(&[b"token_pair", mint.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"local_token_config", mint.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
-                // // cctp_used_nonces
-                // get_message_transmitter_pda(&[b"used_nonces", domain_seed, nonce_seed.as_ref()])
-                //     .writable(),
+                // remote_token_config
+                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
+                    .writable(),
+                // inbound_message_path
+                get_pda(&[b"inbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
+                    .writable(),
                 solana_program::system_program::ID.readonly(),
             ],
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
