@@ -36,7 +36,6 @@ use crate::{
 pub struct TokenOfframp<'info> {
     // CCIP accounts ------------------------
     #[account(
-        mut,
         seeds = [EXTERNAL_TOKEN_POOLS_SIGNER, crate::ID.as_ref()],
         bump,
         seeds::program = offramp_program.key(),
@@ -235,7 +234,7 @@ fn mailbox_receive_message<'info>(
         &[ctx.bumps.pool_signer],
     ]];
     let ra:Vec<AccountInfo<'_>> = [
-        ctx.accounts.authority.to_account_info(),
+        ctx.accounts.pool_signer.to_account_info(),
         ctx.accounts.bridge_config.to_account_info(),
         ctx.accounts.message_handled.to_account_info(),
         ctx.accounts.token_program.to_account_info(),

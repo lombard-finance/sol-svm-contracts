@@ -1,5 +1,7 @@
+use std::io::{BufReader, Cursor, Read};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
+use anchor_lang::solana_program::hash::hash  as sha256;
 use base_token_pool::common::{
     CcipAccountMeta, CcipTokenPoolError, DeriveAccountsResponse, LockOrBurnInV1, ReleaseOrMintInV1,
     ToMeta, POOL_CHAINCONFIG_SEED,
@@ -12,6 +14,7 @@ use std::{
 
 use crate::{
     context::{BRIDGE_PROGRAM, get_pda, Empty, MAILBOX_PROGRAM}, 
+    errors::LombardTokenPoolError,
     state::ChainConfig,
 };
 
@@ -89,20 +92,15 @@ pub mod release_or_mint {
         let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;
         let chain_id = chain_config.bridge.destination_chain_id;
         let mint = release_or_mint.local_token;
-        // let cctp_msg =
-        //     MessageAndAttestation::try_from_slice(&release_or_mint.offchain_token_data)?.message;
-        // let nonce_seed = TokenOfframpRemainingAccounts::first_nonce_seed(&cctp_msg);
-        // let domain_str = domain_id.to_string();
-        // let domain_seed = domain_str.as_bytes();
-        // let remote_token_address_bytes =
-        //     to_solana_pubkey(&chain_config.base.remote.token_address).to_bytes();
+        let payload = payload_from_offchain_data(&release_or_mint.offchain_token_data)?;
+        let payload_hash = sha256(&payload).to_bytes();
 
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
                 // message_info
-                get_pda(&[b"message", &release_or_mint.offchain_token_data], &MAILBOX_PROGRAM).writable(),
+                get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
                 // message_handled
-                get_pda(&[b"message_handled", &release_or_mint.offchain_token_data], &BRIDGE_PROGRAM).writable(),
+                get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
                 // remote_bridge_config
                 get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
@@ -120,6 +118,32 @@ pub mod release_or_mint {
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
             ..Default::default()
         })
+    }
+
+
+    pub fn payload_from_offchain_data(bytes: &[u8]) -> Result<Vec<u8>> {
+        let mut reader = BufReader::new(Cursor::new(bytes));
+
+        // check length is at least for all static fields and length of dynamic fields
+        // 32 for the tuple length and 32 for each field
+        // plus 4 for the message selector
+        require!(bytes.len() >= 32 * 2, LombardTokenPoolError::InvalidPayloadLength);
+
+        // check selector
+        let mut offset_bytes = [0u8; 32];
+        reader.read_exact(&mut offset_bytes)?;
+        let offset = u64::from_be_bytes(offset_bytes[24..32].try_into().unwrap());
+        require!(offset > 32, LombardTokenPoolError::InvalidPayload);
+        reader.seek_relative(offset as i64 - 32)?;
+
+        let mut length_bytes = [0u8; 32];
+        reader.read_exact(&mut length_bytes)?;
+        let length = u64::from_be_bytes(length_bytes[24..32].try_into().unwrap());
+
+        let mut payload = vec![0u8; length as usize];
+        reader.read_exact(&mut payload)?;
+
+        Ok(payload)
     }
 }
 
