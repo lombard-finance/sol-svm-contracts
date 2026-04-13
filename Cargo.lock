@@ -1365,6 +1365,7 @@ dependencies = [
  "bridge",
  "build_commit",
  "ccip_common",
+ "hex",
  "mailbox",
  "solana-security-txt",
 ]

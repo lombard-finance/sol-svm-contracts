@@ -24,7 +24,6 @@ use crate::{
 pub struct TokenOnramp<'info> {
     // CCIP accounts ------------------------
     #[account(
-        mut,
         address = state.config.router_onramp_authority @ CcipTokenPoolError::InvalidPoolCaller
     )]
     pub authority: Signer<'info>,
