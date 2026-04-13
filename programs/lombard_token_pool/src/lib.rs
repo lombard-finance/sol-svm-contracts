@@ -34,7 +34,7 @@ pub const RECEIVE_MESSAGE_DISCRIMINATOR: [u8; 8] = [38, 144, 127, 225, 31, 225, 
 pub const DEPOSIT_FOR_BURN_WITH_CALLER_DISCRIMINATOR: [u8; 8] =
     [167, 222, 19, 114, 85, 21, 14, 118]; // global:deposit_for_burn_with_caller
 pub const RECLAIM_EVENT_ACCOUNT_DISCRIMINATOR: [u8; 8] = [94, 198, 180, 159, 131, 236, 15, 174]; // global:reclaim_event_account
-pub const TOKEN_POOL_TYPE_AND_VERSION: &str = "LombardTokenPoolV2 1.0.0";
+pub const TOKEN_POOL_TYPE_AND_VERSION: &str = "lombard-token-pool 1.0.0";
 
 #[program]
 pub mod lombard_token_pool {
