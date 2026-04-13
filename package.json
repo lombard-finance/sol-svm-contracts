@@ -70,6 +70,7 @@
     "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts",
     "crosschain_tokenPoolInitRemoteChainConfig": "ts-node -T scripts/crosschain/tokenPoolInitRemoteChainConfig.ts",
     "crosschain_tokenPoolAppendRemotePool": "ts-node -T scripts/crosschain/tokenPoolAppendRemotePool.ts",
+    "crosschain_tokenPoolGetTypeAndVersion": "ts-node -T scripts/crosschain/tokenPoolGetTypeAndVersion.ts",
     "test:anchor-each": "bash scripts/anchor-test-each.sh"
   },
   "dependencies": {
