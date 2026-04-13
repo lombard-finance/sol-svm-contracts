@@ -122,12 +122,12 @@ pub mod release_or_mint {
 
 
     pub fn payload_from_offchain_data(bytes: &[u8]) -> Result<Vec<u8>> {
-        let mut reader = BufReader::new(Cursor::new(bytes));
-
         // check length is at least for all static fields and length of dynamic fields
         // 32 for the tuple length and 32 for each field
         // plus 4 for the message selector
         require!(bytes.len() >= 32 * 2, LombardTokenPoolError::InvalidPayloadLength);
+
+        let mut reader = BufReader::new(Cursor::new(bytes));
 
         // check selector
         let mut offset_bytes = [0u8; 32];
