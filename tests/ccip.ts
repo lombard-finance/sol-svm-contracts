@@ -629,14 +629,9 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // messageInfo
-						pubkey: messageInfoPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // messageHandled
-						pubkey: messageHandledPDA,
-						isWritable: true,
+					{ // Treasury
+						pubkey: tokenPool.programId,
+						isWritable: false,
 						isSigner: false
 					},
 					{ // remoteBridgeConfig
@@ -657,6 +652,16 @@ describe("CCIP Token Pool", () => {
 					{ // inboundMessagePath
 						pubkey: inboundMessagePathPDA,
 						isWritable: false,
+						isSigner: false
+					},
+					{ // messageInfo
+						pubkey: messageInfoPDA,
+						isWritable: true,
+						isSigner: false
+					},
+					{ // messageHandled
+						pubkey: messageHandledPDA,
+						isWritable: true,
 						isSigner: false
 					},
 					{
@@ -749,6 +754,7 @@ describe("CCIP Token Pool", () => {
 					tokenPool: tokenPool.programId,
 					tokenPoolTokenAccount: tokenPoolSignerTA,
 					cpiSigner: cpiSignerPDA,
+					state: tokenPoolStatePDA,
 					systemProgram: SystemProgram.programId,
 				})
 				.remainingAccounts([
@@ -757,11 +763,11 @@ describe("CCIP Token Pool", () => {
 					// 	isWritable: true,
 					// 	isSigner: true
 					// },
-					{ // state
-						pubkey: tokenPoolStatePDA,
-						isWritable: false,
-						isSigner: false
-					},
+					// { // state
+					// 	pubkey: tokenPoolStatePDA,
+					// 	isWritable: false,
+					// 	isSigner: false
+					// },
 					{ // poolSigner
 						pubkey: tokenPoolSignerPDA,
 						isWritable: true,
@@ -792,8 +798,23 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
+					{ // mintAuthority
+						pubkey: multisig,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // tokenAuthority
+						pubkey: tokenAuth,
+						isWritable: false,
+						isSigner: false
+					},
 					{ // bridge
 						pubkey: bridge.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // bridgeConfig
+						pubkey: bridgeConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -807,29 +828,9 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // bridgeConfig
-						pubkey: bridgeConfigPDA,
+					{ // Treasury
+						pubkey: tokenPool.programId,
 						isWritable: false,
-						isSigner: false
-					},
-					{ // bridgeSenderConfig
-						pubkey: tokenPoolSenderConfigPDA,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // outboundMessagePath
-						pubkey: outboundMessagePathPDA,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // outboundMessage
-						pubkey: outboundMessagePDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // mailboxSenderConfig
-						pubkey: bridgeSenderConfigPDA,
-						isWritable: true,
 						isSigner: false
 					},
 					{ // remoteBridgeConfig
@@ -847,9 +848,24 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // Treasury
-						pubkey: tokenPool.programId,
+					{ // bridgeSenderConfig
+						pubkey: tokenPoolSenderConfigPDA,
 						isWritable: false,
+						isSigner: false
+					},
+					{ // mailboxSenderConfig
+						pubkey: bridgeSenderConfigPDA,
+						isWritable: true,
+						isSigner: false
+					},
+					{ // outboundMessagePath
+						pubkey: outboundMessagePathPDA,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // outboundMessage
+						pubkey: outboundMessagePDA,
+						isWritable: true,
 						isSigner: false
 					},
 					{

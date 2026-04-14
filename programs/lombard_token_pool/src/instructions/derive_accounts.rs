@@ -97,10 +97,6 @@ pub mod release_or_mint {
 
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
-                // message_info
-                get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
-                // message_handled
-                get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
                 // remote_bridge_config
                 get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
@@ -113,6 +109,10 @@ pub mod release_or_mint {
                 // inbound_message_path
                 get_pda(&[b"inbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
                     .writable(),
+                // message_info
+                get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
+                // message_handled
+                get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
                 solana_program::system_program::ID.readonly(),
             ],
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
