@@ -63,6 +63,7 @@ pub struct TokenOfframp<'info> {
     // Token pool accounts ------------------
     // consistent set + token pool program
     #[account(
+        mut,
         seeds = [
             POOL_STATE_SEED,
             mint.key().as_ref()
@@ -228,13 +229,25 @@ fn mailbox_receive_message<'info>(
     ctx: &Context<TokenOfframp>,
     payload_hash: &[u8; 32],
 ) -> Result<Option<InboundResponse>> {
-    let signer_seeds: &[&[&[u8]]] = &[&[
+    let state_signer_seed = &[
+        POOL_STATE_SEED,
+        &ctx.accounts.mint.key().to_bytes(),
+        &[ctx.bumps.state],
+    ];
+    let token_pool_signer_seed = &[
         POOL_SIGNER_SEED,
         &ctx.accounts.mint.key().to_bytes(),
         &[ctx.bumps.pool_signer],
-    ]];
+    ];
+
+    let signer_seeds: &[&[&[u8]]] = &[state_signer_seed, token_pool_signer_seed];
+    let pool_signer = AccountInfo {
+        is_signer: true, // Manually set to true
+        ..ctx.accounts.pool_signer.to_account_info().clone()
+    };
+
     let ra:Vec<AccountInfo<'_>> = [
-        ctx.accounts.pool_signer.to_account_info(),
+        pool_signer,
         ctx.accounts.bridge_config.to_account_info(),
         ctx.accounts.message_handled.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
@@ -254,7 +267,7 @@ fn mailbox_receive_message<'info>(
         .expect("mailbox must be provided")
         .to_account_info(),
         HandleMessage {
-            handler: ctx.accounts.pool_signer.to_account_info(),
+            handler: ctx.accounts.state.to_account_info(),
             config: ctx.accounts.mailbox_config.to_account_info(),
             message_info: ctx.accounts.message_info.to_account_info(),
             recipient_program: ctx.accounts.bridge.to_account_info(),

@@ -475,7 +475,8 @@ describe("CCIP Token Pool", () => {
 				nonceForeignChain++,
 				foreignBridgeAddress,
 				bridge.programId.toBuffer(),
-				tokenPoolSignerPDA.toBuffer(),
+				// tokenPoolSignerPDA.toBuffer(),
+				tokenPoolStatePDA.toBuffer(),
 				bridgePayload.bytes()
 			);
 
@@ -551,7 +552,7 @@ describe("CCIP Token Pool", () => {
 					},
 					{ // state
 						pubkey: tokenPoolStatePDA,
-						isWritable: false,
+						isWritable: true,
 						isSigner: false
 					},
 					{ // tokenProgram
