@@ -60,7 +60,7 @@ pub mod lombard_token_pool {
     /// # Arguments
     /// * `ctx` - The context
     pub fn type_version(_ctx: Context<Empty>) -> Result<String> {
-        msg!("{}", TOKEN_POOL_TYPE_AND_VERSION);
+        msg!("{}", TOKEN_POOL_TYPE_AND_VERSION.to_string());
         Ok(TOKEN_POOL_TYPE_AND_VERSION.to_string())
     }
 
