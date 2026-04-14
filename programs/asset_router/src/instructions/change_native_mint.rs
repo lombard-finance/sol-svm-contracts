@@ -1,4 +1,4 @@
-//! Functionality to set treasury address.
+//! Functionality to change the native mint address.
 use crate::{constants, events::NativeMintChanged, state::Config};
 use anchor_lang::prelude::*;
 
