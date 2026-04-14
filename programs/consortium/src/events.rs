@@ -29,7 +29,7 @@ pub struct SessionFinalized {
 #[event]
 pub struct SessionSignaturesAdded {
     pub hash: [u8; 32],
-    pub signatures: Vec<[u8; 64]>,
+    pub validator_indices: Vec<u64>,
 }
 
 #[event]
