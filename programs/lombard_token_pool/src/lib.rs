@@ -190,4 +190,12 @@ pub mod lombard_token_pool {
     ) -> Result<LockOrBurnOutV1> {
         instructions::lock_or_burn_tokens(ctx, lock_or_burn)
     }
+
+    pub fn derive_accounts_lock_or_burn_tokens<'info>(
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        stage: String,
+        lock_or_burn: LockOrBurnInV1,
+    ) -> Result<DeriveAccountsResponse> {
+        instructions::derive_accounts_lock_or_burn_tokens(ctx, stage, lock_or_burn)
+    }
 }

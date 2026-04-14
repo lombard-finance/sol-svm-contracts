@@ -629,11 +629,6 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // Treasury
-						pubkey: tokenPool.programId,
-						isWritable: false,
-						isSigner: false
-					},
 					{ // remoteBridgeConfig
 						pubkey: bridgeRemoteBridgeConfigPDA,
 						isWritable: false,

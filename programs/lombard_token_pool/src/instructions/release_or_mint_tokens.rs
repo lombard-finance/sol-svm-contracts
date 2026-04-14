@@ -155,9 +155,6 @@ pub struct TokenOfframp<'info> {
     #[account()]
     pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub treasury: Option<UncheckedAccount<'info>>,
-    /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
     )]

@@ -12,6 +12,11 @@ use std::{
     str::FromStr,
 };
 
+use mailbox::{
+    self,
+    state::Config,
+};
+
 use crate::{
     context::{BRIDGE_PROGRAM, get_pda, Empty, MAILBOX_PROGRAM}, 
     errors::LombardTokenPoolError,
@@ -180,14 +185,17 @@ pub mod lock_or_burn {
 
     pub fn retrieve_chain_config(lock_or_burn: &LockOrBurnInV1) -> Result<DeriveAccountsResponse> {
         Ok(DeriveAccountsResponse {
-            ask_again_with: vec![find(
-                &[
-                    POOL_CHAINCONFIG_SEED,
-                    &lock_or_burn.remote_chain_selector.to_le_bytes(),
-                    lock_or_burn.local_token.as_ref(),
-                ],
-                crate::ID,
-            )],
+            ask_again_with: vec![
+                find(
+                    &[
+                        POOL_CHAINCONFIG_SEED,
+                        &lock_or_burn.remote_chain_selector.to_le_bytes(),
+                        lock_or_burn.local_token.as_ref(),
+                    ],
+                    crate::ID,
+                ),
+                get_pda(&[b"mailbox_config"], &MAILBOX_PROGRAM).readonly(),
+            ],
             // The static PDAs have mostly already been returned by CCIP via the LUT, so we just return here the ones not shared with offramp (so not in LUT)
             accounts_to_save: vec![
                 // get_token_messenger_minter_pda(&[b"sender_authority"]).readonly()
@@ -199,13 +207,14 @@ pub mod lock_or_burn {
     }
 
     pub fn build_dynamic_accounts<'info>(
-        _ctx: Context<Empty>,
-        _lock_or_burn: &LockOrBurnInV1,
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        lock_or_burn: &LockOrBurnInV1,
     ) -> Result<DeriveAccountsResponse> {
-        // let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;
-        // let domain_id = chain_config.cctp.domain_id;
-        // let domain_str = domain_id.to_string();
-        // let domain_seed = domain_str.as_bytes();
+        let chain_config = Account::<'info, ChainConfig>::try_from(&ctx.remaining_accounts[0])?;
+        let chain_id = chain_config.bridge.destination_chain_id;
+        let mint = lock_or_burn.local_token;
+        let token_pool_signer = get_pda(&[b"ccip_tokenpool_signer", mint.as_ref()], &crate::ID);
+        let mailbox_config = Account::<'info, Config>::try_from(&ctx.remaining_accounts[1])?;
 
         // msg!(
         //     "Sender: {:?}, selector: {:?}, nonce: {:?}",
@@ -216,20 +225,29 @@ pub mod lock_or_burn {
 
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
-                // // cctp_remote_token_messenger_key
-                // get_token_messenger_minter_pda(&[b"remote_token_messenger", domain_seed])
-                //     .readonly(),
-                // // cctp_message_sent_event
-                // find(
-                //     &[
-                //         MESSAGE_SENT_EVENT_SEED,
-                //         &lock_or_burn.original_sender.to_bytes(),
-                //         &lock_or_burn.remote_chain_selector.to_le_bytes(),
-                //         &lock_or_burn.msg_total_nonce.to_le_bytes(),
-                //     ],
-                //     crate::ID,
-                // )
-                // .writable(),
+                // treasury
+                mailbox_config.treasury.readonly(),
+                // remote_bridge_config
+                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
+                    .readonly(),
+                // local_token_config
+                get_pda(&[b"local_token_config", mint.as_ref()], &BRIDGE_PROGRAM)
+                    .readonly(),
+                // remote_token_config
+                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
+                    .writable(),
+                // bridge_sender_config
+                get_pda(&[b"sender_config", token_pool_signer.as_ref()], &BRIDGE_PROGRAM)
+                    .readonly(),
+                // mailbox_sender_config
+                get_pda(&[b"sender_config", &BRIDGE_PROGRAM.as_ref()], &MAILBOX_PROGRAM)
+                    .readonly(),
+                // outbound_message_path
+                get_pda(&[b"outbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
+                    .readonly(),
+                // outbound_message
+                get_pda(&[b"outbound_message", &mailbox_config.global_nonce.to_be_bytes()], &MAILBOX_PROGRAM).writable(),
+                solana_program::system_program::ID.readonly(),
             ],
             current_stage: OnrampDeriveStage::BuildDynamicAccounts.to_string(),
             next_stage: "".to_string(),
