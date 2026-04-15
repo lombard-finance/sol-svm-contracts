@@ -49,6 +49,10 @@ pub enum ConsortiumError {
     ValidatedPayloadAlreadyExists,
     #[msg("Validated payload not empty")]
     ValidatedPayloadNotEmpty,
+    #[msg("Epoch must be greater than zero")]
+    InvalidEpoch,
+    #[msg("Duplicate validator in validator set")]
+    DuplicateValidator,
 }
 
 impl From<std::io::Error> for ConsortiumError {

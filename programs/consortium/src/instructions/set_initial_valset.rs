@@ -22,6 +22,7 @@ pub fn set_initial_valset(ctx: Context<SetInitialValset>, payload: Vec<u8>) -> R
     );
 
     let update_valset_payload = UpdateValSetPayload::from_session_payload(&payload)?;
+    update_valset_payload.validate_valset()?;
     ctx.accounts.config.current_epoch = update_valset_payload.epoch;
     ctx.accounts.config.current_validators = update_valset_payload.validators;
     ctx.accounts.config.current_weights = update_valset_payload.weights;
