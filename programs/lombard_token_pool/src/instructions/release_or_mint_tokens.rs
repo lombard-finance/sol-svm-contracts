@@ -13,7 +13,6 @@ use mailbox::{
 
 use bridge::{
     self,
-    program::Bridge,
     state::RemoteBridgeConfig,
     utils::{gmp_messages::{InboundResponse}},
 };
@@ -145,7 +144,7 @@ pub struct TokenOfframp<'info> {
     #[account()]
     pub token_authority: UncheckedAccount<'info>,
     #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
-    pub bridge: Program<'info, Bridge>,
+    pub bridge: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub bridge_config: UncheckedAccount<'info>,
