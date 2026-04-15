@@ -151,7 +151,7 @@ pub struct TokenOfframp<'info> {
     pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the bridge program
     #[account()]
-    pub mailbox: Option<Program<'info, Mailbox>>,
+    pub mailbox: Program<'info, Mailbox>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub mailbox_config: UncheckedAccount<'info>,
@@ -263,8 +263,6 @@ fn mailbox_receive_message<'info>(
     ].to_vec();
     let cpi_context = CpiContext::new_with_signer(
         ctx.accounts.mailbox
-        .as_ref()
-        .expect("mailbox must be provided")
         .to_account_info(),
         HandleMessage {
             handler: ctx.accounts.state.to_account_info(),
