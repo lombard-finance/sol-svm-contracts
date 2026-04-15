@@ -13,7 +13,6 @@ use mailbox::{
 
 use bridge::{
     self,
-    program::Bridge,
     state::RemoteBridgeConfig,
     utils::{gmp_messages::{InboundResponse}},
 };
@@ -145,13 +144,13 @@ pub struct TokenOfframp<'info> {
     #[account()]
     pub token_authority: UncheckedAccount<'info>,
     #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
-    pub bridge: Program<'info, Bridge>,
+    pub bridge: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the bridge program
     #[account()]
-    pub mailbox: Option<Program<'info, Mailbox>>,
+    pub mailbox: Program<'info, Mailbox>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub mailbox_config: UncheckedAccount<'info>,
@@ -186,8 +185,8 @@ pub fn release_or_mint_tokens<'info>(
 
     let parsed_amount = to_svm_token_amount(
         release_or_mint.amount,
-        8,
-        8,
+        ctx.accounts.chain_config.base.remote.decimals,
+        ctx.accounts.state.config.decimals,
     )?;
 
     let BaseChain {
@@ -263,8 +262,6 @@ fn mailbox_receive_message<'info>(
     ].to_vec();
     let cpi_context = CpiContext::new_with_signer(
         ctx.accounts.mailbox
-        .as_ref()
-        .expect("mailbox must be provided")
         .to_account_info(),
         HandleMessage {
             handler: ctx.accounts.state.to_account_info(),

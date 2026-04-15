@@ -13,7 +13,7 @@ use anchor_lang::prelude::*;
 pub struct FinalizeSession<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut, seeds = [CONFIG_SEED], bump)]
+    #[account(seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     #[account(
         mut,

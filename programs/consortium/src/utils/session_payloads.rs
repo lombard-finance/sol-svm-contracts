@@ -152,6 +152,7 @@ impl UpdateValSetPayload {
             self.validators.len() <= MAX_VALIDATOR_SET_SIZE,
             ConsortiumError::ValidatorSetSizeTooBig
         );
+        require!(self.epoch > 0, ConsortiumError::InvalidEpoch);
         require!(
             self.weight_threshold > 0,
             ConsortiumError::InvalidWeightThreshold
@@ -160,6 +161,16 @@ impl UpdateValSetPayload {
             self.validators.len() == self.weights.len(),
             ConsortiumError::ValidatorsAndWeightsMismatch
         );
+
+        let validators = &self.validators;
+        for i in 0..validators.len() {
+            for j in (i + 1)..validators.len() {
+                require!(
+                    validators[i] != validators[j],
+                    ConsortiumError::DuplicateValidator
+                );
+            }
+        }
 
         let mut sum = 0;
         for weight in &self.weights {

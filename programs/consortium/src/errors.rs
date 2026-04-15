@@ -51,6 +51,10 @@ pub enum ConsortiumError {
     ValidatedPayloadNotEmpty,
     #[msg("Validated payload epoch mismatch")]
     ValidatedPayloadEpochMismatch,
+    #[msg("Epoch must be greater than zero")]
+    InvalidEpoch,
+    #[msg("Duplicate validator in validator set")]
+    DuplicateValidator,
 }
 
 impl From<std::io::Error> for ConsortiumError {
