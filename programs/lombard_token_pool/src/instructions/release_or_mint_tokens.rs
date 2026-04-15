@@ -185,8 +185,8 @@ pub fn release_or_mint_tokens<'info>(
 
     let parsed_amount = to_svm_token_amount(
         release_or_mint.amount,
-        8,
-        8,
+        ctx.accounts.chain_config.base.remote.decimals,
+        ctx.accounts.state.config.decimals,
     )?;
 
     let BaseChain {
