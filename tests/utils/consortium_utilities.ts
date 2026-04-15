@@ -396,7 +396,6 @@ export class ConsortiumUtility {
 					.accounts({
 						payer: payer.publicKey,
 						session: sessionPDA,
-						validatedPayload: validatedPayloadPDA,
 					})
 					.signers([payer])
 					.rpc({ commitment: "confirmed" })

@@ -34,7 +34,10 @@ impl Session {
 }
 
 #[account]
-pub struct ValidatedPayload {}
+#[derive(InitSpace)]
+pub struct ValidatedPayload {
+    pub latest_epoch: u64,
+}
 
 #[account]
 pub struct SessionPayload {

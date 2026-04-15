@@ -303,7 +303,6 @@ describe("Consortium", () => {
             .accounts({
               payer: payer.publicKey,
               session: sessionPDA,
-              validatedPayload: validatedPayloadPDA,
             })
             .signers([payer])
             .rpc({ commitment: "confirmed" })
