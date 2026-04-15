@@ -49,6 +49,8 @@ pub enum ConsortiumError {
     ValidatedPayloadAlreadyExists,
     #[msg("Validated payload not empty")]
     ValidatedPayloadNotEmpty,
+    #[msg("Validated payload epoch mismatch")]
+    ValidatedPayloadEpochMismatch,
 }
 
 impl From<std::io::Error> for ConsortiumError {
