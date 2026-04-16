@@ -10,7 +10,6 @@ use crate::state::{
 #[derive(Accounts)]
 #[instruction(mint_message: MintMessage)]
 pub struct ValidateMint<'info> {
-    #[account(mut)]
     pub validator: Signer<'info>,
     /// Pays for the 'Deposit' account creation if the account does not already exist; can be any account
     #[account(mut)]
