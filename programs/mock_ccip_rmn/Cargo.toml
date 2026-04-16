@@ -11,6 +11,10 @@ name = "mock_ccip_rmn"
 [features]
 default = ["mainnet"]
 mainnet = []
+gastald = []
+staging = []
+bft = []
+localnet = []
 devnet = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
@@ -23,7 +27,7 @@ anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
 base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"] }
 rmn_remote = { path = "../../dependencies/ccip/programs/rmn-remote", features = ["no-entrypoint"] }
-lombard_token_pool = { path = "../lombard_token_pool", features = ["cpi"] }
+# lombard_token_pool = { path = "../lombard_token_pool", features = ["cpi"] }
 
 
 [lints.rust.unexpected_cfgs]

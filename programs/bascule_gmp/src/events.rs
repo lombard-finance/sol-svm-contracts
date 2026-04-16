@@ -40,3 +40,8 @@ pub struct ValidateThresholdUpdated {
 pub struct OwnershipTransferInitiated {
     pub new_admin: Pubkey,
 }
+
+#[event]
+pub struct TrustedSignerSet {
+    pub trusted_signer: [u8; 64],
+}

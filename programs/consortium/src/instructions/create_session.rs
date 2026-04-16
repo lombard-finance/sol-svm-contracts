@@ -1,6 +1,6 @@
 //! Instruction to create the on-chain descriptor for a consortium notary session.
 use crate::{
-    constants::{CONFIG_SEED, SESSION_SEED, VALIDATED_PAYLOAD_SEED},
+    constants::{CONFIG_SEED, SESSION_SEED},
     errors::ConsortiumError,
     events::SessionCreated,
     state::{Config, Session},
@@ -24,14 +24,6 @@ pub struct CreateSession<'info> {
         bump,
     )]
     pub session: Account<'info, Session>,
-    /// CHECK: Only want to check that the validated payload account does not exist.
-    #[account(
-        constraint = validated_payload.data_is_empty() @ ConsortiumError::ValidatedPayloadNotEmpty,
-        constraint = validated_payload.owner == &System::id() @ ConsortiumError::ValidatedPayloadAlreadyExists,
-        seeds = [VALIDATED_PAYLOAD_SEED, &payload_hash[..]],
-        bump
-    )]
-    pub validated_payload: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 

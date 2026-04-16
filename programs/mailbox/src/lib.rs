@@ -21,7 +21,7 @@ declare_id!("Lomu595CAtJGF6mpnfeAJ7daZfVdHeRkAdKyfqzXqom");
 declare_id!("Lom5doBNAny5AaPS9J7SRPLghVqwEQLrEmvQMhNEUqa");
 #[cfg(feature = "bft")]
 declare_id!("LomJw912MoUd7iiAesTQAgz1paLcTqi6ndG3w3pnKH9");
-#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
+#[cfg(any(feature = "localnet", not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft"))))]
 declare_id!("3TfSFMuw31Je57m5Wcd9ZopGzjrHLHkjh292aEwXvm3h");
 
 #[program]

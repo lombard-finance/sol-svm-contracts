@@ -37,4 +37,8 @@ pub enum LombardTokenPoolError {
     RemoteChainMismatch,
     #[msg("Amount mismatch")]
     AmountMismatch,
+    #[msg("Invalid payload size")]
+    InvalidPayloadLength,
+    #[msg("Invalid payload")]
+    InvalidPayload,
 }

@@ -37,9 +37,9 @@ for f in "${files[@]}"; do
 
   run_st=0
   if [[ "$first" -eq 1 ]]; then
-    ANCHOR_MOCHA_FILES="$f" anchor test "$@" || run_st=$?
+    ANCHOR_MOCHA_FILES="$f" anchor test "$@" -- --features localnet --no-default-features || run_st=$?
   else
-    ANCHOR_MOCHA_FILES="$f" anchor test --skip-build "$@" || run_st=$?
+    ANCHOR_MOCHA_FILES="$f" anchor test --skip-build "$@" -- --features localnet --no-default-features || run_st=$?
   fi
   if [[ "$run_st" -ne 0 ]]; then
     failures=$((failures + 1))

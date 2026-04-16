@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 
-use anchor_spl::token_interface::{Mint, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use base_token_pool::common::*;
 use ccip_common::seed;
@@ -11,7 +13,6 @@ use mailbox::{
 
 use bridge::{
     self,
-    program::Bridge,
     state::RemoteBridgeConfig,
     utils::{gmp_messages::{InboundResponse}},
 };
@@ -23,7 +24,9 @@ use mailbox::{
 
 use crate::{
     constants::*,
+    context::*,
     errors::LombardTokenPoolError,
+    instructions::derive_accounts,
     state::{ChainConfig, State}
 };
 
@@ -32,7 +35,6 @@ use crate::{
 pub struct TokenOfframp<'info> {
     // CCIP accounts ------------------------
     #[account(
-        mut,
         seeds = [EXTERNAL_TOKEN_POOLS_SIGNER, crate::ID.as_ref()],
         bump,
         seeds::program = offramp_program.key(),
@@ -60,6 +62,7 @@ pub struct TokenOfframp<'info> {
     // Token pool accounts ------------------
     // consistent set + token pool program
     #[account(
+        mut,
         seeds = [
             POOL_STATE_SEED,
             mint.key().as_ref()
@@ -67,7 +70,7 @@ pub struct TokenOfframp<'info> {
         bump,
         constraint = valid_version(state.version, MAX_POOL_STATE_V) @ CcipTokenPoolError::InvalidVersion,
     )]
-    pub state: Account<'info, State>,
+    pub state: Box<Account<'info, State>>,
 
     #[account(address = state.config.token_program)]
     pub token_program: Interface<'info, TokenInterface>,
@@ -87,6 +90,14 @@ pub struct TokenOfframp<'info> {
 
     #[account(
         mut,
+        associated_token::mint = mint,
+        associated_token::authority = pool_signer,
+        associated_token::token_program = token_program,
+    )]
+    pub pool_token_account: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        mut,
         seeds = [
             POOL_CHAINCONFIG_SEED,
             &release_or_mint.remote_chain_selector.to_le_bytes(),
@@ -95,7 +106,7 @@ pub struct TokenOfframp<'info> {
         bump,
         constraint = valid_version(chain_config.version, MAX_POOL_CHAIN_CONFIG_V) @ CcipTokenPoolError::InvalidVersion,
     )]
-    pub chain_config: Account<'info, ChainConfig>,
+    pub chain_config: Box<Account<'info, ChainConfig>>,
 
     ////////////////////
     // RMN Remote CPI //
@@ -121,35 +132,29 @@ pub struct TokenOfframp<'info> {
         seeds::program = state.config.rmn_remote,
     )]
     pub rmn_remote_config: UncheckedAccount<'info>,
-
-    // Lombard GMP-specific accounts
-    #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
-    pub bridge: Program<'info, Bridge>,
-
-    /// CHECK: This will be verified by the bridge program
-    #[account()]
-    pub mailbox: Option<Program<'info, Mailbox>>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
-    pub message_info: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
-    pub message_handled: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub mailbox_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub receiver_token_account: UncheckedAccount<'info>,
+
+    // Lombard GMP-specific accounts
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub mint_authority: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub token_authority: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
+    pub bridge: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub bridge_config: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the bridge program
+    #[account()]
+    pub mailbox: Program<'info, Mailbox>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
@@ -164,6 +169,12 @@ pub struct TokenOfframp<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub inbound_message_path: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(mut)]
+    pub message_info: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(mut)]
+    pub message_handled: UncheckedAccount<'info>,
     /// The system program (needed for the 'init' constraint of the 'data' account)
     pub system_program: Program<'info, System>,
 }
@@ -175,8 +186,10 @@ pub fn release_or_mint_tokens<'info>(
 
     let parsed_amount = to_svm_token_amount(
         release_or_mint.amount,
-        8,
-        8,
+        // ctx.accounts.chain_config.base.remote.decimals,
+        // ctx.accounts.state.config.decimals,
+    8,
+    8,
     )?;
 
     let BaseChain {
@@ -218,13 +231,25 @@ fn mailbox_receive_message<'info>(
     ctx: &Context<TokenOfframp>,
     payload_hash: &[u8; 32],
 ) -> Result<Option<InboundResponse>> {
-    let signer_seeds: &[&[&[u8]]] = &[&[
+    let state_signer_seed = &[
+        POOL_STATE_SEED,
+        &ctx.accounts.mint.key().to_bytes(),
+        &[ctx.bumps.state],
+    ];
+    let token_pool_signer_seed = &[
         POOL_SIGNER_SEED,
         &ctx.accounts.mint.key().to_bytes(),
         &[ctx.bumps.pool_signer],
-    ]];
+    ];
+
+    let signer_seeds: &[&[&[u8]]] = &[state_signer_seed, token_pool_signer_seed];
+    let pool_signer = AccountInfo {
+        is_signer: true, // Manually set to true
+        ..ctx.accounts.pool_signer.to_account_info().clone()
+    };
+
     let ra:Vec<AccountInfo<'_>> = [
-        ctx.accounts.authority.to_account_info(),
+        pool_signer,
         ctx.accounts.bridge_config.to_account_info(),
         ctx.accounts.message_handled.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
@@ -240,11 +265,9 @@ fn mailbox_receive_message<'info>(
     ].to_vec();
     let cpi_context = CpiContext::new_with_signer(
         ctx.accounts.mailbox
-        .as_ref()
-        .expect("mailbox must be provided")
         .to_account_info(),
         HandleMessage {
-            handler: ctx.accounts.pool_signer.to_account_info(),
+            handler: ctx.accounts.state.to_account_info(),
             config: ctx.accounts.mailbox_config.to_account_info(),
             message_info: ctx.accounts.message_info.to_account_info(),
             recipient_program: ctx.accounts.bridge.to_account_info(),
@@ -265,4 +288,22 @@ fn mailbox_receive_message<'info>(
     };
 
     Ok(Some(response))
+}
+
+pub fn derive_accounts_release_or_mint_tokens<'info>(
+    ctx: Context<'_, '_, 'info, 'info, Empty>,
+    stage: String,
+    release_or_mint: ReleaseOrMintInV1,
+) -> Result<DeriveAccountsResponse> {
+    msg!("Stage: {}", stage);
+    let stage = derive_accounts::release_or_mint::OfframpDeriveStage::from_str(&stage)?;
+
+    match stage {
+        derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveChainConfig => {
+            derive_accounts::release_or_mint::retrieve_chain_config(&release_or_mint)
+        }
+        derive_accounts::release_or_mint::OfframpDeriveStage::BuildDynamicAccounts => {
+            derive_accounts::release_or_mint::build_dynamic_accounts(ctx, &release_or_mint)
+        }
+    }
 }

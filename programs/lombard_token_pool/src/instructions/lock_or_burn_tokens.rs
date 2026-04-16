@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -15,7 +17,9 @@ use bridge::{
 
 use crate::{
     constants::*,
+    context::Empty,
     errors::LombardTokenPoolError,
+    instructions::derive_accounts,
     state::{ChainConfig, State}
 };
 
@@ -24,15 +28,9 @@ use crate::{
 pub struct TokenOnramp<'info> {
     // CCIP accounts ------------------------
     #[account(
-        mut,
         address = state.config.router_onramp_authority @ CcipTokenPoolError::InvalidPoolCaller
     )]
     pub authority: Signer<'info>,
-
-    pub token_program: Interface<'info, TokenInterface>,
-
-    #[account(mut)]
-    pub mint: InterfaceAccount<'info, Mint>,
 
     // Token pool accounts ------------------
     // consistent set + token pool program
@@ -42,6 +40,11 @@ pub struct TokenOnramp<'info> {
         constraint = valid_version(state.version, MAX_POOL_STATE_V) @ CcipTokenPoolError::InvalidVersion,
     )]
     pub state: Box<Account<'info, State>>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+
+    #[account(mut)]
+    pub mint: InterfaceAccount<'info, Mint>,
 
     /// CHECK: CPI signer. This account is intentionally not initialized, and it will
     /// hold a balance to pay for the rent of initializing the Lombard MessageSentEvent account
@@ -99,28 +102,26 @@ pub struct TokenOnramp<'info> {
     pub chain_config: Account<'info, ChainConfig>,
 
     // Lombard GMP-specific accounts
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub mint_authority: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub token_authority: UncheckedAccount<'info>,
     #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
-    pub bridge: Option<Program<'info, Bridge>>,
+    pub bridge: Program<'info, Bridge>,
+    /// CHECK: This will be verified by the bridge program
+    #[account()]
+    pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the bridge program
     #[account()]
     pub mailbox: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub mailbox_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the bridge program
-    #[account()]
-    pub bridge_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
-    pub bridge_sender_config: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    pub outbound_message_path: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
-    pub outbound_message: UncheckedAccount<'info>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
-    pub mailbox_sender_config: UncheckedAccount<'info>,
+    pub treasury: Option<UncheckedAccount<'info>>,
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
     )]
@@ -133,7 +134,15 @@ pub struct TokenOnramp<'info> {
     pub remote_token_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
-    pub treasury: Option<UncheckedAccount<'info>>,
+    pub bridge_sender_config: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(mut)]
+    pub mailbox_sender_config: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    pub outbound_message_path: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account(mut)]
+    pub outbound_message: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -187,12 +196,9 @@ fn bridge_deposit_for_burn_with_caller(
     ]];
 
     let cpi_context = CpiContext::new_with_signer(
-        ctx.accounts.bridge
-        .as_ref()
-        .expect("bridge must be provided")
-        .to_account_info(),
+        ctx.accounts.bridge.to_account_info(),
         Deposit {
-            fee_payer: ctx.accounts.authority.to_account_info(), 
+            fee_payer: ctx.accounts.pool_signer.to_account_info(), 
             sender: ctx.accounts.pool_signer.to_account_info(), 
             sender_token_account: ctx.accounts.pool_token_account.to_account_info(), 
             token_program: ctx.accounts.token_program.to_account_info(), 
@@ -231,4 +237,22 @@ fn bridge_deposit_for_burn_with_caller(
 
 pub fn abi_encode(payload: &[u8; 32]) -> Vec<u8> {
     payload.to_vec()
+}
+
+pub fn derive_accounts_lock_or_burn_tokens<'info>(
+    ctx: Context<'_, '_, 'info, 'info, Empty>,
+    stage: String,
+    lock_or_burn: LockOrBurnInV1,
+) -> Result<DeriveAccountsResponse> {
+    msg!("Stage: {}", stage);
+    let stage = derive_accounts::lock_or_burn::OnrampDeriveStage::from_str(&stage)?;
+
+    match stage {
+        derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveChainConfig => {
+            derive_accounts::lock_or_burn::retrieve_chain_config(&lock_or_burn)
+        }
+        derive_accounts::lock_or_burn::OnrampDeriveStage::BuildDynamicAccounts => {
+            derive_accounts::lock_or_burn::build_dynamic_accounts(ctx, &lock_or_burn)
+        }
+    }
 }

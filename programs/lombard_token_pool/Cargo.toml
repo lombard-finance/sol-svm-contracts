@@ -10,12 +10,13 @@ name = "lombard_token_pool"
 
 [features]
 default = ["mainnet"]
-mainnet = []
-gastald = []
-staging = []
-bft = []
-devnet = []
-cpi = ["no-entrypoint"]
+mainnet = ["bridge/mainnet","mailbox/mainnet"]
+gastald = ["bridge/gastald","mailbox/gastald"]
+staging = ["bridge/staging","mailbox/staging"]
+bft = ["bridge/bft","mailbox/bft"]
+localnet = ["bridge/localnet","mailbox/localnet"]
+devnet = ["bridge/devnet","mailbox/devnet"]
+# cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
@@ -31,6 +32,10 @@ ccip_common = { path = "../../dependencies/ccip/programs/ccip-common" }
 bridge = { path = "../bridge", features = ["cpi"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
 solana-security-txt = "1.1.1"
+
+ 
+[dev-dependencies]
+hex = "0.4.3"
 
 [build-dependencies]
 build_commit = { path = "../../dependencies/ccip/crates/build-commit" }
