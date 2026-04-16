@@ -115,7 +115,6 @@ pub mod release_or_mint {
                 get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
                 // message_handled
                 get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
-                solana_program::system_program::ID.readonly(),
             ],
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
             ..Default::default()
@@ -232,7 +231,6 @@ pub mod lock_or_burn {
                 // outbound_message_path
                 get_pda(&[b"outbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
                     .readonly(),
-                solana_program::system_program::ID.readonly(),  // TODO this is static across msgs and is also used by the release_or_mint - considering moving to the Lookup Table         
             ],
             current_stage: OnrampDeriveStage::BuildDynamicAccounts1.to_string(),
             next_stage: OnrampDeriveStage::BuildDynamicAccounts2.to_string(),

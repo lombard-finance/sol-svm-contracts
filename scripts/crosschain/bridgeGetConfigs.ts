@@ -45,12 +45,12 @@ const mint = new PublicKey(process.argv[2]);
 
     console.log(`Bridge local token config PDA: ${localTokenConfigPDA.toBase58()}`);
 
-    const loclaTokenConfig = await program.account.config.fetch(localTokenConfigPDA);
-    console.log(`local token config contents: ${JSON.stringify(loclaTokenConfig)}`)
+    const localaTokenConfig = await program.account.localTokenConfig.fetch(localTokenConfigPDA);
+    console.log(`local token config contents: ${JSON.stringify(localaTokenConfig)}`)
 
     
   } catch (err) {
-    console.error("Error setting initial validator set:", err);
+    console.error("Error getting configs:", err);
   }
 
   const mintAccountInfo = await provider.connection.getAccountInfo(mint);
