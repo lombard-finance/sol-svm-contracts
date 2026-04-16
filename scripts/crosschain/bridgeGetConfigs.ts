@@ -2,12 +2,12 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { Bridge } from "../../target/types/bridge";
-import { getBridgeConfigPDA } from "./utils";
+import { getBridgeConfigPDA, getBridgeLocalTokenConfigPDA } from "./utils";
 import { getTokenAuthority } from "../utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> BRIDGE_PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeGetConfig <mint>
+  console.log(`Usage: PROGRAM_ID=<program_id> BRIDGE_PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeGetConfigs <mint>
 
     Returns current bridge cobnfig. `);
   process.exit(0);
@@ -40,7 +40,15 @@ const mint = new PublicKey(process.argv[2]);
 
     const config = await program.account.config.fetch(configPDA);
     console.log(`config contents: ${JSON.stringify(config)}`)
+ 
+    const localTokenConfigPDA = getBridgeLocalTokenConfigPDA(mint, programId);
 
+    console.log(`Bridge local token config PDA: ${localTokenConfigPDA.toBase58()}`);
+
+    const loclaTokenConfig = await program.account.config.fetch(localTokenConfigPDA);
+    console.log(`local token config contents: ${JSON.stringify(loclaTokenConfig)}`)
+
+    
   } catch (err) {
     console.error("Error setting initial validator set:", err);
   }

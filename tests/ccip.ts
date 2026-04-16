@@ -630,13 +630,18 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // remoteBridgeConfig
-						pubkey: bridgeRemoteBridgeConfigPDA,
+					{ // localTokenConfig
+						pubkey: bridgeLocalTokenConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
-					{ // localTokenConfig
-						pubkey: bridgeLocalTokenConfigPDA,
+					{
+						pubkey: SystemProgram.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // remoteBridgeConfig
+						pubkey: bridgeRemoteBridgeConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -660,11 +665,6 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{
-						pubkey: SystemProgram.programId,
-						isWritable: false,
-						isSigner: false
-					}
 				])
 				.signers([payer])
 				.rpc({ commitment: "confirmed" })
@@ -824,18 +824,18 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // Treasury
-						pubkey: tokenPool.programId,
+					{ // localTokenConfig
+						pubkey: bridgeLocalTokenConfigPDA,
+						isWritable: false,
+						isSigner: false
+					},
+					{
+						pubkey: SystemProgram.programId,
 						isWritable: false,
 						isSigner: false
 					},
 					{ // remoteBridgeConfig
 						pubkey: bridgeRemoteBridgeConfigPDA,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // localTokenConfig
-						pubkey: bridgeLocalTokenConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -859,16 +859,16 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
+					{ // Treasury
+						pubkey: tokenPool.programId,
+						isWritable: false,
+						isSigner: false
+					},
 					{ // outboundMessage
 						pubkey: outboundMessagePDA,
 						isWritable: true,
 						isSigner: false
 					},
-					{
-						pubkey: SystemProgram.programId,
-						isWritable: false,
-						isSigner: false
-					}
 				])
 				.signers([payer])
 				.rpc({ commitment: "confirmed" })

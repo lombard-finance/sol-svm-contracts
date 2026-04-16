@@ -156,13 +156,15 @@ pub struct TokenOfframp<'info> {
     #[account()]
     pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub local_token_config: UncheckedAccount<'info>,
+    /// The system program (needed for the 'init' constraint of the 'data' account)
+    pub system_program: Program<'info, System>,
+    /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
     )]
     pub remote_bridge_config: Account<'info, RemoteBridgeConfig>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub local_token_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub remote_token_config: UncheckedAccount<'info>,
@@ -175,8 +177,6 @@ pub struct TokenOfframp<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub message_handled: UncheckedAccount<'info>,
-    /// The system program (needed for the 'init' constraint of the 'data' account)
-    pub system_program: Program<'info, System>,
 }
 
 pub fn release_or_mint_tokens<'info>(
