@@ -83,6 +83,10 @@ pub mod lombard_token_pool {
         instructions::set_rmn(ctx, rmn_address)
     }
 
+    pub fn set_alt(ctx: Context<AdminUpdateTokenPool>, alt: Option<Pubkey>) -> Result<()> {
+        instructions::set_alt(ctx, alt)
+    }
+
     // initialize remote config (with no remote pools as it must be zero sized)
     pub fn init_chain_remote_config(
         ctx: Context<InitializeChainConfig>,
