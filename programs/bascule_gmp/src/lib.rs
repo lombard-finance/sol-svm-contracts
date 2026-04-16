@@ -63,6 +63,10 @@ pub mod bascule_gmp {
         instructions::accept_ownership(ctx)
     }
 
+    pub fn set_trusted_signer(ctx: Context<Admin>, trusted_signer: [u8; 64]) -> Result<()> {
+        instructions::set_trusted_signer(ctx, trusted_signer)
+    }
+
     pub fn report_mint(
         ctx: Context<ReportMint>,
         mint_message: MintMessage,
