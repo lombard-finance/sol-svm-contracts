@@ -5,8 +5,7 @@ use anchor_spl::token_interface::{Mint};
 use base_token_pool::common::*;
 
 use crate::{
-    constants::*,
-    state::State
+    constants::*, events::AltEnabled, state::State
 };
 
 #[derive(Accounts)]
@@ -29,3 +28,8 @@ pub struct SetConfig<'info> {
 }
 
 
+pub fn set_alt(ctx: Context<SetConfig>, alt: Option<Pubkey>) -> Result<()> {
+    ctx.accounts.state.config.alt = alt;
+    emit!(AltEnabled { enabled: alt.is_some() });
+    Ok(())
+}

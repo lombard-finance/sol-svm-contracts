@@ -83,7 +83,7 @@ pub mod lombard_token_pool {
         instructions::set_rmn(ctx, rmn_address)
     }
 
-    pub fn set_alt(ctx: Context<AdminUpdateTokenPool>, alt: Option<Pubkey>) -> Result<()> {
+    pub fn set_alt(ctx: Context<SetConfig>, alt: Option<Pubkey>) -> Result<()> {
         instructions::set_alt(ctx, alt)
     }
 
