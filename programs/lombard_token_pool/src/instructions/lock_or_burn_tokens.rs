@@ -109,7 +109,7 @@ pub struct TokenOnramp<'info> {
     #[account()]
     pub token_authority: UncheckedAccount<'info>,
     #[account(address = state.config.bridge @ LombardTokenPoolError::InvalidBridge)]
-    pub bridge: Option<Program<'info, Bridge>>,
+    pub bridge: Program<'info, Bridge>,
     /// CHECK: This will be verified by the bridge program
     #[account()]
     pub bridge_config: UncheckedAccount<'info>,
@@ -196,12 +196,9 @@ fn bridge_deposit_for_burn_with_caller(
     ]];
 
     let cpi_context = CpiContext::new_with_signer(
-        ctx.accounts.bridge
-        .as_ref()
-        .expect("bridge must be provided")
-        .to_account_info(),
+        ctx.accounts.bridge.to_account_info(),
         Deposit {
-            fee_payer: ctx.accounts.authority.to_account_info(), 
+            fee_payer: ctx.accounts.pool_signer.to_account_info(), 
             sender: ctx.accounts.pool_signer.to_account_info(), 
             sender_token_account: ctx.accounts.pool_token_account.to_account_info(), 
             token_program: ctx.accounts.token_program.to_account_info(), 
