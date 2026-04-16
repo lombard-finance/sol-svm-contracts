@@ -5,9 +5,7 @@ use anchor_spl::token_interface::{Mint};
 use base_token_pool::common::*;
 
 use crate::{
-    constants::MAX_POOL_STATE_V,
-    program::LombardTokenPool,
-    state::State
+    constants::MAX_POOL_STATE_V, events::AltEnabled, program::LombardTokenPool, state::State
 };
 
 
@@ -45,6 +43,12 @@ pub fn set_router(ctx: Context<AdminUpdateTokenPool>, new_router: Pubkey) -> Res
 
 pub fn set_rmn(ctx: Context<AdminUpdateTokenPool>, rmn_address: Pubkey) -> Result<()> {
     ctx.accounts.state.config.set_rmn(rmn_address)
+}
+
+pub fn set_alt(ctx: Context<AdminUpdateTokenPool>, alt: Option<Pubkey>) -> Result<()> {
+    ctx.accounts.state.config.alt = alt;
+    emit!(AltEnabled { enabled: alt.is_some() });
+    Ok(())
 }
 
 /// Checks that the authority and the token pool owner are the upgrade authority

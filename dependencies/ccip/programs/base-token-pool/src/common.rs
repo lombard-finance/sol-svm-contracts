@@ -63,6 +63,9 @@ pub struct BaseConfig {
 
     // Lombard bridge
     pub bridge: Pubkey,                  // bridge address
+
+    // Lombard bridge
+    pub alt: Option<Pubkey>,                  // bridge address
 }
 
 impl BaseConfig {
@@ -111,6 +114,7 @@ impl BaseConfig {
             allow_list: vec![],
             rmn_remote,
             bridge,
+            alt: None,
         }
     }
 

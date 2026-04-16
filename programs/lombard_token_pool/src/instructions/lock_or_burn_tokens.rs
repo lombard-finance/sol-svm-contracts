@@ -247,8 +247,11 @@ pub fn derive_accounts_lock_or_burn_tokens<'info>(
     let stage = derive_accounts::lock_or_burn::OnrampDeriveStage::from_str(&stage)?;
 
     match stage {
+        derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveStateConfig => {
+            derive_accounts::lock_or_burn::retrieve_state_config(&lock_or_burn)
+        }
         derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveChainConfig => {
-            derive_accounts::lock_or_burn::retrieve_chain_config(&lock_or_burn)
+            derive_accounts::lock_or_burn::retrieve_chain_config(ctx, &lock_or_burn)
         }
         derive_accounts::lock_or_burn::OnrampDeriveStage::BuildDynamicAccounts1 => {
             derive_accounts::lock_or_burn::build_dynamic_accounts1(ctx, &lock_or_burn)

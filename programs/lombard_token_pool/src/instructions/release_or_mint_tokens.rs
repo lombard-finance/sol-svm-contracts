@@ -299,8 +299,11 @@ pub fn derive_accounts_release_or_mint_tokens<'info>(
     let stage = derive_accounts::release_or_mint::OfframpDeriveStage::from_str(&stage)?;
 
     match stage {
+        derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveStateConfig => {
+            derive_accounts::release_or_mint::retrieve_state_config(&release_or_mint)
+        }
         derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveChainConfig => {
-            derive_accounts::release_or_mint::retrieve_chain_config(&release_or_mint)
+            derive_accounts::release_or_mint::retrieve_chain_config(ctx, &release_or_mint)
         }
         derive_accounts::release_or_mint::OfframpDeriveStage::BuildDynamicAccounts => {
             derive_accounts::release_or_mint::build_dynamic_accounts(ctx, &release_or_mint)
