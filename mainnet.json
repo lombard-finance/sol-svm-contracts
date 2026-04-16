@@ -9,5 +9,15 @@
     "LZ_oft_adapter": "7QkBVz37mjevzKYJDcVy6xKDG1hUewWgj51Dehgcu5sM",
     "LZ_oft_store": "CQeKmXxoGog57U5jPyYz7YAo8AuLUdoDqxGTXtMPkMuc",
     "LZ_escrow": "6nc7pBpN82EeKFbcqRt7xVV2h8FNQGdiVnTb2TQvyv99",
-    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK"
+    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK",
+
+    "registry": "LomApQenrjmo7phzAYM7SanrNt4oDabpsR3J99jCGCK",
+    
+    "Consortium": "",
+    "Mailbox": "",
+    "Asset Router": "",
+    "Ratio Oracle": "",
+    "Bridge": "",
+    "Lombard Token Pool": "Lomb8TTCwJKEhZrJ1J8UbsCRjNSf7NNQUEr4qo3dkSk",
+    "BTC.b": "BTCbKVgfW4xMqTWEmxVwc6pzg2c5YtQWxSpBuQDhUrpu"
 }

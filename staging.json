@@ -17,5 +17,11 @@
     "Ratio Oracle": "LomMaT3jSjMiECtPrK4pLfzNQB2uMaxMqGenBbimjWq",
     "Bridge": "LomS25cte2jkQoLbKembGB19gb2pMNKPFodwLHpMiWR",
     "Lombard Token Pool": "LomtioA14cDhme8bCCw5oc5a9FUDyT91z8ujtGnY5g9",
-    "BTC.b": "BTCGPAHQSsS9RYcL2Z4B5z6YyAXLatNcnaEwYdczsMZw"
+    "BTC.b": "BTCGPAHQSsS9RYcL2Z4B5z6YyAXLatNcnaEwYdczsMZw",
+
+    "LZ_oft_adapter_BTCb": "D6ZsnPzdhQcsiXHihpozcYQoUpRqEEMX2VwqXYVJcuzg",
+    "LZ_oft_store_BTCb": "J7d95FjFEg7LFKe45vvoSF7URgDoErEAZP4Nny5kf2pb",
+    "LZ_escrow_BTCb": "2SSH8qoDfaVNztjzGVKUFWBTZ4WudZBdn2hqvoVJGTqr",
+    "BTCb_mint_auth": "2BiYsQduXGtzRHVx9YfPxDM1Z5rrTufxd4ycYc2n2M4V",
+    "LBTC_mint_auth": "mntgvvf1XZ9Fmzvju7ZxwLPRFdNT4JYgPF3AVrvNsX6"
 }
