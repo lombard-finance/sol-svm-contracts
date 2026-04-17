@@ -29,7 +29,7 @@ if (!program.programId.equals(programId)) {
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-let whitelisted = process.argv.at(-2) === "--whitelisted";
+let whitelisted = process.argv.at(-2) === "--whitelisted" || process.argv.at(-1) === "--whitelisted";
 
 const sender = new PublicKey(process.argv[2]);
 const discount = new anchor.BN(process.argv[3]);

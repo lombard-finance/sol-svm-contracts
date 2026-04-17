@@ -65,6 +65,7 @@
     "crosschain_bridgeSetRemoteTokenConfig": "ts-node -T scripts/crosschain/bridgeSetRemoteTokenConfig.ts",
     "crosschain_bridgeSetSenderConfig": "ts-node -T scripts/crosschain/bridgeSetSenderConfig.ts",
     "crosschain_bridgeGetConfigs": "ts-node -T scripts/crosschain/bridgeGetConfigs.ts",
+    "crosschain_bridgeGetSenderConfig": "ts-node -T scripts/crosschain/bridgeGetSenderConfig.ts",
     "crosschain_tokenPoolGetSigner": "ts-node -T scripts/crosschain/tokenPoolGetSigner.ts",
     "crosschain_tokenPoolGlobalInitialize": "ts-node -T scripts/crosschain/tokenPoolGlobalInitialize.ts",
     "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts",
