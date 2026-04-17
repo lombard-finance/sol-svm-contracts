@@ -70,12 +70,12 @@ pub mod release_or_mint {
     ) -> Result<DeriveAccountsResponse> {
         let mint = release_or_mint.local_token;
         Ok(DeriveAccountsResponse {
-            ask_again_with: vec![find(
+            ask_again_with: vec![get_pda(
                 &[
                     POOL_STATE_SEED, mint.as_ref()
                 ],
-                crate::ID,
-            )],
+                &crate::ID,
+            ).writable()],
             // We don't need the domain for the first few PDAs, so we return them now to keep
             // return sizes balanced.
             accounts_to_save: vec![],
@@ -231,14 +231,14 @@ pub mod lock_or_burn {
         let state = Account::<'info, State>::try_from(&ctx.remaining_accounts[0])?;
         Ok(DeriveAccountsResponse {
             ask_again_with: vec![
-                find(
+                get_pda(
                     &[
                         POOL_CHAINCONFIG_SEED,
                         &lock_or_burn.remote_chain_selector.to_le_bytes(),
                         lock_or_burn.local_token.as_ref(),
                     ],
-                    crate::ID,
-                )
+                    &crate::ID,
+                ).writable(),
             ],
             // The static PDAs have mostly already been returned by CCIP via the LUT, so we just return here the ones not shared with offramp (so not in LUT)
             accounts_to_save: vec![
