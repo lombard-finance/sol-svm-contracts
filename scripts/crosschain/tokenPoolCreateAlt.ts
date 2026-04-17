@@ -22,7 +22,7 @@ const admin = new PublicKey(process.argv[2]);
     const deployer = provider.wallet.publicKey; // Get wallet address
 
     const slot = await provider.connection.getSlot();
-    const [lookupTableInst, lookupTableAddress] =
+    const [ix, lookupTableAddress] =
     AddressLookupTableProgram.createLookupTable({
       authority: admin,
       payer: deployer,
@@ -30,6 +30,10 @@ const admin = new PublicKey(process.argv[2]);
     });
 
     console.log("lookup table address:", lookupTableAddress.toBase58());
+
+    const tx = new anchor.web3.Transaction().add(ix);
+    const txSig = await provider.sendAndConfirm(tx);
+    console.log("Transaction Signature:", txSig);
 
   } catch (err) {
     console.error("Error creating ALT:", err);

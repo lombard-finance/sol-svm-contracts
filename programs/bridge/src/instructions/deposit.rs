@@ -79,7 +79,7 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub outbound_message: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
+    #[account()]
     pub mailbox_sender_config: UncheckedAccount<'info>,
 
     #[account(mut)]

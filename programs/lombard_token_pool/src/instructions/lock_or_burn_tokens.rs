@@ -133,7 +133,7 @@ pub struct TokenOnramp<'info> {
     #[account()]
     pub bridge_sender_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
+    #[account()]
     pub mailbox_sender_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     pub outbound_message_path: UncheckedAccount<'info>,
