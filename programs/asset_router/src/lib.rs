@@ -14,7 +14,7 @@ use utils::consortium_payloads::DEPOSIT_V1_PAYLOAD_LEN;
 use utils::fee::FEE_PAYLOAD_LEN;
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("Lom9TMiPbqkXk8ddFooUY1gbHqt87TCmVfTfv8AHgYx");
 #[cfg(feature = "gastald")]
 declare_id!("Lom7TQyK45pTUjFmmsuLaBrMVQ5crggYnSuCrjm9ebr");
 #[cfg(feature = "staging")]

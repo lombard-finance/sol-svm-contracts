@@ -11,7 +11,7 @@ pub mod utils;
 use instructions::*;
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("LomuEULX7VPwCBVTjxsgFjBLz7HJwE8V1DyaSqXj1dc");
 #[cfg(feature = "gastald")]
 declare_id!("Lomfd3XZfPV8PyLkjuLVwpYhrBoGJdnYkm98HCgeYGC");
 #[cfg(feature = "staging")]

@@ -13,11 +13,12 @@
 
     "registry": "LomApQenrjmo7phzAYM7SanrNt4oDabpsR3J99jCGCK",
     
-    "Consortium": "",
-    "Mailbox": "",
-    "Asset Router": "",
-    "Ratio Oracle": "",
-    "Bridge": "",
+    "Consortium": "LomuEULX7VPwCBVTjxsgFjBLz7HJwE8V1DyaSqXj1dc",
+    "Mailbox": "Lomsq4ZNkZQGysC1pQc2NqNiAbXQm6C8nLmKcUoESEA",
+    "Asset Router": "Lom9TMiPbqkXk8ddFooUY1gbHqt87TCmVfTfv8AHgYx",
+    "Ratio Oracle": "LomyRmBeQiuqiwcPmr23RRA1SMLAuDEgj5tHHe7rsDn",
+    "Bridge": "Lomva5kTftuXE8992qRufkaeq3XrXV47qv3C1W9xW6Z",
     "Lombard Token Pool": "Lomb8TTCwJKEhZrJ1J8UbsCRjNSf7NNQUEr4qo3dkSk",
+    "Bascule GMP": "LomeavGUocL4Rn5TboDYFQEwUp3wBKodUTRKE8KqbE6",
     "BTC.b": "BTCbKVgfW4xMqTWEmxVwc6pzg2c5YtQWxSpBuQDhUrpu"
 }

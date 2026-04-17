@@ -12,7 +12,7 @@ use instructions::*;
 use utils::consortium_payloads::RATIO_UPDATE_PAYLOAD_LEN;
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("LomyRmBeQiuqiwcPmr23RRA1SMLAuDEgj5tHHe7rsDn");
 #[cfg(feature = "gastald")]
 declare_id!("LomWze3gBt8Y7RN3sspuh2jupqAQPUi4tuaLWDnf6CZ");
 #[cfg(feature = "staging")]
