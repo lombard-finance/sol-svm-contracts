@@ -300,7 +300,7 @@ pub mod lock_or_burn {
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
                 // treasury
-                mailbox_config.treasury.readonly(),
+                mailbox_config.treasury.writable(),
                 // outbound_message
                 get_pda(&[b"outbound_message", &mailbox_config.global_nonce.to_be_bytes()], &MAILBOX_PROGRAM).writable(),
             ],
