@@ -121,14 +121,11 @@ pub struct TokenOnramp<'info> {
     pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
-    pub treasury: Option<UncheckedAccount<'info>>,
-    #[account(
-        constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
-    )]
-    pub remote_bridge_config: Account<'info, RemoteBridgeConfig>,
+    pub local_token_config: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
-    pub local_token_config: UncheckedAccount<'info>,
+    pub remote_bridge_config: Account<'info, RemoteBridgeConfig>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub remote_token_config: UncheckedAccount<'info>,
@@ -136,15 +133,17 @@ pub struct TokenOnramp<'info> {
     #[account()]
     pub bridge_sender_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
+    #[account()]
     pub mailbox_sender_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     pub outbound_message_path: UncheckedAccount<'info>,
+    pub treasury: Option<UncheckedAccount<'info>>,
+    #[account(
+        constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
+    )]
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub outbound_message: UncheckedAccount<'info>,
-
-    pub system_program: Program<'info, System>,
 }
 
 pub fn lock_or_burn_tokens(
@@ -248,11 +247,17 @@ pub fn derive_accounts_lock_or_burn_tokens<'info>(
     let stage = derive_accounts::lock_or_burn::OnrampDeriveStage::from_str(&stage)?;
 
     match stage {
-        derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveChainConfig => {
-            derive_accounts::lock_or_burn::retrieve_chain_config(&lock_or_burn)
+        derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveStateConfig => {
+            derive_accounts::lock_or_burn::retrieve_state_config(&lock_or_burn)
         }
-        derive_accounts::lock_or_burn::OnrampDeriveStage::BuildDynamicAccounts => {
-            derive_accounts::lock_or_burn::build_dynamic_accounts(ctx, &lock_or_burn)
+        derive_accounts::lock_or_burn::OnrampDeriveStage::RetrieveChainConfig => {
+            derive_accounts::lock_or_burn::retrieve_chain_config(ctx, &lock_or_burn)
+        }
+        derive_accounts::lock_or_burn::OnrampDeriveStage::BuildDynamicAccounts1 => {
+            derive_accounts::lock_or_burn::build_dynamic_accounts1(ctx, &lock_or_burn)
+        }
+        derive_accounts::lock_or_burn::OnrampDeriveStage::BuildDynamicAccounts2 => {
+            derive_accounts::lock_or_burn::build_dynamic_accounts2(ctx, &lock_or_burn)
         }
     }
 }

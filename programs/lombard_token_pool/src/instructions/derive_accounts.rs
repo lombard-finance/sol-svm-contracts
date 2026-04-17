@@ -1,10 +1,10 @@
 use std::io::{BufReader, Cursor, Read};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
+
 use anchor_lang::solana_program::hash::hash  as sha256;
 use base_token_pool::common::{
     CcipAccountMeta, CcipTokenPoolError, DeriveAccountsResponse, LockOrBurnInV1, ReleaseOrMintInV1,
-    ToMeta, POOL_CHAINCONFIG_SEED,
+    ToMeta, POOL_CHAINCONFIG_SEED, POOL_STATE_SEED,
 };
 use core::fmt;
 use std::{
@@ -20,7 +20,7 @@ use mailbox::{
 use crate::{
     context::{BRIDGE_PROGRAM, get_pda, Empty, MAILBOX_PROGRAM}, 
     errors::LombardTokenPoolError,
-    state::ChainConfig,
+    state::{ChainConfig, State},
 };
 
 // Local helper to find a readonly CCIP meta for a given seed + program_id combo.
@@ -37,6 +37,7 @@ pub mod release_or_mint {
 
     #[derive(Clone, Debug)]
     pub enum OfframpDeriveStage {
+        RetrieveStateConfig,
         RetrieveChainConfig,
         BuildDynamicAccounts,
     }
@@ -44,6 +45,7 @@ pub mod release_or_mint {
     impl Display for OfframpDeriveStage {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
             match self {
+                OfframpDeriveStage::RetrieveStateConfig => f.write_str("RetrieveStateConfig"),
                 OfframpDeriveStage::RetrieveChainConfig => f.write_str("RetrieveChainConfig"),
                 OfframpDeriveStage::BuildDynamicAccounts => f.write_str("BuildDynamicAccounts"),
             }
@@ -55,16 +57,39 @@ pub mod release_or_mint {
 
         fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
             match s {
-                "Start" | "RetrieveChainConfig" => Ok(Self::RetrieveChainConfig),
+                "Start" | "RetrieveStateConfig" => Ok(Self::RetrieveStateConfig),
+                "RetrieveChainConfig" => Ok(Self::RetrieveChainConfig),
                 "BuildDynamicAccounts" => Ok(Self::BuildDynamicAccounts),
                 _ => Err(CcipTokenPoolError::InvalidDerivationStage),
             }
         }
     }
 
-    pub fn retrieve_chain_config(
+    pub fn retrieve_state_config(
         release_or_mint: &ReleaseOrMintInV1,
     ) -> Result<DeriveAccountsResponse> {
+        let mint = release_or_mint.local_token;
+        Ok(DeriveAccountsResponse {
+            ask_again_with: vec![get_pda(
+                &[
+                    POOL_STATE_SEED, mint.as_ref()
+                ],
+                &crate::ID,
+            ).writable()],
+            // We don't need the domain for the first few PDAs, so we return them now to keep
+            // return sizes balanced.
+            accounts_to_save: vec![],
+            current_stage: OfframpDeriveStage::RetrieveStateConfig.to_string(),
+            next_stage: OfframpDeriveStage::RetrieveChainConfig.to_string(),
+            ..Default::default()
+        })
+    }
+
+    pub fn retrieve_chain_config<'info>(
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        release_or_mint: &ReleaseOrMintInV1,
+    ) -> Result<DeriveAccountsResponse> {
+        let state = Account::<'info, State>::try_from(&ctx.remaining_accounts[0])?;
         Ok(DeriveAccountsResponse {
             ask_again_with: vec![find(
                 &[
@@ -76,14 +101,11 @@ pub mod release_or_mint {
             )],
             // We don't need the domain for the first few PDAs, so we return them now to keep
             // return sizes balanced.
-            accounts_to_save: vec![
-                // // cctp_authority_pda
-                // get_message_transmitter_pda(&[
-                //     b"message_transmitter_authority",
-                //     TOKEN_MESSENGER_MINTER.as_ref(),
-                // ])
-                // .readonly(),
-            ],
+            accounts_to_save: vec![],
+            look_up_tables_to_save: match state.config.alt {
+                Some(alt) => vec![alt],
+                None => vec![]
+            },
             current_stage: OfframpDeriveStage::RetrieveChainConfig.to_string(),
             next_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
             ..Default::default()
@@ -105,9 +127,6 @@ pub mod release_or_mint {
                 // remote_bridge_config
                 get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
-                // local_token_config
-                get_pda(&[b"local_token_config", mint.as_ref()], &BRIDGE_PROGRAM)
-                    .readonly(),
                 // remote_token_config
                 get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
                     .writable(),
@@ -118,7 +137,6 @@ pub mod release_or_mint {
                 get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
                 // message_handled
                 get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
-                solana_program::system_program::ID.readonly(),
             ],
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
             ..Default::default()
@@ -155,15 +173,19 @@ pub mod lock_or_burn {
 
     #[derive(Clone, Debug)]
     pub enum OnrampDeriveStage {
+        RetrieveStateConfig,
         RetrieveChainConfig,
-        BuildDynamicAccounts,
+        BuildDynamicAccounts1,
+        BuildDynamicAccounts2,
     }
 
     impl Display for OnrampDeriveStage {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
             match self {
+                OnrampDeriveStage::RetrieveStateConfig => f.write_str("RetrieveStateConfig"),
                 OnrampDeriveStage::RetrieveChainConfig => f.write_str("RetrieveChainConfig"),
-                OnrampDeriveStage::BuildDynamicAccounts => f.write_str("BuildDynamicAccounts"),
+                OnrampDeriveStage::BuildDynamicAccounts1 => f.write_str("BuildDynamicAccounts1"),
+                OnrampDeriveStage::BuildDynamicAccounts2 => f.write_str("BuildDynamicAccounts2"),
             }
         }
     }
@@ -173,37 +195,66 @@ pub mod lock_or_burn {
 
         fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
             match s {
-                "Start" | "RetrieveChainConfig" => Ok(Self::RetrieveChainConfig),
-                "BuildDynamicAccounts" => Ok(Self::BuildDynamicAccounts),
+                "Start" | "RetrieveStateConfig" => Ok(Self::RetrieveStateConfig),
+                "RetrieveChainConfig" => Ok(Self::RetrieveChainConfig),
+                "BuildDynamicAccounts1" => Ok(Self::BuildDynamicAccounts1),
+                "BuildDynamicAccounts2" => Ok(Self::BuildDynamicAccounts2),
                 _ => Err(CcipTokenPoolError::InvalidDerivationStage),
             }
         }
     }
 
-    pub fn retrieve_chain_config(lock_or_burn: &LockOrBurnInV1) -> Result<DeriveAccountsResponse> {
+    pub fn retrieve_state_config<'info>(
+        lock_or_burn: &LockOrBurnInV1
+    ) -> Result<DeriveAccountsResponse> {
+        let mint = lock_or_burn.local_token;
+        Ok(DeriveAccountsResponse {
+            ask_again_with: vec![find(
+                &[
+                    POOL_STATE_SEED, mint.as_ref()
+                ],
+                crate::ID,
+            )],
+            // We don't need the domain for the first few PDAs, so we return them now to keep
+            // return sizes balanced.
+            accounts_to_save: vec![],
+            current_stage: OnrampDeriveStage::RetrieveStateConfig.to_string(),
+            next_stage: OnrampDeriveStage::RetrieveChainConfig.to_string(),
+            ..Default::default()
+        })
+    }
+
+    pub fn retrieve_chain_config<'info>(
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        lock_or_burn: &LockOrBurnInV1,
+    ) -> Result<DeriveAccountsResponse> {
+        let state = Account::<'info, State>::try_from(&ctx.remaining_accounts[0])?;
         Ok(DeriveAccountsResponse {
             ask_again_with: vec![
-                find(
+                get_pda(
                     &[
                         POOL_CHAINCONFIG_SEED,
                         &lock_or_burn.remote_chain_selector.to_le_bytes(),
                         lock_or_burn.local_token.as_ref(),
                     ],
-                    crate::ID,
-                ),
-                get_pda(&[b"mailbox_config"], &MAILBOX_PROGRAM).readonly(),
+                    &crate::ID,
+                ).writable(),
             ],
             // The static PDAs have mostly already been returned by CCIP via the LUT, so we just return here the ones not shared with offramp (so not in LUT)
             accounts_to_save: vec![
                 // get_token_messenger_minter_pda(&[b"sender_authority"]).readonly()
             ],
+            look_up_tables_to_save: match state.config.alt {
+                Some(alt) => vec![alt],
+                None => vec![]
+            },
             current_stage: OnrampDeriveStage::RetrieveChainConfig.to_string(),
-            next_stage: OnrampDeriveStage::BuildDynamicAccounts.to_string(),
+            next_stage: OnrampDeriveStage::BuildDynamicAccounts1.to_string(),
             ..Default::default()
         })
     }
 
-    pub fn build_dynamic_accounts<'info>(
+    pub fn build_dynamic_accounts1<'info>(
         ctx: Context<'_, '_, 'info, 'info, Empty>,
         lock_or_burn: &LockOrBurnInV1,
     ) -> Result<DeriveAccountsResponse> {
@@ -211,24 +262,15 @@ pub mod lock_or_burn {
         let chain_id = chain_config.bridge.destination_chain_id;
         let mint = lock_or_burn.local_token;
         let token_pool_signer = get_pda(&[b"ccip_tokenpool_signer", mint.as_ref()], &crate::ID);
-        let mailbox_config = Account::<'info, Config>::try_from(&ctx.remaining_accounts[1])?;
-
-        // msg!(
-        //     "Sender: {:?}, selector: {:?}, nonce: {:?}",
-        //     lock_or_burn.original_sender,
-        //     lock_or_burn.remote_chain_selector,
-        //     lock_or_burn.msg_total_nonce
-        // );
 
         Ok(DeriveAccountsResponse {
+            ask_again_with: vec![
+                get_pda(&[b"mailbox_config"], &MAILBOX_PROGRAM).readonly(),
+            ],
+            // The static PDAs have mostly already been returned by CCIP via the LUT, so we just return here the ones not shared with offramp (so not in LUT)
             accounts_to_save: vec![
-                // treasury
-                mailbox_config.treasury.readonly(),
                 // remote_bridge_config
                 get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
-                    .readonly(),
-                // local_token_config
-                get_pda(&[b"local_token_config", mint.as_ref()], &BRIDGE_PROGRAM)
                     .readonly(),
                 // remote_token_config
                 get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
@@ -242,11 +284,27 @@ pub mod lock_or_burn {
                 // outbound_message_path
                 get_pda(&[b"outbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
                     .readonly(),
+            ],
+            current_stage: OnrampDeriveStage::BuildDynamicAccounts1.to_string(),
+            next_stage: OnrampDeriveStage::BuildDynamicAccounts2.to_string(),
+            ..Default::default()
+        })
+    }
+
+    pub fn build_dynamic_accounts2<'info>(
+        ctx: Context<'_, '_, 'info, 'info, Empty>,
+        _lock_or_burn: &LockOrBurnInV1,
+    ) -> Result<DeriveAccountsResponse> {
+        let mailbox_config = Account::<'info, Config>::try_from(&ctx.remaining_accounts[0])?;
+
+        Ok(DeriveAccountsResponse {
+            accounts_to_save: vec![
+                // treasury
+                mailbox_config.treasury.writable(),
                 // outbound_message
                 get_pda(&[b"outbound_message", &mailbox_config.global_nonce.to_be_bytes()], &MAILBOX_PROGRAM).writable(),
-                solana_program::system_program::ID.readonly(),
             ],
-            current_stage: OnrampDeriveStage::BuildDynamicAccounts.to_string(),
+            current_stage: OnrampDeriveStage::BuildDynamicAccounts2.to_string(),
             next_stage: "".to_string(),
             ..Default::default()
         })

@@ -34,3 +34,8 @@ pub struct CcipLombardMessageEventAccountClosed {
     // Actual event account address, derived from the seeds above
     address: Pubkey,
 }
+
+#[event]
+pub struct AltEnabled {
+    pub enabled: bool,
+}

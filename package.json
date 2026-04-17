@@ -64,7 +64,8 @@
     "crosschain_bridgeSetLocalTokenConfig": "ts-node -T scripts/crosschain/bridgeSetLocalTokenConfig.ts",
     "crosschain_bridgeSetRemoteTokenConfig": "ts-node -T scripts/crosschain/bridgeSetRemoteTokenConfig.ts",
     "crosschain_bridgeSetSenderConfig": "ts-node -T scripts/crosschain/bridgeSetSenderConfig.ts",
-    "crosschain_bridgeGetConfig": "ts-node -T scripts/crosschain/bridgeGetConfig.ts",
+    "crosschain_bridgeGetConfigs": "ts-node -T scripts/crosschain/bridgeGetConfigs.ts",
+    "crosschain_bridgeGetSenderConfig": "ts-node -T scripts/crosschain/bridgeGetSenderConfig.ts",
     "crosschain_tokenPoolGetSigner": "ts-node -T scripts/crosschain/tokenPoolGetSigner.ts",
     "crosschain_tokenPoolGlobalInitialize": "ts-node -T scripts/crosschain/tokenPoolGlobalInitialize.ts",
     "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts",
@@ -72,6 +73,10 @@
     "crosschain_tokenPoolAppendRemotePool": "ts-node -T scripts/crosschain/tokenPoolAppendRemotePool.ts",
     "crosschain_tokenPoolGetTypeAndVersion": "ts-node -T scripts/crosschain/tokenPoolGetTypeAndVersion.ts",
     "crosschain_tokenPoolGetChainConfig": "ts-node -T scripts/crosschain/tokenPoolGetChainConfig.ts",
+    "crosschain_tokenPoolClearConfig": "ts-node -T scripts/crosschain/tokenPoolClearConfig.ts",
+    "crosschain_tokenPoolCreateAlt": "ts-node -T scripts/crosschain/tokenPoolCreateAlt.ts",
+    "crosschain_tokenPoolSetAlt": "ts-node -T scripts/crosschain/tokenPoolSetAlt.ts",
+    "crosschain_tokenPoolAddToAlt": "ts-node -T scripts/crosschain/tokenPoolAddToAlt.ts",
     "test:anchor-each": "bash scripts/anchor-test-each.sh"
   },
   "dependencies": {

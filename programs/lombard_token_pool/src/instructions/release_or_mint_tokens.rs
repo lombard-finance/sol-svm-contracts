@@ -156,13 +156,15 @@ pub struct TokenOfframp<'info> {
     #[account()]
     pub mailbox_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
+    #[account()]
+    pub local_token_config: UncheckedAccount<'info>,
+    /// The system program (needed for the 'init' constraint of the 'data' account)
+    pub system_program: Program<'info, System>,
+    /// CHECK: This will be verified by the mailbox program
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
     )]
     pub remote_bridge_config: Account<'info, RemoteBridgeConfig>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
-    pub local_token_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
     pub remote_token_config: UncheckedAccount<'info>,
@@ -175,8 +177,6 @@ pub struct TokenOfframp<'info> {
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub message_handled: UncheckedAccount<'info>,
-    /// The system program (needed for the 'init' constraint of the 'data' account)
-    pub system_program: Program<'info, System>,
 }
 
 pub fn release_or_mint_tokens<'info>(
@@ -299,8 +299,11 @@ pub fn derive_accounts_release_or_mint_tokens<'info>(
     let stage = derive_accounts::release_or_mint::OfframpDeriveStage::from_str(&stage)?;
 
     match stage {
+        derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveStateConfig => {
+            derive_accounts::release_or_mint::retrieve_state_config(&release_or_mint)
+        }
         derive_accounts::release_or_mint::OfframpDeriveStage::RetrieveChainConfig => {
-            derive_accounts::release_or_mint::retrieve_chain_config(&release_or_mint)
+            derive_accounts::release_or_mint::retrieve_chain_config(ctx, &release_or_mint)
         }
         derive_accounts::release_or_mint::OfframpDeriveStage::BuildDynamicAccounts => {
             derive_accounts::release_or_mint::build_dynamic_accounts(ctx, &release_or_mint)
