@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { Lbtc } from "../target/types/lbtc";
-import { getBase58EncodedTxBytes, getConfigPDA } from "./utils";
+import { getBase58EncodedTxBytes, getConfigPDA, loadWalletKeypair } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -32,9 +32,9 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const admin = new anchor.BN(process.argv[2]);
-const mint = new anchor.BN(process.argv[3]);
-const treasuryHolder = new anchor.BN(process.argv[4]);
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const treasuryHolder = new PublicKey(process.argv[4]);
 const burnCommission = new anchor.BN(process.argv[5]);
 const dustFeeRate = new anchor.BN(process.argv[6]);
 const mintFee = new anchor.BN(process.argv[7]);
@@ -43,7 +43,8 @@ const mintFee = new anchor.BN(process.argv[7]);
   try {
     const payer = provider.wallet.publicKey; // Get wallet address
 
-    const treasury = await spl.createAssociatedTokenAccount(provider.connection, provider.wallet, mint, treasuryHolder); // Generates an ATA for the treasury holder
+    const payerKeypair = loadWalletKeypair();
+    const treasury = await spl.createAssociatedTokenAccount(provider.connection, payerKeypair, mint, treasuryHolder); // Generates an ATA for the treasury holder
 
     // Derive PDA for config
     const configPDA = getConfigPDA(programId);

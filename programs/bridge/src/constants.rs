@@ -1,0 +1,11 @@
+pub const CONFIG_SEED: &[u8] = b"bridge_config";
+pub const SENDER_CONFIG_SEED: &[u8] = b"sender_config";
+pub const TOKEN_AUTHORITY_SEED: &[u8] = b"token_authority";
+pub const MESSAGE_HANDLED_SEED: &[u8] = b"message_handled";
+pub const ACCOUNT_ROLES_SEED: &[u8] = b"account_roles";
+pub const LOCAL_TOKEN_CONFIG_SEED: &[u8] = b"local_token_config";
+pub const REMOTE_TOKEN_CONFIG_SEED: &[u8] = b"remote_token_config";
+pub const REMOTE_BRIDGE_CONFIG_SEED: &[u8] = b"remote_bridge_config";
+pub const OUTBOUND_DIRECTION: u8 = 1;
+pub const INBOUND_DIRECTION: u8 = 2;
+pub const OPTIONAL_MESSAGE_SIZE: usize = 48;

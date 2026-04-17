@@ -1,0 +1,45 @@
+[package]
+name = "lombard_token_pool"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "lombard_token_pool"
+
+[features]
+default = ["mainnet"]
+mainnet = ["bridge/mainnet","mailbox/mainnet"]
+gastald = ["bridge/gastald","mailbox/gastald"]
+staging = ["bridge/staging","mailbox/staging"]
+bft = ["bridge/bft","mailbox/bft"]
+localnet = ["bridge/localnet","mailbox/localnet"]
+devnet = ["bridge/devnet","mailbox/devnet"]
+# cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-spl = "0.31.1"
+# base-token-pool = { git = "https://github.com/smartcontractkit/chainlink-ccip", tag = "solana-v0.1.2", features = ["no-entrypoint"]}
+base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"]}
+# ccip_common = { git = "https://github.com/smartcontractkit/chainlink-ccip", tag = "solana-v0.1.2" }
+ccip_common = { path = "../../dependencies/ccip/programs/ccip-common" }
+bridge = { path = "../bridge", features = ["cpi"] }
+mailbox = { path = "../mailbox", features = ["cpi"] }
+solana-security-txt = "1.1.1"
+
+ 
+[dev-dependencies]
+hex = "0.4.3"
+
+[build-dependencies]
+build_commit = { path = "../../dependencies/ccip/crates/build-commit" }
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic", "custom-heap"))']

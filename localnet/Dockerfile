@@ -21,7 +21,7 @@ RUN cargo install --git https://github.com/coral-xyz/anchor avm --force
 RUN avm install 0.31.1
 
 # Solana
-RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.0/install)"
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.21/install)"
 ENV PATH="/root/.local/share/solana/install/active_release/bin:$PATH"
 RUN solana config set --url http://0.0.0.0:8899
 RUN solana config set --ws ws://0.0.0.0:8900
@@ -37,14 +37,11 @@ ADD https://raw.githubusercontent.com/mock-server/mockserver/refs/heads/master/m
     /usr/local/share/ca-certificates/mockserver-cert.crt
 RUN update-ca-certificates
 
-# Project
 WORKDIR /contracts
-COPY . /contracts
-RUN rm -rf localnet/ target/
-COPY localnet/id.json /root/.config/solana/
 
+#node
+COPY package.json /contracts/
 RUN yarn -i
-RUN cargo update
 
 EXPOSE 8899 8900
 

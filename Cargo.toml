@@ -1,8 +1,13 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "dependencies/ccip/crates/*",
+    "dependencies/ccip/programs/*"
 ]
 resolver = "2"
+
+[workspace.metadata.cli]
+solana = "3.0.0"
 
 [profile.release]
 overflow-checks = true
