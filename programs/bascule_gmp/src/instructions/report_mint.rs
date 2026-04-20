@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 
-use crate::constants::{ACCOUNT_ROLES_SEED, CONFIG_SEED, MINT_PAYLOAD_SEED};
+use crate::constants::{ACCOUNT_ROLES_SEED, CHAIN_ID, CONFIG_SEED, MINT_PAYLOAD_SEED};
 use crate::errors::BasculeGmpError;
 use crate::events::MintReported;
 use crate::state::{
@@ -41,6 +41,12 @@ pub fn report_mint(
     mint_message: MintMessage,
     proof: MintProof,
 ) -> Result<()> {
+    // check that the chain id is the expected one for the current network
+    require!(
+        mint_message.chain_id == CHAIN_ID,
+        BasculeGmpError::InvalidChainId
+    );
+
     let mint_id = mint_message.mint_id();
     let trusted_signer = &ctx.accounts.config.trusted_signer;
 

@@ -94,6 +94,7 @@ impl AccountRoles {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
