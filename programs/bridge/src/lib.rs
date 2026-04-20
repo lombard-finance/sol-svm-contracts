@@ -16,7 +16,7 @@ use utils::gmp_messages::{InboundResponse, OutboundResponse};
 use base_token_pool::rate_limiter::RateLimitConfig;
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("Lomva5kTftuXE8992qRufkaeq3XrXV47qv3C1W9xW6Z");
 #[cfg(feature = "gastald")]
 declare_id!("LombUtstgyrZUhjvi12hUnm7HG7CxhtanUv6hakuCm4");
 #[cfg(feature = "staging")]

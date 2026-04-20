@@ -14,7 +14,7 @@ use crate::state::AccountRole;
 use crate::utils::message_utils::SendResult;
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("Lomsq4ZNkZQGysC1pQc2NqNiAbXQm6C8nLmKcUoESEA");
 #[cfg(feature = "gastald")]
 declare_id!("Lomu595CAtJGF6mpnfeAJ7daZfVdHeRkAdKyfqzXqom");
 #[cfg(feature = "staging")]

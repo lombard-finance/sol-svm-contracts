@@ -11,7 +11,7 @@ use instructions::*;
 use state::{AccountRole, MintMessage, MintProof};
 
 #[cfg(feature = "mainnet")]
-declare_id!("ToDo111111111111111111111111111111111111111");
+declare_id!("LomeavGUocL4Rn5TboDYFQEwUp3wBKodUTRKE8KqbE6");
 #[cfg(feature = "gastald")]
 declare_id!("LomuUjLMHJWsar8xxrbLhNSGdHTVg7hsoWnTibNtdgD");
 #[cfg(feature = "staging")]
