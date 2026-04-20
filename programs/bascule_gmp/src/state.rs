@@ -18,7 +18,7 @@ fn u64_to_32_be_bytes(v: u64) -> [u8; 32] {
 }
 
 impl MintMessage {
-    /// Returns the mint message id (keccak256 of nonce || token_address || recipient || amount).
+    /// Returns the mint message id (keccak256 of nonce || chain_id || recipient || token_address || amount).
     /// amount and nonce are padded to 32 bytes as in evm abi encoding.
     pub fn mint_id(&self) -> [u8; 32] {
         let mut data = [0u8; 32 + 32 + 32 + 32 + 32];
