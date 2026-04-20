@@ -19,7 +19,7 @@ use mailbox::{
 };
 
 use crate::{
-    context::get_pda, Empty, 
+    context::{get_pda, Empty}, 
     errors::LombardTokenPoolError,
     state::{ChainConfig, State},
 };
