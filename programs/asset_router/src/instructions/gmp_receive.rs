@@ -9,7 +9,7 @@ use bascule_gmp::{
 use mailbox::{constants::MESSAGE_SEED, state::MessageV1Info};
 
 use crate::{
-    constants::{BASCULE_VALIDATOR_SEED, BTC_STAKING_MODULE_ADDRESS, CONFIG_SEED, MESSAGE_HANDLED_SEED},
+    constants::{BASCULE_VALIDATOR_SEED, BTC_STAKING_MODULE_ADDRESS, CHAIN_ID, CONFIG_SEED, MESSAGE_HANDLED_SEED},
     errors::AssetRouterError,
     state::{Config, MessageHandled},
     utils::{self, gmp_messages::Mint},
@@ -160,6 +160,7 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
         
         let mint_message = MintMessage {
             nonce: ctx.accounts.message_info.message.nonce,
+            chain_id: CHAIN_ID,
             token_address: mint_message.token_address,
             recipient: mint_message.recipient,
             amount: mint_message.amount,
