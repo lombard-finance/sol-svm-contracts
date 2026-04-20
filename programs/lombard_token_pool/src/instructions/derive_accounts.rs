@@ -12,7 +12,6 @@ use std::{
     str::FromStr,
 };
 
-use bridge::{self};
 use mailbox::{
     self,
     state::Config,
