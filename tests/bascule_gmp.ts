@@ -21,18 +21,24 @@ function u64To32BeBytes(v: bigint | number): Uint8Array {
   return buf;
 }
 
-/** Compute mint message id (keccak256 of nonce_32 || token_address || recipient || amount_32). */
+const CHAIN_ID = Uint8Array.from(
+  Buffer.from("02296998a6f8e2a784db5d9f95e18fc23f70441a1039446801089879b08c7ef0", "hex")
+);
+
+/** Compute mint message id (keccak256 of nonce_32 || chain_id || recipient || token_address || amount_32). */
 function mintMessageId(
   nonce: bigint | number,
+  chainId: Uint8Array,
   tokenAddress: Uint8Array,
   recipient: Uint8Array,
   amount: bigint | number
 ): Uint8Array {
-  const data = new Uint8Array(128);
+  const data = new Uint8Array(160);
   data.set(u64To32BeBytes(nonce), 0);
-  data.set(tokenAddress, 32);
+  data.set(chainId, 32);
   data.set(recipient, 64);
-  data.set(u64To32BeBytes(amount), 96);
+  data.set(tokenAddress, 96);
+  data.set(u64To32BeBytes(amount), 128);
   return new Uint8Array(keccak_256(data));
 }
 
@@ -279,7 +285,13 @@ describe("Bascule GMP", () => {
     const amount = 1000;
     let tokenAddress: Uint8Array;
     let recipient: Uint8Array;
-    let mintMessage: { nonce: BN; tokenAddress: number[]; recipient: number[]; amount: BN };
+    let mintMessage: {
+      nonce: BN;
+      chainId: number[];
+      tokenAddress: number[];
+      recipient: number[];
+      amount: BN;
+    };
     let mintMessageIdBytes: Uint8Array;
     let proof: { signature: number[]; recoveryId: number };
 
@@ -290,11 +302,12 @@ describe("Bascule GMP", () => {
       recipient.set(reporter.publicKey.toBytes(), 0);
       mintMessage = {
         nonce: new BN(nonce),
+        chainId: Array.from(CHAIN_ID),
         tokenAddress: Array.from(tokenAddress),
         recipient: Array.from(recipient),
         amount: new BN(amount)
       };
-      mintMessageIdBytes = mintMessageId(nonce, tokenAddress, recipient, amount);
+      mintMessageIdBytes = mintMessageId(nonce, CHAIN_ID, tokenAddress, recipient, amount);
       const signed = signMintMessageId(mintMessageIdBytes, trustedSignerKeypair.privateKey);
       proof = { signature: signed.signature, recoveryId: signed.recoveryId };
     });
@@ -322,6 +335,36 @@ describe("Bascule GMP", () => {
           .rpc({ commitment: "confirmed" })
           )
         ).to.be.rejectedWith("InvalidProof");
+    });
+
+    it("reportMint: rejects when chain id is invalid", async () => {
+      const wrongChainId = Uint8Array.from(CHAIN_ID);
+      wrongChainId[31] ^= 1;
+      const invalidChainMintMessage = {
+        nonce: mintMessage.nonce,
+        chainId: Array.from(wrongChainId),
+        tokenAddress: mintMessage.tokenAddress,
+        recipient: mintMessage.recipient,
+        amount: mintMessage.amount
+      };
+      const invalidChainMintMessageId = mintMessageId(nonce, wrongChainId, tokenAddress, recipient, amount);
+      const [mintPayloadPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mint_payload"), invalidChainMintMessageId],
+        program.programId
+      );
+
+      await expect(
+          withBlockhashRetry(() =>
+            program.methods
+          .reportMint(invalidChainMintMessage, proof)
+          .accountsPartial({
+            reporter: reporter.publicKey,
+            mintPayload: mintPayloadPDA,
+          })
+          .signers([reporter])
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidChainId");
     });
 
     it("reportMint: successful with valid proof", async () => {
@@ -412,11 +455,12 @@ describe("Bascule GMP", () => {
       const amount2 = 50; // below threshold 1000
       const mintMessage2 = {
         nonce: new BN(nonce2),
+        chainId: Array.from(CHAIN_ID),
         tokenAddress: Array.from(tokenAddress),
         recipient: Array.from(recipient),
         amount: new BN(amount2)
       };
-      const mintMessageId2 = mintMessageId(nonce2, tokenAddress, recipient, amount2);
+      const mintMessageId2 = mintMessageId(nonce2, CHAIN_ID, tokenAddress, recipient, amount2);
       const [mintPayloadPDA2] = PublicKey.findProgramAddressSync(
         [Buffer.from("mint_payload"), mintMessageId2],
         program.programId

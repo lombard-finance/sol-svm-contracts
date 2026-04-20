@@ -16,4 +16,6 @@ pub enum BasculeGmpError {
     MintPayloadNotFound,
     #[msg("Invalid proof: signature of mint message id does not match trusted signer")]
     InvalidProof,
+    #[msg("Invalid chain id")]
+    InvalidChainId,
 }
