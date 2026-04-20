@@ -18,7 +18,7 @@ use mailbox::{
 };
 
 use crate::{
-    context::{BRIDGE_PROGRAM, get_pda, Empty, MAILBOX_PROGRAM}, 
+    context::{get_pda, Empty}, 
     errors::LombardTokenPoolError,
     state::{ChainConfig, State},
 };
@@ -125,18 +125,18 @@ pub mod release_or_mint {
         Ok(DeriveAccountsResponse {
             accounts_to_save: vec![
                 // remote_bridge_config
-                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &bridge::ID)
                     .readonly(),
                 // remote_token_config
-                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &bridge::ID)
                     .writable(),
                 // inbound_message_path
-                get_pda(&[b"inbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
+                get_pda(&[b"inbound_message_path", chain_id.as_ref()], &mailbox::ID)
                     .writable(),
                 // message_info
-                get_pda(&[b"message", &payload_hash], &MAILBOX_PROGRAM).writable(),
+                get_pda(&[b"message", &payload_hash], &mailbox::ID).writable(),
                 // message_handled
-                get_pda(&[b"message_handled", &payload_hash], &BRIDGE_PROGRAM).writable(),
+                get_pda(&[b"message_handled", &payload_hash], &bridge::ID).writable(),
             ],
             current_stage: OfframpDeriveStage::BuildDynamicAccounts.to_string(),
             ..Default::default()
@@ -265,24 +265,24 @@ pub mod lock_or_burn {
 
         Ok(DeriveAccountsResponse {
             ask_again_with: vec![
-                get_pda(&[b"mailbox_config"], &MAILBOX_PROGRAM).readonly(),
+                get_pda(&[b"mailbox_config"], &mailbox::ID).readonly(),
             ],
             // The static PDAs have mostly already been returned by CCIP via the LUT, so we just return here the ones not shared with offramp (so not in LUT)
             accounts_to_save: vec![
                 // remote_bridge_config
-                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"remote_bridge_config", chain_id.as_ref()], &bridge::ID)
                     .readonly(),
                 // remote_token_config
-                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"remote_token_config", mint.as_ref(), chain_id.as_ref()], &bridge::ID)
                     .writable(),
                 // bridge_sender_config
-                get_pda(&[b"sender_config", token_pool_signer.as_ref()], &BRIDGE_PROGRAM)
+                get_pda(&[b"sender_config", token_pool_signer.as_ref()], &bridge::ID)
                     .readonly(),
                 // mailbox_sender_config
-                get_pda(&[b"sender_config", &BRIDGE_PROGRAM.as_ref()], &MAILBOX_PROGRAM)
+                get_pda(&[b"sender_config", &bridge::ID.as_ref()], &mailbox::ID)
                     .readonly(),
                 // outbound_message_path
-                get_pda(&[b"outbound_message_path", chain_id.as_ref()], &MAILBOX_PROGRAM)
+                get_pda(&[b"outbound_message_path", chain_id.as_ref()], &mailbox::ID)
                     .readonly(),
             ],
             current_stage: OnrampDeriveStage::BuildDynamicAccounts1.to_string(),
@@ -302,7 +302,7 @@ pub mod lock_or_burn {
                 // treasury
                 mailbox_config.treasury.writable(),
                 // outbound_message
-                get_pda(&[b"outbound_message", &mailbox_config.global_nonce.to_be_bytes()], &MAILBOX_PROGRAM).writable(),
+                get_pda(&[b"outbound_message", &mailbox_config.global_nonce.to_be_bytes()], &mailbox::ID).writable(),
             ],
             current_stage: OnrampDeriveStage::BuildDynamicAccounts2.to_string(),
             next_stage: "".to_string(),
