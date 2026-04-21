@@ -5,6 +5,7 @@ import { getBase58EncodedTxBytes, getTokenAuthority } from "../utils";
 import { AssetRouter } from "../../target/types/asset_router";
 import { getAssetRouterConfigPDA } from "./utils";
 import { Bridge } from "../../target/types/bridge";
+import { BASCULE_VALIDATOR_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -78,4 +79,6 @@ if (!mailboxProgram.programId.equals(bridgeProgramId)) {
   console.log("Asset Router token authority:", arTokenAuthority.toBase58());
   console.log("Bridge token authority:", bTokenAuthority.toBase58());
 
+  const basculeValidatorPDA = PublicKey.findProgramAddressSync([BASCULE_VALIDATOR_SEED], programId)[0];
+  console.log("Asset Router bascule validator PDA:", basculeValidatorPDA.toBase58());
 })();
