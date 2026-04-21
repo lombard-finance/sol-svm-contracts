@@ -6,7 +6,7 @@ import { CONSORTIUM_CONFIG_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_consortiumAcceptOwnership  [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_consortiumAcceptOwnership <new_admin>  [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -32,15 +32,16 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
+const newAdmin = new PublicKey(process.argv[2]);
+
 (async () => {
   try {
-    const payer = provider.wallet.publicKey;
     const configPDA = PublicKey.findProgramAddressSync([CONSORTIUM_CONFIG_SEED], programId)[0];
 
     console.log("Using config PDA:", configPDA.toBase58());
 
     const tx = await program.methods.acceptOwnership().accounts({
-      payer,
+      payer: newAdmin,
       config: configPDA
     });
 
