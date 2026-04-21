@@ -6,7 +6,7 @@ import { MAILBOX_CONFIG_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxOwnershipAccept  [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxAcceptOwnership  [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);

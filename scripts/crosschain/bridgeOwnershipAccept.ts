@@ -1,12 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getBase58EncodedTxBytes } from "../utils";
-import { BasculeGmp } from "../../target/types/bascule_gmp";
-import { BASCULE_GMP_CONFIG_SEED } from "./constants";
+import { Bridge } from "../../target/types/bridge";
+import { BRIDGE_CONFIG_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_basculeGmpAcceptOwnership  [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeAcceptOwnership [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -22,7 +22,7 @@ if (!process.env.PROGRAM_ID) {
   process.exit(1);
 }
 const programId = new PublicKey(process.env.PROGRAM_ID);
-const program = new anchor.Program(require("../../target/idl/bascule_gmp.json"), provider) as anchor.Program<BasculeGmp>;
+const program = new anchor.Program(require("../../target/idl/bridge.json"), provider) as anchor.Program<Bridge>;
 
 if (!program.programId.equals(programId)) {
   console.error("the program id in the idl does not match the program id passed as env variable");
@@ -35,7 +35,7 @@ let populate = process.argv.at(-1) === "--populate";
 (async () => {
   try {
     const payer = provider.wallet.publicKey;
-    const configPDA = PublicKey.findProgramAddressSync([BASCULE_GMP_CONFIG_SEED], programId)[0];
+    const configPDA = PublicKey.findProgramAddressSync([BRIDGE_CONFIG_SEED], programId)[0];
 
     console.log("Using config PDA:", configPDA.toBase58());
 
