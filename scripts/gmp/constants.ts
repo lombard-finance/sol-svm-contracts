@@ -12,6 +12,9 @@ export const MAILBOX_OUTBOUND_MESSGE_PATH_SEED = Buffer.from("outbound_message_p
 export const MAILBOX_MESSAGE_HANDLED_SEED = Buffer.from("message_handled");
 export const MAILBOX_OUTBOUND_MESSAGE_SEED = Buffer.from("outbound_message");
 export const ORACLE_SEED = Buffer.from("oracle");
+export const BASCULE_GMP_CONFIG_SEED = Buffer.from("bascule_gmp_config");
+export const RATIO_ORACLE_CONFIG_SEED = Buffer.from("ratio_oracle_config");
+export const BASCULE_VALIDATOR_SEED = Buffer.from("bascule_validator");
 export const METADATA_SEED = Buffer.from([
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 ]);
