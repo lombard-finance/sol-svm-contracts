@@ -6,7 +6,7 @@ import { getTokenPoolState } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolAcceptOwnership <mint address> [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolAcceptOwnership <mint address> <new_admin> [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -33,16 +33,16 @@ if (!program.programId.equals(programId)) {
 let populate = process.argv.at(-1) === "--populate";
 
 const mint = new PublicKey(process.argv[2]);
+const newAdmin = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey;
     const statePDA = getTokenPoolState(mint, programId);
 
     console.log("Using state(config) PDA:", statePDA.toBase58());
 
     const tx = await program.methods.acceptOwnership().accounts({
-      authority: admin,
+      authority: newAdmin,
       mint: mint,
       state: statePDA
     });
