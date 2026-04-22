@@ -41,7 +41,7 @@ const newAdmin = new PublicKey(process.argv[2]);
     console.log("Using config PDA:", configPDA.toBase58());
 
     const tx = await program.methods.acceptOwnership().accounts({
-      payer: newAdmin,
+      acceptAdmin: newAdmin,
       config: configPDA
     });
 
