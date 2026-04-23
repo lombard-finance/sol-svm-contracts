@@ -9,7 +9,7 @@ import { getBase58EncodedTxBytes } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn buildExtendProgram <programId> <upgrade authority> <additional bytes> [--populate]
+  console.log(`Usage: ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn buildExtendProgram <programId> <upgrade authority> <payer> <additional bytes> [--populate]
 
     Build extend program size transaction.`);
   process.exit(0);
@@ -29,7 +29,8 @@ let populate = process.argv.at(-1) === "--populate";
 
 const programId = new PublicKey(process.argv[2]);
 const upgradeAuthority = new PublicKey(process.argv[3]);
-const additionalBytes = Number(process.argv[4])
+const additionalBytes = Number(process.argv[5]);
+const payer = new PublicKey(process.argv[4]);
 
 const additionalBytesBuffer = Buffer.alloc(4);
 additionalBytesBuffer.writeUInt32LE(additionalBytes, 0);
@@ -48,8 +49,7 @@ const extendProgramIx = new TransactionInstruction({
     { pubkey: programId,          isSigner: false, isWritable: true },  // program account
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     { pubkey: upgradeAuthority,           isSigner: false, isWritable: true }, // upgrade authority (Squads vault)
-    // Optional: payer if different from authority
-    // { pubkey: upgradeAuthority, isSigner: true, isWritable: true },
+    { pubkey: payer, isSigner: true, isWritable: true },
   ],
   data,
 });
