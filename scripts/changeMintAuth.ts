@@ -6,7 +6,7 @@ import { getBase58EncodedTxBytes, getConfigPDA, getTokenAuthority } from "./util
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn changeMintAuth <authority>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn changeMintAuth <admin> <authority> [--populate]
 
     Updates the mint authority of the LBTC token to be <authority>.
     WARNING: This can brick the LBTC minting functionality. Use with extreme caution.`);
@@ -32,12 +32,11 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const authority = new PublicKey(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+const authority = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const payer = provider.wallet.publicKey; // Get wallet address
-
     // Derive PDA for token authority
     const tokenAuthority = getTokenAuthority(programId);
     console.log("Using token authority PDA:", tokenAuthority.toBase58());
@@ -56,7 +55,7 @@ const authority = new PublicKey(process.argv[2]);
     const currentAuth = mintAccount.mintAuthority;
 
     const tx = await program.methods.changeMintAuth(authority).accounts({
-      payer,
+      payer: admin,
       config: configPDA,
       tokenProgram: spl.TOKEN_PROGRAM_ID,
       mint,
