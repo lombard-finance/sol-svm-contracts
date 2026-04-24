@@ -29,6 +29,7 @@
     "unpause": "ts-node -T scripts/unpause.ts",
     "getConfig": "ts-node -T scripts/getConfig.ts",
     "test:lbtc": "anchor test -p lbtc -- --no-default-features --features devnet",
+    "buildExtendProgram": "ts-node -T scripts/buildExtendProgram.ts",
     "gmp_initializeConsortium": "ts-node -T scripts/gmp/initializeConsortium.ts",
     "gmp_setInitialValidatorSet": "ts-node -T scripts/gmp/setInitialValidatorSet.ts",
     "gmp_setInitialValidatorSetFromSession": "ts-node -T scripts/gmp/setInitialValidatorSetFromSession.ts",
