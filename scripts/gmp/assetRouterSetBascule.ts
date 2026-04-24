@@ -6,7 +6,7 @@ import { ASSET_ROUTER_CONFIG_SEED, BASCULE_VALIDATOR_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetBasculeGmp <BasculeGmp address> <authority> [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetBascule <Bascule address> <authority> [--populate]
 
     Sets BasculeGmp with the AssetRouter. `);
   process.exit(0);
@@ -31,19 +31,18 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const basculeGmp = new PublicKey(process.argv[2]);
+const bascule = new PublicKey(process.argv[2]);
 const authority = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const payer = provider.wallet.publicKey;
     const configPDA = PublicKey.findProgramAddressSync([ASSET_ROUTER_CONFIG_SEED], programId)[0];
     const basculeValidatorPDA = PublicKey.findProgramAddressSync([BASCULE_VALIDATOR_SEED], programId)[0];
 
     console.log("Using config PDA:", configPDA.toBase58());
     console.log("Bascule Validator PDA:", basculeValidatorPDA.toBase58());
 
-    const tx = await program.methods.setBasculeGmp(basculeGmp).accounts({
+    const tx = await program.methods.setBascule(bascule).accounts({
       payer: authority,
     });
 
