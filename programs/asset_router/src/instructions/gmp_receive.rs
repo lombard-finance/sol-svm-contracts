@@ -60,6 +60,7 @@ pub struct GMPReceive<'info> {
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, TokenMint>,
     /// CHECK: This being used in the mint call constrains it to be correct, otherwise the
     /// instruction will fail.

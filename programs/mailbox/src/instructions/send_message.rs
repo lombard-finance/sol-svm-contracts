@@ -138,7 +138,7 @@ pub fn send_message(
     outbound_message_account.try_borrow_mut_data()?.copy_from_slice(&payload);
 
     Ok(SendResult{
-        nonce: config.global_nonce,
+        nonce: message.nonce,
         payload_hash: payload_hash,
     })
 }
