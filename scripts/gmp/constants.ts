@@ -6,6 +6,7 @@ export const ASSET_ROUTER_CONFIG_SEED = Buffer.from("asset_router_config");
 export const ASSET_ROUTER_TOKEN_ROUTE_SEED = Buffer.from("token_route");
 export const ASSET_ROUTER_TOKEN_CONFIG_SEED = Buffer.from("token_config");
 export const MAILBOX_CONFIG_SEED = Buffer.from("mailbox_config");
+export const ACCOUNT_ROLES_SEED = Buffer.from("account_roles");
 export const MAILBOX_SENDER_CONFIG_SEED = Buffer.from("sender_config");
 export const MAILBOX_INBOUND_MESSGE_PATH_SEED = Buffer.from("inbound_message_path");
 export const MAILBOX_OUTBOUND_MESSGE_PATH_SEED = Buffer.from("outbound_message_path");

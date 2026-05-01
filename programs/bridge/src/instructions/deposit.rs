@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use solana_address::bytes_are_curve_point;
 
 use crate::{
     constants::{self, CONFIG_SEED, LOCAL_TOKEN_CONFIG_SEED, OPTIONAL_MESSAGE_SIZE, OUTBOUND_DIRECTION, REMOTE_BRIDGE_CONFIG_SEED, REMOTE_TOKEN_CONFIG_SEED, SENDER_CONFIG_SEED}, 
@@ -37,11 +36,7 @@ pub struct Deposit<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED, 
-            if bytes_are_curve_point(sender.key.as_ref()) || sender.data_is_empty() {
-                sender.key.as_ref()
-            } else {
-                sender.owner.as_ref()
-            }
+            sender.key.as_ref()
         ],
         constraint = sender_config.whitelisted @ BridgeError::NotWhitelisted,
         bump

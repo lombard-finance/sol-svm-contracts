@@ -72,6 +72,8 @@
     "gmp_basculeGmpGrantRole": "ts-node -T scripts/gmp/basculeGmpGrantRole.ts",
     "gmp_mailboxTransferOwnership": "ts-node -T scripts/gmp/mailboxOwnershipTransfer.ts",
     "gmp_mailboxAcceptOwnership": "ts-node -T scripts/gmp/mailboxOwnershipAccept.ts",
+    "gmp_mailboxPause": "ts-node -T scripts/gmp/mailboxPause.ts",
+    "gmp_mailboxGrantRole": "ts-node -T scripts/gmp/mailboxGrantRole.ts",
     "gmp_ratioOracleTransferOwnership": "ts-node -T scripts/gmp/ratioOracleOwnershipTransfer.ts",
     "gmp_ratioOracleAcceptOwnership": "ts-node -T scripts/gmp/ratioOracleOwnershipAccept.ts",
     "crosschain_bridgeInitialize": "ts-node -T scripts/crosschain/bridgeInitialize.ts",

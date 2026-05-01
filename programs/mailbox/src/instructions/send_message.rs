@@ -47,11 +47,7 @@ pub struct SendMessage<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED,
-            if bytes_are_curve_point(sender_authority.key.as_ref()) || sender_authority.data_is_empty() {
-                sender_authority.key.as_ref()
-            } else {
-                sender_authority.owner.as_ref()
-            }
+            sender_authority.key.as_ref()
         ],
         bump
     )]
