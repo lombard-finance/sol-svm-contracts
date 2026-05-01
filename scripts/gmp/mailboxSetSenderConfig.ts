@@ -5,7 +5,7 @@ import { Mailbox } from "../../target/types/mailbox";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxSetSenderConfig <sender address> <max payload size> [--disable-fee]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxSetSenderConfig <admin> <sender address> <max payload size> [--disable-fee]
 
     Sets sender config on the Mailbox contract. `);
   process.exit(0);
@@ -31,12 +31,13 @@ if (!program.programId.equals(programId)) {
 let populate = process.argv.at(-1) === "--populate";
 let feeDisabled = process.argv.at(-2) === "--disable-fee";
 
-const sender = new PublicKey(process.argv[2]);
-const maxPayload =  Number(process.argv[3]);
+const admin = new PublicKey(process.argv[2]);
+const sender = new PublicKey(process.argv[3]);
+const maxPayload =  Number(process.argv[4]);
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey; // Get wallet address
+    // const admin = provider.wallet.publicKey; // Get wallet address
 
     const tx = await program.methods.setSenderConfig(sender, maxPayload, feeDisabled).accounts({
       admin: admin,
