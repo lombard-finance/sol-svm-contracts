@@ -177,7 +177,7 @@ describe("Bridge", () => {
     bridge.programId
   );
   const [bridgeSenderConfigPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from("sender_config"), bridge.programId.toBuffer()],
+    [Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
     mailbox.programId
   );
   const [senderConfigPDA] = PublicKey.findProgramAddressSync(
@@ -555,7 +555,7 @@ describe("Bridge", () => {
     it("Set sender config on mailbox", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true)
           .accounts({
             admin: admin.publicKey
           })
@@ -783,7 +783,7 @@ describe("Bridge", () => {
     before("Set bridge fee = 100% mailbox fee", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true)
           .accounts({
             admin: admin.publicKey
           })
