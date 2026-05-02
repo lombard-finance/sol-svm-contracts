@@ -279,7 +279,7 @@ pub mod lock_or_burn {
                 get_pda(&[b"sender_config", token_pool_signer.as_ref()], &bridge::ID)
                     .readonly(),
                 // mailbox_sender_config
-                get_pda(&[b"sender_config", &bridge::ID.as_ref()], &mailbox::ID)
+                get_pda(&[b"sender_config", get_pda(&[b"bridge_config"], &bridge::ID).as_ref()], &mailbox::ID)
                     .readonly(),
                 // outbound_message_path
                 get_pda(&[b"outbound_message_path", chain_id.as_ref()], &mailbox::ID)
