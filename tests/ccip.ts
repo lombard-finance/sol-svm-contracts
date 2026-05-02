@@ -233,7 +233,7 @@ describe("CCIP Token Pool", () => {
 		bridge.programId
 		)[0];
 		bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
-		[Buffer.from("sender_config"), bridge.programId.toBuffer()],
+		[Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
 		mailbox.programId
 		)[0];
 
@@ -694,7 +694,7 @@ describe("CCIP Token Pool", () => {
 			);
 			await withBlockhashRetry(() =>
 			  mailbox.methods
-				.setSenderConfig(bridge.programId, customMaxPayloadSize, true)
+				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true)
 				.accounts({
 					admin: admin.publicKey
 				})

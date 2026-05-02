@@ -3,7 +3,7 @@ import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { getBase58EncodedTxBytes, getTokenAuthority } from "../utils";
 import { AssetRouter } from "../../target/types/asset_router";
-import { getAssetRouterConfigPDA } from "./utils";
+import { getAssetRouterConfigPDA, getAssetRouterMessagingAuthorityPDA } from "./utils";
 import { Bridge } from "../../target/types/bridge";
 import { BASCULE_VALIDATOR_SEED } from "./constants";
 
@@ -71,6 +71,9 @@ if (!mailboxProgram.programId.equals(bridgeProgramId)) {
     console.log("Token program:", tokenProgram.toBase58());
     console.log("Mint:", mint.toBase58());
     console.log("Mint authority:", mintAuthority.toBase58());
+
+    const messagingAuthorityPDA = getAssetRouterMessagingAuthorityPDA(programId);
+    console.log("Messaging authority:", messagingAuthorityPDA.toBase58());
   } catch (err) {
     console.error("Error getting configuration data:", err);
   }

@@ -123,8 +123,9 @@ pub struct TokenOnramp<'info> {
     #[account()]
     pub local_token_config: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
-    /// CHECK: This will be verified by the mailbox program
-    #[account()]
+    #[account(
+        constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
+    )]
     pub remote_bridge_config: Account<'info, RemoteBridgeConfig>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
@@ -137,10 +138,9 @@ pub struct TokenOnramp<'info> {
     pub mailbox_sender_config: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
     pub outbound_message_path: UncheckedAccount<'info>,
+    /// CHECK: This will be verified by the mailbox program
+    #[account()]
     pub treasury: Option<UncheckedAccount<'info>>,
-    #[account(
-        constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
-    )]
     /// CHECK: This will be verified by the mailbox program
     #[account(mut)]
     pub outbound_message: UncheckedAccount<'info>,

@@ -47,11 +47,7 @@ pub struct SendMessage<'info> {
     #[account(
         seeds = [
             SENDER_CONFIG_SEED,
-            if bytes_are_curve_point(sender_authority.key.as_ref()) || sender_authority.data_is_empty() {
-                sender_authority.key.as_ref()
-            } else {
-                sender_authority.owner.as_ref()
-            }
+            sender_authority.key.as_ref()
         ],
         bump
     )]
@@ -138,7 +134,7 @@ pub fn send_message(
     outbound_message_account.try_borrow_mut_data()?.copy_from_slice(&payload);
 
     Ok(SendResult{
-        nonce: config.global_nonce,
+        nonce: message.nonce,
         payload_hash: payload_hash,
     })
 }

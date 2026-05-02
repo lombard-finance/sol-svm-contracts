@@ -2,12 +2,13 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getBase58EncodedTxBytes } from "../utils";
 import { Mailbox } from "../../target/types/mailbox";
+import { MAILBOX_CONFIG_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxSetSenderConfig <admin> <sender address> <max payload size> [--disable-fee]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxUnpause <admin> [--populate]
 
-    Sets sender config on the Mailbox contract. `);
+    Unpauses Mailbox contract.`);
   process.exit(0);
 }
 
@@ -29,18 +30,18 @@ if (!program.programId.equals(programId)) {
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-let feeDisabled = process.argv.at(-2) === "--disable-fee";
 
 const admin = new PublicKey(process.argv[2]);
-const sender = new PublicKey(process.argv[3]);
-const maxPayload =  Number(process.argv[4]);
 
 (async () => {
   try {
-    // const admin = provider.wallet.publicKey; // Get wallet address
+    const configPDA = PublicKey.findProgramAddressSync([MAILBOX_CONFIG_SEED], programId)[0];
 
-    const tx = await program.methods.setSenderConfig(sender, maxPayload, feeDisabled).accounts({
-      admin: admin,
+    console.log("Using config PDA:", configPDA.toBase58());
+
+    const tx = await program.methods.unpause().accounts({
+      admin,
+      config: configPDA
     });
 
     if (populate) {
@@ -49,6 +50,7 @@ const maxPayload =  Number(process.argv[4]);
       console.log("Transaction Signature:", await tx.rpc());
     }
   } catch (err) {
-    console.error("Error setting initial validator set:", err);
+    console.error("Error changing asset router mint authority:", err);
+    process.exit(1);
   }
 })();
