@@ -6,6 +6,7 @@ pub const ACCOUNT_ROLES_SEED: &[u8] = b"account_roles";
 pub const LOCAL_TOKEN_CONFIG_SEED: &[u8] = b"local_token_config";
 pub const REMOTE_TOKEN_CONFIG_SEED: &[u8] = b"remote_token_config";
 pub const REMOTE_BRIDGE_CONFIG_SEED: &[u8] = b"remote_bridge_config";
+pub const MESSAGING_AUTHORITY_SEED: &[u8] = b"messaging_authority";
 pub const OUTBOUND_DIRECTION: u8 = 1;
 pub const INBOUND_DIRECTION: u8 = 2;
 pub const OPTIONAL_MESSAGE_SIZE: usize = 48;

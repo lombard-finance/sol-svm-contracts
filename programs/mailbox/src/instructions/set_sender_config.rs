@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{CONFIG_SEED, SENDER_CONFIG_SEED};
+use crate::constants::{CONFIG_SEED, MESSAGING_AUTHORITY_SEED, SENDER_CONFIG_SEED};
+use crate::utils::account::get_pda;
 use crate::{
     errors::MailboxError,
     events::SenderConfigSet,
@@ -8,7 +9,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-#[instruction(sender_program: Pubkey)]
+#[instruction(sender: Pubkey, is_program: bool)]
 pub struct SetSenderConfig<'info> {
     #[account(mut, address = config.admin @ MailboxError::Unauthorized)]
     pub admin: Signer<'info>,
@@ -18,7 +19,16 @@ pub struct SetSenderConfig<'info> {
         init_if_needed,
         payer = admin,
         space = 8 + SenderConfig::INIT_SPACE,
-        seeds = [SENDER_CONFIG_SEED, &sender_program.to_bytes()],
+        seeds = [
+            SENDER_CONFIG_SEED,
+            {
+                let mut acc = sender;
+                if is_program {
+                    acc = get_pda(&[MESSAGING_AUTHORITY_SEED], &acc);
+                }
+                &acc.to_bytes()              
+            }
+        ],
         bump
     )]
     pub sender_config: Account<'info, SenderConfig>,
@@ -27,17 +37,21 @@ pub struct SetSenderConfig<'info> {
 
 pub fn set_sender_config(
     ctx: Context<SetSenderConfig>,
-    sender_program: Pubkey,
+    sender: Pubkey,
     max_payload_size: u32,
     fee_disabled: bool,
+    is_program: bool,
 ) -> Result<()> {
     ctx.accounts.sender_config.bump = ctx.bumps.sender_config;
     ctx.accounts.sender_config.max_payload_size = max_payload_size;
     ctx.accounts.sender_config.fee_disabled = fee_disabled;
+    ctx.accounts.sender_config.sender = sender;
+    ctx.accounts.sender_config.is_program = is_program;
     emit!(SenderConfigSet {
-        sender_program,
+        sender,
         max_payload_size,
         fee_disabled,
+        is_program
     });
     Ok(())
 }

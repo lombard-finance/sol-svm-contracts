@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::system_instruction::transfer;
-use solana_address::bytes_are_curve_point;
 
-use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
+use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, MESSAGING_AUTHORITY_SEED, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
+use crate::utils::account::get_pda;
 use crate::utils::message_utils::SendResult;
 use crate::state::{Config, OutboundMessagePath, SenderConfig};
 use crate::utils::message_utils::MessageV1;
@@ -80,11 +80,26 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
-    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) ||
-        ctx.accounts.sender_authority.data_is_empty() {
-        true => ctx.accounts.sender_authority.key.to_bytes(),
-        false => ctx.accounts.sender_authority.owner.to_bytes(),
+    let (expected_sender_authority, message_sender) = match &ctx.accounts.sender_config {
+        Some(sender_config) => {
+            if sender_config.is_program {
+                (
+                    get_pda(&[MESSAGING_AUTHORITY_SEED], &sender_config.sender),
+                    sender_config.sender.to_bytes()
+                )
+            } else {
+                (
+                    sender_config.sender.key(), 
+                    sender_config.sender.key().to_bytes()
+                )  
+            }
+        },
+        None => (
+            ctx.accounts.sender_authority.key(), 
+            ctx.accounts.sender_authority.key().to_bytes()
+        ),
     };
+    require!(ctx.accounts.sender_authority.key() == expected_sender_authority, MailboxError::InvalidSenderConfig);
 
     let message = MessageV1 {
         nonce: config.global_nonce,
@@ -92,7 +107,7 @@ pub fn send_message(
         destination_caller: destination_caller,
         recipient: recipient,
         message_path_identifier: ctx.accounts.outbound_message_path.identifier,
-        sender: sender,
+        sender: message_sender,
     };
 
     if !fee_disabled {

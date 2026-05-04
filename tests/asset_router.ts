@@ -1047,7 +1047,7 @@ describe("Asset Router", () => {
               mintAuthority: tokenAuth,
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               consortiumValidatedPayload: validatedPayloadPDA,
-              depositPayloadSpent: depositPayloadSpentPDA
+              depositPayloadSpent: depositPayloadSpentPDA,
             })
           )
           .signers([payer])
@@ -1076,7 +1076,7 @@ describe("Asset Router", () => {
             mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
             outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
             outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey),
+            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey, false),
             treasury: null
           })
           .signers([staker1])
@@ -1104,7 +1104,7 @@ describe("Asset Router", () => {
             mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
             outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
             outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey),
+            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey, false),
             treasury: null
           })
           .signers([staker1])
@@ -1131,7 +1131,7 @@ describe("Asset Router", () => {
             mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
             outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
             outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey),
+            senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey, false),
             treasury: null
           })
           .signers([staker1])
@@ -2323,7 +2323,7 @@ describe("Asset Router", () => {
     );
 
     before("Exempt assetRouter from mailbox fees", async () => {
-      await mailboxUtilities.setSenderConfig(messagingAuthorityPDA, 10000, true);
+      await mailboxUtilities.setSenderConfig(program.programId, 10000, true);
     });
 
     const args = [
@@ -2375,7 +2375,7 @@ describe("Asset Router", () => {
             outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
             // senderConfig: null,
             // treasury: treasury.publicKey
-            senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
+            senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA, false),
             treasury: null
           })
           .signers([staker1])
@@ -2677,7 +2677,7 @@ describe("Asset Router", () => {
           mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
           outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
           outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-          senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
+          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId, true),
           treasury: null
         })
         .signers([staker1])
@@ -2776,7 +2776,7 @@ describe("Asset Router", () => {
               mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
               outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
               outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-              senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey),
+              senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey, false),
               treasury: null
             })
             .signers([staker1])
@@ -2822,7 +2822,7 @@ describe("Asset Router", () => {
           mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
           outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
           outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-          senderConfig: mailboxUtilities.getSenderConfigPDA(messagingAuthorityPDA),
+          senderConfig: mailboxUtilities.getSenderConfigPDA(program.programId, true),
           treasury: null
         })
         .signers([staker1])
@@ -2918,7 +2918,7 @@ describe("Asset Router", () => {
               mailboxConfig: MailboxUtilities.getMailboxConfigPDA(),
               outboundMessagePath: mailboxUtilities.getOutboundMessagePathPDA(LEDGER_LCHAIN_ID),
               outboundMessage: await MailboxUtilities.getCurrentOutboundMessagePDA(),
-              senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey),
+              senderConfig: mailboxUtilities.getSenderConfigPDA(staker1.publicKey, false),
               treasury: null
             })
             .signers([staker1])

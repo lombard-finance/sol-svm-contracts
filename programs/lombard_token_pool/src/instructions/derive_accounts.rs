@@ -217,7 +217,10 @@ pub mod lock_or_burn {
             )],
             // We don't need the domain for the first few PDAs, so we return them now to keep
             // return sizes balanced.
-            accounts_to_save: vec![],
+            accounts_to_save: vec![
+                // Bridge messaging authority
+                get_pda(&[b"messaging_authority"], &bridge::ID).readonly(),
+            ],
             current_stage: OnrampDeriveStage::RetrieveStateConfig.to_string(),
             next_stage: OnrampDeriveStage::RetrieveChainConfig.to_string(),
             ..Default::default()

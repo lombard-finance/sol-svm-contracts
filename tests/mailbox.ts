@@ -10,7 +10,7 @@ import chaiAsPromised from "chai-as-promised";
 import { ConsortiumUtility, randomNumber } from "./utils/consortium_utilities";
 import { keccak256 } from "ethers";
 import { MailboxReceiver } from "../target/types/mailbox_receiver";
-import { MESSAGE_V1_SELECTOR, MessageV1 } from "./utils/mailbox_utilities";
+import { MailboxUtilities, MESSAGE_V1_SELECTOR, MessageV1 } from "./utils/mailbox_utilities";
 import {
   BITCOIN_LCHAIN_ID,
   fundWallet,
@@ -40,6 +40,7 @@ BN.prototype.toBigInt = function (): bigint {
 
 describe("Mailbox", () => {
   let globalNonce = 0;
+  let mailboxUtilities: MailboxUtilities;
 
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -111,6 +112,7 @@ describe("Mailbox", () => {
 
     consortiumUtility.generateAndAddKeypairs(3);
     await consortiumUtility.initializeConsortiumProgram(admin);
+    mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
   });
 
   describe("Initialize and set roles", function () {
@@ -1256,9 +1258,10 @@ describe("Mailbox", () => {
       await expect(
           withBlockhashRetry(() =>
             mailbox.methods
-          .setSenderConfig(sender.publicKey, maxPayloadSize, true)
+          .setSenderConfig(sender.publicKey, maxPayloadSize, true, false)
           .accounts({
-            admin: payer.publicKey
+            admin: payer.publicKey,
+            senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1271,9 +1274,10 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(sender.publicKey, maxPayloadSize, true)
+        .setSenderConfig(sender.publicKey, maxPayloadSize, true, false)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
+          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1289,9 +1293,10 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(sender.publicKey, maxPayloadSize, false)
+        .setSenderConfig(sender.publicKey, maxPayloadSize, false, false)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
+          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1306,9 +1311,10 @@ describe("Mailbox", () => {
       await expect(
           withBlockhashRetry(() =>
             mailbox.methods
-          .unsetSenderConfig(sender.publicKey)
+          .unsetSenderConfig(sender.publicKey, false)
           .accounts({
-            admin: payer.publicKey
+            admin: payer.publicKey,
+            senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1319,9 +1325,10 @@ describe("Mailbox", () => {
     it("unsetSenderConfig successful by admin", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-        .unsetSenderConfig(sender.publicKey)
+        .unsetSenderConfig(sender.publicKey, false)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
+          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1356,9 +1363,10 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, true)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
+           senderConfig: mailboxUtilities.getSenderConfigPDA(payerFeeExempt.publicKey, false),
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1439,9 +1447,10 @@ describe("Mailbox", () => {
       // we use system program just for ease of testing
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, true)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
+          senderConfig: mailboxUtilities.getSenderConfigPDA(sender, isProgram),
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
