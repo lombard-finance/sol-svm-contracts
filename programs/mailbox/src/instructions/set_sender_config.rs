@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-#[instruction(sender: Pubkey, is_program: bool)]
+#[instruction(sender: Pubkey, _max_payload_size: u32, _fee_disabled: bool, is_program: bool)]
 pub struct SetSenderConfig<'info> {
     #[account(mut, address = config.admin @ MailboxError::Unauthorized)]
     pub admin: Signer<'info>,
