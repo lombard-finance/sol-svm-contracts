@@ -125,7 +125,7 @@ pub struct TokenOnramp<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This will be verified by the mailbox program
     #[account()]
-    pub mesaging_authority: UncheckedAccount<'info>,
+    pub messaging_authority: UncheckedAccount<'info>,
     #[account(
         constraint = remote_bridge_config.chain_id == chain_config.bridge.destination_chain_id @ LombardTokenPoolError::RemoteChainMismatch
     )]
@@ -219,7 +219,7 @@ fn bridge_deposit_for_burn_with_caller(
                 Some(a) => Some(a.to_account_info()),
                 None => None,
             },
-            messaging_authority: ctx.accounts.mesaging_authority.to_account_info(),
+            messaging_authority: ctx.accounts.messaging_authority.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         },
         pool_signer_seeds,

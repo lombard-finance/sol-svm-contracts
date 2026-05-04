@@ -40,7 +40,6 @@ BN.prototype.toBigInt = function (): bigint {
 
 describe("Mailbox", () => {
   let globalNonce = 0;
-  let mailboxUtilities: MailboxUtilities;
 
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -112,7 +111,6 @@ describe("Mailbox", () => {
 
     consortiumUtility.generateAndAddKeypairs(3);
     await consortiumUtility.initializeConsortiumProgram(admin);
-    mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
   });
 
   describe("Initialize and set roles", function () {
@@ -1261,7 +1259,7 @@ describe("Mailbox", () => {
           .setSenderConfig(sender.publicKey, maxPayloadSize, true, false)
           .accounts({
             admin: payer.publicKey,
-            senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
+            senderConfig: senderConfigPDA,
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1277,7 +1275,7 @@ describe("Mailbox", () => {
         .setSenderConfig(sender.publicKey, maxPayloadSize, true, false)
         .accounts({
           admin: admin.publicKey,
-          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
+          senderConfig: senderConfigPDA,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1296,7 +1294,7 @@ describe("Mailbox", () => {
         .setSenderConfig(sender.publicKey, maxPayloadSize, false, false)
         .accounts({
           admin: admin.publicKey,
-          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
+          senderConfig: senderConfigPDA,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1314,7 +1312,7 @@ describe("Mailbox", () => {
           .unsetSenderConfig(sender.publicKey, false)
           .accounts({
             admin: payer.publicKey,
-            senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
+            senderConfig: senderConfigPDA,
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1328,7 +1326,7 @@ describe("Mailbox", () => {
         .unsetSenderConfig(sender.publicKey, false)
         .accounts({
           admin: admin.publicKey,
-          senderConfig: mailboxUtilities.getSenderConfigPDA(sender.publicKey, false),
+          senderConfig: senderConfigPDA,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1342,6 +1340,10 @@ describe("Mailbox", () => {
     const customMaxPayloadSize = defaultMaxPayloadSize + 10;
     const MsgSentEvents = [];
     const listeners: number[] = [];
+    const senderConfigPDA = PublicKey.findProgramAddressSync(
+      [Buffer.from("sender_config"), payerFeeExempt.publicKey.toBuffer()],
+      mailbox.programId
+    )[0];
 
     before("Enable outbound message path", async () => {
       listeners.push(
@@ -1363,10 +1365,10 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, false)
         .accounts({
           admin: admin.publicKey,
-           senderConfig: mailboxUtilities.getSenderConfigPDA(payerFeeExempt.publicKey, false),
+           senderConfig: senderConfigPDA,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1447,10 +1449,10 @@ describe("Mailbox", () => {
       // we use system program just for ease of testing
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, false)
         .accounts({
           admin: admin.publicKey,
-          senderConfig: mailboxUtilities.getSenderConfigPDA(sender, isProgram),
+          senderConfig: senderConfigPDA,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })

@@ -79,7 +79,7 @@ pub struct Deposit<'info> {
 
     #[account(mut)]
     pub treasury: Option<UncheckedAccount<'info>>,
-    /// CHECK: PDA to whitelisted with Mailbox as sender_authority
+    /// CHECK: PDA whitelisted with Mailbox as sender_authority
     #[account(seeds = [constants::MESSAGING_AUTHORITY_SEED], bump)]
     pub messaging_authority: UncheckedAccount<'info>,
 
