@@ -79,9 +79,6 @@ pub struct Deposit<'info> {
 
     #[account(mut)]
     pub treasury: Option<UncheckedAccount<'info>>,
-    /// CHECK: PDA whitelisted with Mailbox as sender_authority
-    #[account(seeds = [constants::MESSAGING_AUTHORITY_SEED], bump)]
-    pub messaging_authority: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -113,7 +110,7 @@ pub fn deposit(
         amount: amount,
         optional_message: message,
     };
-    let signer_seeds: &[&[&[u8]]] = &[&[constants::MESSAGING_AUTHORITY_SEED, &[ctx.bumps.messaging_authority]]];
+    let signer_seeds: &[&[&[u8]]] = &[&[constants::CONFIG_SEED, &[ctx.bumps.config]]];
     let msg_body = message.to_gmp_body();
 
     let result = send_message(
@@ -123,7 +120,7 @@ pub fn deposit(
             .to_account_info(),
             SendMessage{
                 fee_payer: ctx.accounts.fee_payer.to_account_info(),
-                sender_authority: ctx.accounts.messaging_authority.to_account_info(),
+                sender_authority: ctx.accounts.config.to_account_info(),
                 config: ctx.accounts.mailbox_config.to_account_info(),
                 outbound_message_path: ctx.accounts.outbound_message_path.to_account_info(),
                 outbound_message: ctx.accounts.outbound_message.to_account_info(),

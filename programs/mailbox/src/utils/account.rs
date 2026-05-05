@@ -1,6 +1,0 @@
-use anchor_lang::prelude::Pubkey;
-
-#[inline]
-pub fn get_pda(seeds: &[&[u8]], program_id: &Pubkey) -> Pubkey {
-    Pubkey::find_program_address(seeds, program_id).0
-}

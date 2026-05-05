@@ -138,15 +138,15 @@ pub mod mailbox {
 
     pub fn set_sender_config(
         ctx: Context<SetSenderConfig>,
-        sender: Pubkey,
+        sender_authority: Pubkey,
         max_payload_size: u32,
         fee_disabled: bool,
-        is_program: bool,
+        sender: Pubkey,
     ) -> Result<()> {
-        instructions::set_sender_config(ctx, sender, max_payload_size, fee_disabled, is_program)
+        instructions::set_sender_config(ctx, sender_authority, max_payload_size, fee_disabled, sender)
     }
 
-    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender: Pubkey, is_program: bool) -> Result<()> {
-        instructions::unset_sender_config(ctx, sender, is_program)
+    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender_authority: Pubkey) -> Result<()> {
+        instructions::unset_sender_config(ctx, sender_authority)
     }
 }
