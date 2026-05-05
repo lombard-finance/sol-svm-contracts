@@ -233,11 +233,8 @@ describe("CCIP Token Pool", () => {
 		[Buffer.from("sender_config"), tokenPoolSignerPDA.toBuffer()],
 		bridge.programId
 		)[0];
-		[messagingAuthorityPDA] = PublicKey.findProgramAddressSync(
-			[Buffer.from("messaging_authority")], bridge.programId,
-		);
 		bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
-		[Buffer.from("sender_config"), messagingAuthorityPDA.toBuffer()],
+		[Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
 		mailbox.programId
 		)[0];
 
@@ -699,10 +696,9 @@ describe("CCIP Token Pool", () => {
 			);
 			await withBlockhashRetry(() =>
 			  mailbox.methods
-				.setSenderConfig(bridge.programId, customMaxPayloadSize, true, true)
+				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true, bridge.programId)
 				.accounts({
 					admin: admin.publicKey,
-					senderConfig: mailboxUtilities.getSenderConfigPDA(bridge.programId, true),
 				})
 				.signers([admin])
 				.rpc({ commitment: "confirmed" })
@@ -871,11 +867,6 @@ describe("CCIP Token Pool", () => {
 					},
 					{
 						pubkey: SystemProgram.programId,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // massagingAuthority
-						pubkey: messagingAuthorityPDA,
 						isWritable: false,
 						isSigner: false
 					},

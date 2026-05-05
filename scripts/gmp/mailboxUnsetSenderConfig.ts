@@ -6,7 +6,7 @@ import { getMailboxSenderConfigPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxUnsetSenderConfig <admin> <sender address> <is program> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxUnsetSenderConfig <admin> <sender authority address> [--populate]
 
     Unsets sender config on the Mailbox contract. `);
   process.exit(0);
@@ -32,17 +32,15 @@ if (!program.programId.equals(programId)) {
 let populate = process.argv.at(-1) === "--populate";
 
 const admin = new PublicKey(process.argv[2]);
-const sender = new PublicKey(process.argv[3]);
-const isProgram =  (process.argv[4]?.toLowerCase?.() === 'true');
+const senderAuthority = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
     // const admin = provider.wallet.publicKey; // Get wallet address
-    const senderConfigPDA = getMailboxSenderConfigPDA(program.programId, sender, isProgram)
+    const senderConfigPDA = getMailboxSenderConfigPDA(program.programId, senderAuthority)
 
-    const tx = await program.methods.unsetSenderConfig(sender, isProgram).accounts({
+    const tx = await program.methods.unsetSenderConfig(senderAuthority).accounts({
       admin: admin,
-      senderConfig: senderConfigPDA,
     });
 
     if (populate) {

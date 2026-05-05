@@ -176,11 +176,8 @@ describe("Bridge", () => {
     [Buffer.from("remote_bridge_config"), foreignLchainId2],
     bridge.programId
   );
-  const [messagingAuthorityPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from("messaging_authority")], bridge.programId,
-  );
   const [bridgeSenderConfigPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from("sender_config"), messagingAuthorityPDA.toBuffer()],
+    [Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
     mailbox.programId
   );
   const [senderConfigPDA] = PublicKey.findProgramAddressSync(
@@ -558,10 +555,9 @@ describe("Bridge", () => {
     it("Set sender config on mailbox", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true, bridge.programId)
           .accounts({
             admin: admin.publicKey,
-            senderConfig: mailboxUtilities.getSenderConfigPDA(bridge.programId, true),
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
@@ -787,10 +783,9 @@ describe("Bridge", () => {
     before("Set bridge fee = 100% mailbox fee", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridge.programId, defaultMaxPayloadSize, true, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true, bridge.programId)
           .accounts({
             admin: admin.publicKey,
-            senderConfig: mailboxUtilities.getSenderConfigPDA(bridge.programId, true),
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
@@ -821,8 +816,6 @@ describe("Bridge", () => {
 
       const amountToSend = 2000;
 
-      console.log(`Bridge messaging authority: ${messagingAuthorityPDA.toBase58()}`);
-
       await withBlockhashRetry(() =>
         bridge.methods
           .deposit(senderBz, recipientBz, foreignCallerBytes, new BN(amountToSend), null)
@@ -842,7 +835,6 @@ describe("Bridge", () => {
             outboundMessagePath: outboundMessagePathPDA,
             mailboxSenderConfig: bridgeSenderConfigPDA,
             treasury: treasury.publicKey,
-            messagingAuthority: messagingAuthorityPDA,
           })
           .signers([sender])
           .rpc({ commitment: "confirmed" })

@@ -95,13 +95,11 @@ export class MailboxUtilities {
   }
 
   async setSenderConfig(sender_authority: PublicKey, maxPayload: number, feeDisabled: boolean, sender: PublicKey = sender_authority) {
-    const senderConfigPDA = this.getSenderConfigPDA(sender_authority);
     const tx = await withBlockhashRetry(() =>
       mailbox.methods
       .setSenderConfig(sender_authority, maxPayload, feeDisabled, sender)
       .accounts({
         admin: this.admin.publicKey,
-        senderConfig: senderConfigPDA,
       })
       .signers([this.admin])
       .rpc({ commitment: "confirmed" })
