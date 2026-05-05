@@ -49,8 +49,6 @@ pub enum MailboxError {
     PublicSendWithFeeDisabled,
     #[msg("Invalid destination caller")]
     InvalidDestinationCaller,
-    #[msg("Invalid sender config")]
-    InvalidSenderConfig,
 }
 
 impl From<std::io::Error> for MailboxError {

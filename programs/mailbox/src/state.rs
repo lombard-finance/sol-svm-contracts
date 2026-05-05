@@ -75,7 +75,6 @@ pub struct SenderConfig {
     pub max_payload_size: u32,
     pub fee_disabled: bool,
     pub sender: Pubkey,
-    pub is_program: bool,
 }
 
 #[derive(Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, InitSpace)]
