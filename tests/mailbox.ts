@@ -10,7 +10,7 @@ import chaiAsPromised from "chai-as-promised";
 import { ConsortiumUtility, randomNumber } from "./utils/consortium_utilities";
 import { keccak256 } from "ethers";
 import { MailboxReceiver } from "../target/types/mailbox_receiver";
-import { MailboxUtilities, MESSAGE_V1_SELECTOR, MessageV1 } from "./utils/mailbox_utilities";
+import { MESSAGE_V1_SELECTOR, MessageV1 } from "./utils/mailbox_utilities";
 import {
   BITCOIN_LCHAIN_ID,
   fundWallet,
@@ -1335,10 +1335,6 @@ describe("Mailbox", () => {
     const customMaxPayloadSize = defaultMaxPayloadSize + 10;
     const MsgSentEvents = [];
     const listeners: number[] = [];
-    const senderConfigPDA = PublicKey.findProgramAddressSync(
-      [Buffer.from("sender_config"), payerFeeExempt.publicKey.toBuffer()],
-      mailbox.programId
-    )[0];
 
     before("Enable outbound message path", async () => {
       listeners.push(
