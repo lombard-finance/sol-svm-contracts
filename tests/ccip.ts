@@ -722,8 +722,9 @@ describe("CCIP Token Pool", () => {
 			// Create ALT
 			// const recentSlot = await provider.connection.getSlot("confirmed");
 			const currentSlot = await provider.connection.getSlot();
+			const startSlot = Math.max(0, currentSlot - 20);
 			// Fetch recently produced blocks to find a guaranteed valid slot
-			const validBlocks = await provider.connection.getBlocks(currentSlot - 20, undefined, 'confirmed');
+			const validBlocks = await provider.connection.getBlocks(startSlot, undefined, 'confirmed');
 			if (validBlocks.length === 0) {
 				throw new Error("No valid blocks found for ALT creation");
 			}
