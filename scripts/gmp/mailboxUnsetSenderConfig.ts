@@ -6,9 +6,9 @@ import { getMailboxSenderConfigPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxSetSenderConfig <admin> <sender address> <max payload size> <is program> [--disable-fee] [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxUnsetSenderConfig <admin> <sender address> <is program> [--populate]
 
-    Sets sender config on the Mailbox contract. `);
+    Unsets sender config on the Mailbox contract. `);
   process.exit(0);
 }
 
@@ -30,19 +30,17 @@ if (!program.programId.equals(programId)) {
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-let feeDisabled = process.argv.at(-2) === "--disable-fee";
 
 const admin = new PublicKey(process.argv[2]);
 const sender = new PublicKey(process.argv[3]);
-const maxPayload =  Number(process.argv[4]);
-const isProgram =  (process.argv[5]?.toLowerCase?.() === 'true');
+const isProgram =  (process.argv[4]?.toLowerCase?.() === 'true');
 
 (async () => {
   try {
     // const admin = provider.wallet.publicKey; // Get wallet address
     const senderConfigPDA = getMailboxSenderConfigPDA(program.programId, sender, isProgram)
 
-    const tx = await program.methods.setSenderConfig(sender, maxPayload, feeDisabled, isProgram).accounts({
+    const tx = await program.methods.unsetSenderConfig(sender, isProgram).accounts({
       admin: admin,
       senderConfig: senderConfigPDA,
     });
@@ -53,6 +51,6 @@ const isProgram =  (process.argv[5]?.toLowerCase?.() === 'true');
       console.log("Transaction Signature:", await tx.rpc());
     }
   } catch (err) {
-    console.error("Error setting sender config:", err);
+    console.error("Error unsetting sender config:", err);
   }
 })();

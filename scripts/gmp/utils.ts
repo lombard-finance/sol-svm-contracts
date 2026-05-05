@@ -2,7 +2,7 @@ import { Connection, Transaction, PublicKey, TransactionInstruction } from "@sol
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import bs58 from "bs58";
-import { ASSET_ROUTER_CONFIG_SEED, ASSET_ROUTER_MESSAGING_AUTHORITY_SEED, ASSET_ROUTER_TOKEN_CONFIG_SEED, ASSET_ROUTER_TOKEN_ROUTE_SEED, CONSORTIUM_CONFIG_SEED, CONSORTIUM_SESSION_PAYLOAD_SEED, CONSORTIUM_SESSION_SEED, CONSORTIUM_VALIDATED_PAYLOAD_SEED, MAILBOX_CONFIG_SEED, MAILBOX_INBOUND_MESSGE_PATH_SEED, MAILBOX_MESSAGE_HANDLED_SEED, MAILBOX_OUTBOUND_MESSAGE_SEED, MAILBOX_OUTBOUND_MESSGE_PATH_SEED, MAILBOX_SENDER_CONFIG_SEED, ORACLE_SEED } from "./constants";
+import { ASSET_ROUTER_CONFIG_SEED, ASSET_ROUTER_MESSAGING_AUTHORITY_SEED, ASSET_ROUTER_TOKEN_CONFIG_SEED, ASSET_ROUTER_TOKEN_ROUTE_SEED, CONSORTIUM_CONFIG_SEED, CONSORTIUM_SESSION_PAYLOAD_SEED, CONSORTIUM_SESSION_SEED, CONSORTIUM_VALIDATED_PAYLOAD_SEED, MAILBOX_CONFIG_SEED, MAILBOX_INBOUND_MESSGE_PATH_SEED, MAILBOX_MESSAGE_HANDLED_SEED, MAILBOX_MESSAGING_AUTHORITY_SEED, MAILBOX_OUTBOUND_MESSAGE_SEED, MAILBOX_OUTBOUND_MESSGE_PATH_SEED, MAILBOX_SENDER_CONFIG_SEED, ORACLE_SEED } from "./constants";
 import { sha256 } from "js-sha256";
 
 const BITCOIN_ADDRESS = Buffer.from("0000000000000000000000000000000000000000000000000000000000000001", "hex"); 
@@ -51,8 +51,19 @@ export function getMailboxConfigPDA(program: PublicKey) {
   return PublicKey.findProgramAddressSync([MAILBOX_CONFIG_SEED], program)[0];
 }
 
-export function getMailboxSenderConfigPDA(program: PublicKey, sender: PublicKey) {
-  return PublicKey.findProgramAddressSync([MAILBOX_SENDER_CONFIG_SEED, sender.toBytes()], program)[0];
+export function getMailboxSenderConfigPDA(program: PublicKey, sender: PublicKey, isProgram: boolean) {
+  return PublicKey.findProgramAddressSync(
+    [
+      MAILBOX_SENDER_CONFIG_SEED, 
+      isProgram ? 
+        PublicKey.findProgramAddressSync(
+          [ MAILBOX_MESSAGING_AUTHORITY_SEED ],
+          sender,
+        )[0].toBuffer():
+        sender.toBuffer()  
+    ],
+    program
+  )[0];
 }
 
 export function getMailboxOutboundMessagePDA(program: PublicKey, nonce: anchor.BN) {
