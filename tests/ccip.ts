@@ -115,7 +115,6 @@ describe("CCIP Token Pool", () => {
 	let bridgeRemoteTokenConfigPDA2: PublicKey;
 	let bridgeRemoteTokenConfigPDA3: PublicKey;
 	let bridgeSenderConfigPDA:PublicKey;
-	let messagingAuthorityPDA: PublicKey;
 
 	let mockCcipOfframpConfigPDA: PublicKey;
 	let cpiSignerPDA: PublicKey;
@@ -725,6 +724,9 @@ describe("CCIP Token Pool", () => {
 			const currentSlot = await provider.connection.getSlot();
 			// Fetch recently produced blocks to find a guaranteed valid slot
 			const validBlocks = await provider.connection.getBlocks(currentSlot - 20, undefined, 'confirmed');
+			if (validBlocks.length === 0) {
+				throw new Error("No valid blocks found for ALT creation");
+			}
 			const recentSlot = validBlocks[0]; 
 			const [lookupTableInst, lookupTableAddress] =
 				AddressLookupTableProgram.createLookupTable({
