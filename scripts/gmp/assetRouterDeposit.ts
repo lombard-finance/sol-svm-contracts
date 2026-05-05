@@ -3,7 +3,7 @@ import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { AssetRouter } from "../../target/types/asset_router";
 import { getBase58EncodedTxBytes, getConfigPDA } from "../utils";
-import { getAssetRouterConfigPDA, getAssetRouterTokenBtcRoutePDA, getAssetRouterTokenLocalRoutePDA, getMailboxConfigPDA, getMailboxOutboundMessagePDA, getMailboxSenderConfigPDA, getOutboundMessagePathPDA } from "./utils";
+import { getAssetRouterConfigPDA, getAssetRouterMessagingAuthorityPDA, getAssetRouterTokenBtcRoutePDA, getAssetRouterTokenLocalRoutePDA, getMailboxConfigPDA, getMailboxOutboundMessagePDA, getMailboxSenderConfigPDA, getOutboundMessagePathPDA } from "./utils";
 import { Mailbox } from "../../target/types/mailbox";
 
 // Provide instructions.
@@ -68,7 +68,8 @@ const ledgerChainID = Buffer.from(process.argv[6], "hex");
     const tokenRoutePDA = getAssetRouterTokenLocalRoutePDA(programId, solanaChainID, assetRouterConfig.nativeMint, destinationMint);
     console.log("Token route PDA:", tokenRoutePDA.toBase58());
     const outboundMessagePathPDA = getOutboundMessagePathPDA(mailboxProgramId, ledgerChainID);
-    const senderConfigPDA = getMailboxSenderConfigPDA(mailboxProgramId, programId);
+    const senderAuthority = getAssetRouterMessagingAuthorityPDA(programId);
+    const senderConfigPDA = getMailboxSenderConfigPDA(mailboxProgramId, senderAuthority);
     const outboundMessagePDA = getMailboxOutboundMessagePDA(mailboxProgramId, mailboxConfig.globalNonce);
     console.log("Outbound message PDA:", outboundMessagePDA.toBase58());
 
