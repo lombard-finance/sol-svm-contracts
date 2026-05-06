@@ -481,6 +481,44 @@ describe("Bascule GMP", () => {
       expect(mintPayload.state.minted).to.exist;
       expect(mintPayload.amount.toNumber()).to.equal(amount2);
     });
+
+    it("validateMint: rejects invalid chain id when amount < threshold", async () => {
+      const nonce3 = 3;
+      const amount3 = 50; // below threshold 1000
+      const wrongChainId = Uint8Array.from(CHAIN_ID);
+      wrongChainId[31] ^= 1;
+      const invalidChainMintMessage = {
+        nonce: new BN(nonce3),
+        chainId: Array.from(wrongChainId),
+        tokenAddress: Array.from(tokenAddress),
+        recipient: Array.from(recipient),
+        amount: new BN(amount3)
+      };
+      const invalidChainMintMessageId = mintMessageId(
+        nonce3,
+        wrongChainId,
+        tokenAddress,
+        recipient,
+        amount3
+      );
+      const [mintPayloadPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mint_payload"), invalidChainMintMessageId],
+        program.programId
+      );
+
+      await expect(
+          withBlockhashRetry(() =>
+            program.methods
+          .validateMint(invalidChainMintMessage)
+          .accountsPartial({
+            validator: validator.publicKey,
+            mintPayload: mintPayloadPDA,
+          })
+          .signers([validator])
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("InvalidChainId");
+    });
   });
 
   describe("Pause and unpause", () => {
