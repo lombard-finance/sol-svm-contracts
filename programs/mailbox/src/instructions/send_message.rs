@@ -63,9 +63,17 @@ pub fn send_message(
     let config = &mut ctx.accounts.config;
     let outbound_message_account = &mut ctx.accounts.outbound_message;
 
-    let (mut fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
-        Some(sender_config) => (sender_config.fee_disabled, sender_config.max_payload_size),
-        None => (false, config.default_max_payload_size),
+    let (mut fee_disabled, max_payload_size, message_sender) = match &ctx.accounts.sender_config {
+        Some(sender_config) => (
+            sender_config.fee_disabled,
+            sender_config.max_payload_size,
+            sender_config.sender.key().to_bytes()
+        ),
+        None => (
+            false, 
+            config.default_max_payload_size,
+            ctx.accounts.sender_authority.key().to_bytes(),
+        ),
     };
     let mut fee_per_byte = config.fee_per_byte;
     if fee_disabled && fee_override > 0 {
@@ -78,13 +86,6 @@ pub fn send_message(
         message_body.len() <= max_payload_size as usize,
         MailboxError::PayloadTooLarge
     );
-
-    let message_sender = match &ctx.accounts.sender_config {
-        Some(sender_config) => {
-            sender_config.sender.key().to_bytes()
-        },
-        None => ctx.accounts.sender_authority.key().to_bytes(),
-    };
 
     let message = MessageV1 {
         nonce: config.global_nonce,
