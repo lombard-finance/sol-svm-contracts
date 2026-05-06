@@ -32,7 +32,7 @@ pub struct ExecuteOfframpContext<'info> {
 
 pub fn execute_offramp<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, ExecuteOfframpContext<'info>>,
-    nonce: u16,
+    _nonce: u16,
 ) -> Result<()> {
     let mut accounts = vec![AccountMeta::new(ctx.accounts.cpi_signer.key(), true)];
     let mut account_infos = vec![ctx.accounts.cpi_signer.to_account_info()];
