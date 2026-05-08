@@ -1,4 +1,5 @@
 use std::io::{prelude::*, BufReader};
+use abi_utils::u64_from_abi_word;
 
 use anchor_lang::prelude::{borsh, AnchorDeserialize, AnchorSerialize};
 use anchor_lang::solana_program::hash::hash  as sha256;
@@ -94,7 +95,7 @@ impl MessageV1 {
         // Read nonce
         let mut nonce_bytes = [0u8; 32];
         reader.read_exact(&mut nonce_bytes)?;
-        message_v1.nonce = u64::from_be_bytes(nonce_bytes[24..32].try_into().unwrap());
+        message_v1.nonce = u64_from_abi_word(&nonce_bytes).ok_or(MailboxError::AbiWordOverflow)?;
 
         // Read sender
         reader.read_exact(&mut message_v1.sender)?;
@@ -114,7 +115,7 @@ impl MessageV1 {
         reader.consume(32);
         let mut body_length_bytes = [0u8; 32];
         reader.read_exact(&mut body_length_bytes)?;
-        let body_length = u64::from_be_bytes(body_length_bytes[24..32].try_into().unwrap());
+        let body_length = u64_from_abi_word(&body_length_bytes).ok_or(MailboxError::AbiWordOverflow)?;
         message_v1.body = vec![0u8; body_length as usize];
         reader.read_exact(&mut message_v1.body)?;
 

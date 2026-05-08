@@ -49,6 +49,8 @@ pub enum MailboxError {
     PublicSendWithFeeDisabled,
     #[msg("Invalid destination caller")]
     InvalidDestinationCaller,
+    #[msg("ABI word value overflows the target integer type")]
+    AbiWordOverflow,
 }
 
 impl From<std::io::Error> for MailboxError {

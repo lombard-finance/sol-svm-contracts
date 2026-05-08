@@ -55,6 +55,8 @@ pub enum ConsortiumError {
     InvalidEpoch,
     #[msg("Duplicate validator in validator set")]
     DuplicateValidator,
+    #[msg("ABI word value overflows the target integer type")]
+    AbiWordOverflow,
 }
 
 impl From<std::io::Error> for ConsortiumError {
