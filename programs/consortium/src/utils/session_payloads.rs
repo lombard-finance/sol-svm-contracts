@@ -1,5 +1,6 @@
 use anchor_lang::prelude::{require, Result as AnchorResult};
 use std::io::{prelude::*, BufReader};
+use abi_utils::u64_from_abi_word;
 
 use crate::{
     constants::{MAX_VALIDATOR_SET_SIZE, MIN_VALIDATOR_SET_SIZE, VALIDATOR_PUBKEY_SIZE},
@@ -57,7 +58,7 @@ impl UpdateValSetPayload {
         // Read epoch
         let mut epoch_bytes = [0u8; 32];
         reader.read_exact(&mut epoch_bytes)?;
-        let epoch = u64::from_be_bytes(epoch_bytes[24..32].try_into().unwrap());
+        let epoch = u64_from_abi_word(&epoch_bytes).ok_or(ConsortiumError::AbiWordOverflow)?;
 
         // Skip validators_offset
         reader.consume(32);
@@ -69,18 +70,18 @@ impl UpdateValSetPayload {
         let mut weight_threshold_bytes = [0u8; 32];
         reader.read_exact(&mut weight_threshold_bytes)?;
         let weight_threshold =
-            u64::from_be_bytes(weight_threshold_bytes[24..32].try_into().unwrap());
+            u64_from_abi_word(&weight_threshold_bytes).ok_or(ConsortiumError::AbiWordOverflow)?;
 
         // Read height
         let mut height_bytes = [0u8; 32];
         reader.read_exact(&mut height_bytes)?;
-        let height = u64::from_be_bytes(height_bytes[24..32].try_into().unwrap());
+        let height = u64_from_abi_word(&height_bytes).ok_or(ConsortiumError::AbiWordOverflow)?;
 
         // Read validators length
         let mut validators_length_bytes = [0u8; 32];
         reader.read_exact(&mut validators_length_bytes)?;
         let validators_length =
-            u64::from_be_bytes(validators_length_bytes[24..32].try_into().unwrap());
+            u64_from_abi_word(&validators_length_bytes).ok_or(ConsortiumError::AbiWordOverflow)?;
 
         // Skip offsets for validators bytes fields
         reader.consume(32 * validators_length as usize);
@@ -89,7 +90,7 @@ impl UpdateValSetPayload {
         for _ in 0..validators_length {
             reader.read_exact(&mut pubkey_field_length)?;
             let pubkey_field_length =
-                u64::from_be_bytes(pubkey_field_length[24..32].try_into().unwrap());
+                u64_from_abi_word(&pubkey_field_length).ok_or(ConsortiumError::AbiWordOverflow)?;
             // +1 because pk for secp256k1 has a leading byte representing the format
             if pubkey_field_length as usize != VALIDATOR_PUBKEY_SIZE + 1 {
                 return Err(ConsortiumError::InvalidValidatorPubkeyLength);
@@ -110,7 +111,7 @@ impl UpdateValSetPayload {
         // Read weights length
         let mut weights_length_bytes = [0u8; 32];
         reader.read_exact(&mut weights_length_bytes)?;
-        let weights_length = u64::from_be_bytes(weights_length_bytes[24..32].try_into().unwrap());
+        let weights_length = u64_from_abi_word(&weights_length_bytes).ok_or(ConsortiumError::AbiWordOverflow)?;
 
         if weights_length != validators_length {
             return Err(ConsortiumError::ValidatorsAndWeightsMismatch);
@@ -121,7 +122,7 @@ impl UpdateValSetPayload {
         let mut weight_bytes = [0u8; 32];
         for _ in 0..weights_length {
             reader.read_exact(&mut weight_bytes)?;
-            weights.push(u64::from_be_bytes(weight_bytes[24..32].try_into().unwrap()));
+            weights.push(u64_from_abi_word(&weight_bytes).ok_or(ConsortiumError::AbiWordOverflow)?);
         }
 
         if !reader.buffer().is_empty() {

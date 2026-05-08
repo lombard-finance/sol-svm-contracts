@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/abi_utils",
     "programs/*",
     "dependencies/ccip/crates/*",
     "dependencies/ccip/programs/*"

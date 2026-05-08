@@ -85,6 +85,8 @@ pub enum AssetRouterError {
     InvalidSessionPayload,
     #[msg("Invalid message path")]
     InvalidMessagePath,
+    #[msg("ABI word value overflows the target integer type")]
+    AbiWordOverflow,
 }
 
 impl From<std::io::Error> for AssetRouterError {
