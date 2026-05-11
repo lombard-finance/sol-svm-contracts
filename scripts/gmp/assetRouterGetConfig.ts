@@ -3,8 +3,9 @@ import * as spl from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { getBase58EncodedTxBytes, getTokenAuthority } from "../utils";
 import { AssetRouter } from "../../target/types/asset_router";
-import { getAssetRouterConfigPDA } from "./utils";
+import { getAssetRouterConfigPDA, getAssetRouterMessagingAuthorityPDA } from "./utils";
 import { Bridge } from "../../target/types/bridge";
+import { BASCULE_VALIDATOR_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
@@ -31,7 +32,7 @@ if (!program.programId.equals(programId)) {
 }
 const bridgeIdl = require("../../target/idl/bridge.json");
 const bridgeProgramId = process.env.BRIDGE_PROGRAM_ID
-  ? new PublicKey(process.env.MAILBOX_PROGRAM_ID)
+  ? new PublicKey(process.env.BRIDGE_PROGRAM_ID)
   : new PublicKey(bridgeIdl.address);
 const mailboxProgram = new anchor.Program(
   require("../../target/idl/bridge.json"),
@@ -51,31 +52,36 @@ if (!mailboxProgram.programId.equals(bridgeProgramId)) {
 
     const config = await program.account.config.fetch(configPDA);
     console.log(`config contents: ${JSON.stringify(config)}`)
+    
+    const assetRouterConfig = await program.account.config.fetch(
+        getAssetRouterConfigPDA(programId),
+      );
+    const mint = assetRouterConfig.nativeMint as PublicKey;
 
+    const mintAccountInfo = await provider.connection.getAccountInfo(mint);
+    if (!mintAccountInfo) {
+      throw new Error(`mint account not found: ${mint.toBase58()}`);
+    }
+    const tokenProgram = mintAccountInfo.owner;
+    const mintAccount = await spl.getMint(provider.connection, mint, undefined, tokenProgram);
+    const mintAuthority = mintAccount.mintAuthority;
+    if (!mintAuthority) {
+      throw new Error("mint has no mint authority");
+    }
+    console.log("Token program:", tokenProgram.toBase58());
+    console.log("Mint:", mint.toBase58());
+    console.log("Mint authority:", mintAuthority.toBase58());
+
+    const messagingAuthorityPDA = getAssetRouterMessagingAuthorityPDA(programId);
+    console.log("Messaging authority:", messagingAuthorityPDA.toBase58());
   } catch (err) {
-    console.error("Error setting initial validator set:", err);
-  }
-  const assetRouterConfig = await program.account.config.fetch(
-      getAssetRouterConfigPDA(programId),
-    );
-  const mint = assetRouterConfig.nativeMint as PublicKey;
-
-  const mintAccountInfo = await provider.connection.getAccountInfo(mint);
-  if (!mintAccountInfo) {
-    throw new Error(`mint account not found: ${mint.toBase58()}`);
-  }
-  const tokenProgram = mintAccountInfo.owner;
-  const mintAccount = await spl.getMint(provider.connection, mint, undefined, tokenProgram);
-  const mintAuthority = mintAccount.mintAuthority;
-  if (!mintAuthority) {
-    throw new Error("mint has no mint authority");
+    console.error("Error getting configuration data:", err);
   }
   const arTokenAuthority = getTokenAuthority(programId)
   const bTokenAuthority = getTokenAuthority(bridgeProgramId)
-  console.log("Token program:", tokenProgram.toBase58());
-  console.log("Mint:", mint.toBase58());
-  console.log("Mint authority:", mintAuthority.toBase58());
   console.log("Asset Router token authority:", arTokenAuthority.toBase58());
   console.log("Bridge token authority:", bTokenAuthority.toBase58());
 
+  const basculeValidatorPDA = PublicKey.findProgramAddressSync([BASCULE_VALIDATOR_SEED], programId)[0];
+  console.log("Asset Router bascule validator PDA:", basculeValidatorPDA.toBase58());
 })();

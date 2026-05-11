@@ -39,6 +39,7 @@ pub fn post_session_signatures(
         ConsortiumError::SignaturesIndicesMismatch
     );
 
+    let mut validator_indices = Vec::new();
     signatures
         .iter()
         .zip(indices.iter())
@@ -52,11 +53,13 @@ pub fn post_session_signatures(
             {
                 ctx.accounts.session.signed[*index as usize] = true;
                 ctx.accounts.session.weight += ctx.accounts.config.current_weights[*index as usize];
+                validator_indices.push(*index);
             }
         });
+
     emit!(SessionSignaturesAdded {
         hash: payload_hash,
-        signatures
+        validator_indices,
     });
     Ok(())
 }

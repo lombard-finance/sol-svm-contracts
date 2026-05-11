@@ -9,5 +9,16 @@
     "LZ_oft_adapter": "7QkBVz37mjevzKYJDcVy6xKDG1hUewWgj51Dehgcu5sM",
     "LZ_oft_store": "CQeKmXxoGog57U5jPyYz7YAo8AuLUdoDqxGTXtMPkMuc",
     "LZ_escrow": "6nc7pBpN82EeKFbcqRt7xVV2h8FNQGdiVnTb2TQvyv99",
-    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK"
+    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK",
+
+    "registry": "LomApQenrjmo7phzAYM7SanrNt4oDabpsR3J99jCGCK",
+    
+    "Consortium": "LomuEULX7VPwCBVTjxsgFjBLz7HJwE8V1DyaSqXj1dc",
+    "Mailbox": "Lomsq4ZNkZQGysC1pQc2NqNiAbXQm6C8nLmKcUoESEA",
+    "Asset Router": "Lom9TMiPbqkXk8ddFooUY1gbHqt87TCmVfTfv8AHgYx",
+    "Ratio Oracle": "LomyRmBeQiuqiwcPmr23RRA1SMLAuDEgj5tHHe7rsDn",
+    "Bridge": "Lomva5kTftuXE8992qRufkaeq3XrXV47qv3C1W9xW6Z",
+    "Lombard Token Pool": "Lomb8TTCwJKEhZrJ1J8UbsCRjNSf7NNQUEr4qo3dkSk",
+    "Bascule GMP": "LomeavGUocL4Rn5TboDYFQEwUp3wBKodUTRKE8KqbE6",
+    "BTC.b": "BTCbKVgfW4xMqTWEmxVwc6pzg2c5YtQWxSpBuQDhUrpu"
 }

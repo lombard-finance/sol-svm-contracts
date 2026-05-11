@@ -20,9 +20,10 @@ import {
   EWithdrawalFailedValidation,
   assertError,
   delayMs,
-  rpcOpts
-} from "./util";
-import * as util from "./util";
+  rpcOpts,
+  withBlockhashRetry
+} from "./utils/utils";
+import * as util from "./utils/utils";
 import BASCULE_IDL from "./../target/idl/bascule.json";
 
 describe("bascule", () => {
@@ -32,12 +33,14 @@ describe("bascule", () => {
 
   // Helper that calls the 'initialize' method using the default wallet
   const callInit = async (wallet: anchor.Wallet) =>
-    program.methods
+    withBlockhashRetry(() =>
+      program.methods
       .initialize()
       // bankrun can only deploy non-upgradeable programs, hence the program data is null
       .accounts({ payer: wallet.publicKey, programData: null })
       .signers([wallet.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
   // Waits until the blockhash changes
   const untilNextBlockHash = async () => {
@@ -121,20 +124,23 @@ describe("bascule", () => {
 
     // not allowed by non-admin
     await assertError(
-      program.methods
-        .updateValidateThreshold(newThreshold)
-        .accounts({ admin: ts.acc.other.publicKey })
-        .signers([ts.acc.other.payer])
-        .rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods
+          .updateValidateThreshold(newThreshold)
+          .accounts({ admin: ts.acc.other.publicKey })
+          .signers([ts.acc.other.payer])
+          .rpc({ commitment: "confirmed" })),
       ENotAdmin
     );
 
     // allowed by admin
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .updateValidateThreshold(newThreshold)
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     // assert update worked
     const bd2 = await ts.fetchData();
@@ -143,18 +149,24 @@ describe("bascule", () => {
 
     // pause (the 'admin' key is still the 'pauser')
     const pauser = ts.acc.pauser;
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .grantPauser(pauser.publicKey)
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
-      .rpc(rpcOpts);
-    await program.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
+    await withBlockhashRetry(() =>
+      program.methods.pause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc({ commitment: "confirmed" })
+    );
 
     // not allowed even by admin while paused
     await assertError(ts.setThreshold(newThreshold), EPaused);
 
     // unpause and try again
-    await program.methods.unpause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc(rpcOpts);
+    await withBlockhashRetry(() =>
+      program.methods.unpause().accounts({ pauser: pauser.publicKey }).signers([pauser.payer]).rpc({ commitment: "confirmed" })
+    );
 
     // allowed after unpausing paused
     await ts.setThreshold(1);
@@ -205,44 +217,53 @@ describe("bascule", () => {
   // - only pauser can call pause/unpause
   it("grant pauser", async () => {
     // grant pauser to 'ts.acc.pauser'
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .grantPauser(ts.acc.pauser.publicKey)
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     // the pauser account cannot grant pauser to someone else
     await assertError(
-      program.methods
-        .grantPauser(ts.acc.other.publicKey)
-        .accounts({ admin: ts.acc.pauser.publicKey })
-        .signers([ts.acc.pauser.payer])
-        .rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods
+          .grantPauser(ts.acc.other.publicKey)
+          .accounts({ admin: ts.acc.pauser.publicKey })
+          .signers([ts.acc.pauser.payer])
+          .rpc({ commitment: "confirmed" })),
       ENotAdmin
     );
 
     // the admin cannot pause/unpause
     await assertError(
-      program.methods.pause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods.pause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc({ commitment: "confirmed" })),
       ENotPauser
     );
     await assertError(
-      program.methods.unpause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods.unpause().accounts({ pauser: ts.acc.admin.publicKey }).signers([ts.acc.admin.payer]).rpc({ commitment: "confirmed" })),
       ENotPauser
     );
 
     // the pauser can pause and unpause
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .pause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
     expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.true;
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .unpause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
     expect(await ts.fetchData().then(bd => bd.isPaused)).to.be.false;
   });
 
@@ -255,21 +276,24 @@ describe("bascule", () => {
     await ts.grantPermissions();
 
     // pause
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .pause()
       .accounts({ pauser: ts.acc.pauser.publicKey })
       .signers([ts.acc.pauser.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     const d = DepositId.randomForAmount(10);
 
     // reporting is disallowed
     await assertError(
-      program.methods
-        .reportDeposit(d.depositId)
-        .accounts({ reporter: ts.acc.reporter.publicKey })
-        .signers([ts.acc.reporter.payer])
-        .rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods
+          .reportDeposit(d.depositId)
+          .accounts({ reporter: ts.acc.reporter.publicKey })
+          .signers([ts.acc.reporter.payer])
+          .rpc({ commitment: "confirmed" })),
       EPaused
     );
 
@@ -288,19 +312,22 @@ describe("bascule", () => {
     const depositId = [...Array(32)].map(_ => 0);
 
     // grant reporter
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .grantReporter(ts.acc.reporter.publicKey)
       .accounts({ admin: ts.acc.admin.publicKey })
       .signers([ts.acc.admin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     // cannot be called by anyone else
     await assertError(
-      program.methods
-        .reportDeposit(depositId)
-        .accounts({ reporter: ts.acc.admin.publicKey })
-        .signers([ts.acc.admin.payer])
-        .rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods
+          .reportDeposit(depositId)
+          .accounts({ reporter: ts.acc.admin.publicKey })
+          .signers([ts.acc.admin.payer])
+          .rpc({ commitment: "confirmed" })),
       ENotReporter
     );
 
@@ -309,11 +336,13 @@ describe("bascule", () => {
       // don't try to submit the same transaction too quickly (with the same blockhash)
       await untilNextBlockHash();
 
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .reportDeposit(depositId)
         .accounts({ reporter: ts.acc.reporter.publicKey })
         .signers([ts.acc.reporter.payer])
-        .rpc(rpcOpts);
+        .rpc({ commitment: "confirmed" })
+      );
 
       // retrieve the account info and assert the status
       const [depositPda, bump] = PublicKey.findProgramAddressSync(
@@ -328,11 +357,12 @@ describe("bascule", () => {
 
     // deposit id of a wrong length is rejected
     await assertError(
-      program.methods
-        .reportDeposit([0, 1, 2, 3])
-        .accounts({ reporter: ts.acc.reporter.publicKey })
-        .signers([ts.acc.reporter.payer])
-        .rpc(rpcOpts),
+      withBlockhashRetry(() =>
+        program.methods
+          .reportDeposit([0, 1, 2, 3])
+          .accounts({ reporter: ts.acc.reporter.publicKey })
+          .signers([ts.acc.reporter.payer])
+          .rpc({ commitment: "confirmed" })),
       "InstructionDidNotDeserialize"
     );
   });
@@ -348,11 +378,12 @@ describe("bascule", () => {
     const validators = [ts.acc.admin, ts.acc.validator];
     for (const v of validators) {
       await assertError(
-        program.methods
-          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-          .accounts({ validator: v.publicKey, payer: v.publicKey })
-          .signers([v.payer])
-          .rpc(rpcOpts),
+        withBlockhashRetry(() =>
+          program.methods
+            .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
+            .accounts({ validator: v.publicKey, payer: v.publicKey })
+            .signers([v.payer])
+            .rpc({ commitment: "confirmed" })),
         ENotValidator
       );
     }
@@ -360,24 +391,27 @@ describe("bascule", () => {
     // grant validators
     const admin = ts.acc.admin;
     for (const validator of validators) {
-      await program.methods
+      await withBlockhashRetry(() =>
+        program.methods
         .addWithdrawalValidator(validator.publicKey)
         .accounts({ admin: admin.publicKey })
         .signers([admin.payer])
-        .rpc(rpcOpts);
+        .rpc({ commitment: "confirmed" })
+      );
     }
 
     // now both are allowed to validate (still fails because the deposit has not been reported)
     for (const validator of validators) {
       await assertError(
-        program.methods
-          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-          .accounts({
-            validator: validator.publicKey,
-            payer: validator.publicKey
-          })
-          .signers([validator.payer])
-          .rpc(rpcOpts),
+        withBlockhashRetry(() =>
+          program.methods
+            .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
+            .accounts({
+              validator: validator.publicKey,
+              payer: validator.publicKey
+            })
+            .signers([validator.payer])
+            .rpc({ commitment: "confirmed" })),
         "EWithdrawalFailedValidation"
       );
     }
@@ -386,19 +420,23 @@ describe("bascule", () => {
     await ts.setThreshold(d.amount.toNumber() + 1);
 
     // remove admin from validators
-    await program.methods
+    await withBlockhashRetry(() =>
+      program.methods
       .removeWithdrawalValidator(admin.publicKey)
       .accounts({ admin: admin.publicKey })
       .signers([admin.payer])
-      .rpc(rpcOpts);
+      .rpc({ commitment: "confirmed" })
+    );
 
     // admin is not allowed to validate but validator is
     for (const v of validators) {
-      const rpc = program.methods
-        .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
-        .accounts({ validator: v.publicKey, payer: v.publicKey })
-        .signers([v.payer])
-        .rpc(rpcOpts);
+      const rpc = withBlockhashRetry(() =>
+        program.methods
+          .validateWithdrawal(d.depositId, d.recipient, d.amount, [...d.txId], d.txVout)
+          .accounts({ validator: v.publicKey, payer: v.publicKey })
+          .signers([v.payer])
+          .rpc({ commitment: "confirmed" })
+      );
       if (v == admin) {
         await assertError(rpc, ENotValidator);
       } else {
@@ -409,11 +447,13 @@ describe("bascule", () => {
     // add 10 more validators; the first 9 should fill up the capacity, the 10th should fail with EMaxValidators
     for (let i = 0; i < 10; i++) {
       const v = new anchor.Wallet(Keypair.generate());
-      const rpc = program.methods
-        .addWithdrawalValidator(v.publicKey)
-        .accounts({ admin: admin.publicKey })
-        .signers([admin.payer])
-        .rpc(rpcOpts);
+      const rpc = withBlockhashRetry(() =>
+        program.methods
+          .addWithdrawalValidator(v.publicKey)
+          .accounts({ admin: admin.publicKey })
+          .signers([admin.payer])
+          .rpc({ commitment: "confirmed" })
+      );
       if (i < 9) {
         await rpc;
       } else {

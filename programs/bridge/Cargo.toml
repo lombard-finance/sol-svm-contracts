@@ -9,9 +9,13 @@ crate-type = ["cdylib", "lib"]
 name = "bridge"
 
 [features]
-default = ["mainnet"]
-mainnet = []
-devnet = []
+default = []
+mainnet = ["mailbox/mainnet"]
+gastald = ["mailbox/gastald"]
+staging = ["mailbox/staging"]
+bft = ["mailbox/bft"]
+localnet = ["mailbox/localnet"]
+devnet = ["mailbox/devnet"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
@@ -24,7 +28,8 @@ anchor-spl = "0.31.1"
 spl-token-2022 = { version = "6.0.0", features = ["no-entrypoint"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
 base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", features = ["no-entrypoint"]}
+solana-security-txt = "1.1.1"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic"))']
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic", "custom-heap"))']

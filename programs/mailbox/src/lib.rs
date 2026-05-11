@@ -13,6 +13,15 @@ use instructions::*;
 use crate::state::AccountRole;
 use crate::utils::message_utils::SendResult;
 
+#[cfg(feature = "mainnet")]
+declare_id!("Lomsq4ZNkZQGysC1pQc2NqNiAbXQm6C8nLmKcUoESEA");
+#[cfg(feature = "gastald")]
+declare_id!("Lomu595CAtJGF6mpnfeAJ7daZfVdHeRkAdKyfqzXqom");
+#[cfg(feature = "staging")]
+declare_id!("Lom5doBNAny5AaPS9J7SRPLghVqwEQLrEmvQMhNEUqa");
+#[cfg(feature = "bft")]
+declare_id!("LomJw912MoUd7iiAesTQAgz1paLcTqi6ndG3w3pnKH9");
+#[cfg(any(feature = "localnet", not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft"))))]
 declare_id!("3TfSFMuw31Je57m5Wcd9ZopGzjrHLHkjh292aEwXvm3h");
 
 #[program]
@@ -115,6 +124,9 @@ pub mod mailbox {
     ) -> Result<()> {
         instructions::update_config(ctx, default_max_payload_size, fee_per_byte)
     }
+    pub fn set_treasury(ctx: Context<Admin>, new_treasury: Pubkey) -> Result<()> {
+        instructions::set_treasury(ctx, new_treasury)
+    }
 
     pub fn pause(ctx: Context<Pause>) -> Result<()> {
         instructions::pause(ctx)
@@ -126,14 +138,15 @@ pub mod mailbox {
 
     pub fn set_sender_config(
         ctx: Context<SetSenderConfig>,
-        sender_program: Pubkey,
+        sender_authority: Pubkey,
         max_payload_size: u32,
         fee_disabled: bool,
+        sender: Pubkey,
     ) -> Result<()> {
-        instructions::set_sender_config(ctx, sender_program, max_payload_size, fee_disabled)
+        instructions::set_sender_config(ctx, sender_authority, max_payload_size, fee_disabled, sender)
     }
 
-    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender_program: Pubkey) -> Result<()> {
-        instructions::unset_sender_config(ctx, sender_program)
+    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender_authority: Pubkey) -> Result<()> {
+        instructions::unset_sender_config(ctx, sender_authority)
     }
 }

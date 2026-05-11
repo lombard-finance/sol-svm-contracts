@@ -10,8 +10,12 @@ name = "lombard_token_pool"
 
 [features]
 default = ["mainnet"]
-mainnet = []
-devnet = []
+mainnet = ["bridge/mainnet","mailbox/mainnet"]
+gastald = ["bridge/gastald","mailbox/gastald"]
+staging = ["bridge/staging","mailbox/staging"]
+bft = ["bridge/bft","mailbox/bft"]
+localnet = ["bridge/localnet","mailbox/localnet"]
+devnet = ["bridge/devnet","mailbox/devnet"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
@@ -27,10 +31,15 @@ base-token-pool = { path = "../../dependencies/ccip/programs/base-token-pool", f
 ccip_common = { path = "../../dependencies/ccip/programs/ccip-common" }
 bridge = { path = "../bridge", features = ["cpi"] }
 mailbox = { path = "../mailbox", features = ["cpi"] }
+solana-security-txt = "1.1.1"
+
+ 
+[dev-dependencies]
+hex = "0.4.3"
 
 [build-dependencies]
 build_commit = { path = "../../dependencies/ccip/crates/build-commit" }
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic"))']
+check-cfg = ['cfg(target_os, values("solana"))', 'cfg(feature, values("anchor-debug", "custom-panic", "custom-heap"))']

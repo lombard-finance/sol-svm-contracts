@@ -10,6 +10,15 @@ pub mod state;
 use instructions::*;
 use state::{AccountRole, MintMessage, MintProof};
 
+#[cfg(feature = "mainnet")]
+declare_id!("LomeavGUocL4Rn5TboDYFQEwUp3wBKodUTRKE8KqbE6");
+#[cfg(feature = "gastald")]
+declare_id!("LomuUjLMHJWsar8xxrbLhNSGdHTVg7hsoWnTibNtdgD");
+#[cfg(feature = "staging")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(feature = "bft")]
+declare_id!("ToDo111111111111111111111111111111111111111");
+#[cfg(not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft")))]
 declare_id!("BDCLiRc9M9srhamK61vi739dfcUbU7GAzJ5jQcDcaf3F");
 
 #[program]
@@ -52,6 +61,10 @@ pub mod bascule_gmp {
 
     pub fn accept_ownership(ctx: Context<AcceptOwnership>) -> Result<()> {
         instructions::accept_ownership(ctx)
+    }
+
+    pub fn set_trusted_signer(ctx: Context<Admin>, trusted_signer: [u8; 64]) -> Result<()> {
+        instructions::set_trusted_signer(ctx, trusted_signer)
     }
 
     pub fn report_mint(

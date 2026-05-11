@@ -37,6 +37,9 @@ pub struct ExecuteOnrampContext<'info> {
         bump,
     )]
     pub cpi_signer: UncheckedAccount<'info>,
+    /// CHECK: maybe add some checks later
+    #[account()]
+    pub state: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>
 }
 
@@ -63,11 +66,13 @@ pub fn execute_onramp<'a, 'b, 'c, 'info>(
 
     let mut accounts = vec![
         AccountMeta::new(ctx.accounts.cpi_signer.key(), true),
+        AccountMeta::new_readonly(ctx.accounts.state.key(), false),
         AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
         AccountMeta::new(ctx.accounts.mint.key(), false),
     ];
     let mut account_infos = vec![
         ctx.accounts.cpi_signer.to_account_info(),
+        ctx.accounts.state.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.mint.to_account_info(),
     ];

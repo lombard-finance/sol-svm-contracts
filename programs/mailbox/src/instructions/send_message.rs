@@ -44,7 +44,10 @@ pub struct SendMessage<'info> {
     pub treasury: Option<UncheckedAccount<'info>>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, &sender_authority.owner.to_bytes()],
+        seeds = [
+            SENDER_CONFIG_SEED,
+            sender_authority.key.as_ref()
+        ],
         bump
     )]
     pub sender_config: Option<Account<'info, SenderConfig>>,
@@ -60,9 +63,17 @@ pub fn send_message(
     let config = &mut ctx.accounts.config;
     let outbound_message_account = &mut ctx.accounts.outbound_message;
 
-    let (mut fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
-        Some(sender_config) => (sender_config.fee_disabled, sender_config.max_payload_size),
-        None => (false, config.default_max_payload_size),
+    let (mut fee_disabled, max_payload_size, message_sender) = match &ctx.accounts.sender_config {
+        Some(sender_config) => (
+            sender_config.fee_disabled,
+            sender_config.max_payload_size,
+            sender_config.sender.key().to_bytes()
+        ),
+        None => (
+            false, 
+            config.default_max_payload_size,
+            ctx.accounts.sender_authority.key().to_bytes(),
+        ),
     };
     let mut fee_per_byte = config.fee_per_byte;
     if fee_disabled && fee_override > 0 {
@@ -82,7 +93,7 @@ pub fn send_message(
         destination_caller: destination_caller,
         recipient: recipient,
         message_path_identifier: ctx.accounts.outbound_message_path.identifier,
-        sender: ctx.accounts.sender_authority.owner.to_bytes(),
+        sender: message_sender,
     };
 
     if !fee_disabled {
@@ -124,7 +135,7 @@ pub fn send_message(
     outbound_message_account.try_borrow_mut_data()?.copy_from_slice(&payload);
 
     Ok(SendResult{
-        nonce: config.global_nonce,
+        nonce: message.nonce,
         payload_hash: payload_hash,
     })
 }

@@ -4,6 +4,7 @@ pub mod constants;
 pub mod errors;
 pub mod events;
 pub mod instructions;
+pub mod security;
 pub mod state;
 pub mod utils;
 
@@ -14,6 +15,15 @@ use utils::gmp_messages::{InboundResponse, OutboundResponse};
 
 use base_token_pool::rate_limiter::RateLimitConfig;
 
+#[cfg(feature = "mainnet")]
+declare_id!("Lomva5kTftuXE8992qRufkaeq3XrXV47qv3C1W9xW6Z");
+#[cfg(feature = "gastald")]
+declare_id!("LombUtstgyrZUhjvi12hUnm7HG7CxhtanUv6hakuCm4");
+#[cfg(feature = "staging")]
+declare_id!("LomS25cte2jkQoLbKembGB19gb2pMNKPFodwLHpMiWR");
+#[cfg(feature = "bft")]
+declare_id!("Lom9Em2WzV7gvtttdub9LZSR8gLgtbzFDhFm1zMQRp6");
+#[cfg(any(feature = "localnet", not(any(feature = "mainnet", feature = "gastald", feature = "staging", feature = "bft"))))]
 declare_id!("CAwQ43gQmFB6CD4zodoKt7ipPrHP7eQLxvGRY6tQ6zYx");
 
 #[program]

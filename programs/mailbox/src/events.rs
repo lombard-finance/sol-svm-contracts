@@ -69,14 +69,15 @@ pub struct OwnershipTransferred {
 
 #[event]
 pub struct SenderConfigSet {
-    pub sender_program: Pubkey,
+    pub sender_authority: Pubkey,
     pub max_payload_size: u32,
     pub fee_disabled: bool,
+    pub sender: Pubkey,
 }
 
 #[event]
 pub struct SenderConfigUnset {
-    pub sender_program: Pubkey,
+    pub sender_authority: Pubkey,
 }
 
 #[event]

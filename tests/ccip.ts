@@ -1,20 +1,21 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
+import { BN, Program } from "@coral-xyz/anchor";
+import { AddressLookupTableAccount, AddressLookupTableProgram, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
 import { Consortium } from "../target/types/consortium";
 import { Mailbox } from "../target/types/mailbox";
 import { sha256 } from "js-sha256";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { ConsortiumUtility } from "./consortium_utilities";
-import { AbiCoder, ethers, keccak256 } from "ethers";
-import { MailboxUtilities, messageV1 } from "./mailbox_utilities";
+import { ConsortiumUtility } from "./utils/consortium_utilities";
+import { ethers, keccak256 } from "ethers";
+import { MailboxUtilities, messageV1 } from "./utils/mailbox_utilities";
 import { Bridge } from "../target/types/bridge";
 import { LombardTokenPool } from "../target/types/lombard_token_pool";
 import { MockCcipOfframp } from "../target/types/mock_ccip_offramp";
 import { MockCcipRmn } from "../target/types/mock_ccip_rmn";
+import { withBlockhashRetry } from "./utils/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -113,7 +114,8 @@ describe("CCIP Token Pool", () => {
 	let bridgeRemoteTokenConfigPDA: PublicKey;
 	let bridgeRemoteTokenConfigPDA2: PublicKey;
 	let bridgeRemoteTokenConfigPDA3: PublicKey;
-	
+	let bridgeSenderConfigPDA:PublicKey;
+
 	let mockCcipOfframpConfigPDA: PublicKey;
 	let cpiSignerPDA: PublicKey;
 	let ccipAllowedOfframpPDA: PublicKey;
@@ -185,10 +187,6 @@ describe("CCIP Token Pool", () => {
 	const foreignChainSelector = new BN('1234567');
 	const foreignPoolData = Buffer.from(sha256("some-source-pool-data"), "hex");
 	const foreignPoolDataBytes = Array.from(Uint8Array.from(foreignPoolData));
-	const bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
-	[Buffer.from("sender_config"), bridge.programId.toBuffer()],
-	mailbox.programId
-	)[0];
 	const tokenPoolProgramData = PublicKey.findProgramAddressSync(
 		[tokenPool.programId.toBuffer()],
 		new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")
@@ -234,6 +232,10 @@ describe("CCIP Token Pool", () => {
 		[Buffer.from("sender_config"), tokenPoolSignerPDA.toBuffer()],
 		bridge.programId
 		)[0];
+		bridgeSenderConfigPDA = PublicKey.findProgramAddressSync(
+		[Buffer.from("sender_config"), bridgeConfigPDA.toBuffer()],
+		mailbox.programId
+		)[0];
 
 		[mockCcipOfframpConfigPDA] = PublicKey.findProgramAddressSync([Buffer.from("ccip_mock_config")], mockCcipOfframp.programId);
 		[rmnCursesPDA] = PublicKey.findProgramAddressSync([Buffer.from("curses")], mockCcipRmn.programId);
@@ -251,6 +253,7 @@ describe("CCIP Token Pool", () => {
 		)[0];
 
 		await fundWallet(tokenPoolSignerPDA, 25 * LAMPORTS_PER_SOL);
+		await fundWallet(cpiSignerPDA, 25 * LAMPORTS_PER_SOL);
 
 		consortiumUtility = new ConsortiumUtility(consortium);
 		consortiumUtility.generateAndAddKeypairs(3);
@@ -258,21 +261,25 @@ describe("CCIP Token Pool", () => {
 
 		mailboxUtilities = new MailboxUtilities(consortiumUtility, lchainId, admin, treasury.publicKey);
 
-		await mailbox.methods
+		await withBlockhashRetry(() =>
+		  mailbox.methods
 			.initialize(admin.publicKey, consortium.programId, treasury.publicKey, defaultMaxPayloadSize, feePerByte)
 			.accounts({
 				deployer: provider.wallet.publicKey
 			})
 			.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-			.rpc({ commitment: "confirmed" });
-		await bridge.methods
+			.rpc({ commitment: "confirmed" })
+		);
+		await withBlockhashRetry(() =>
+		  bridge.methods
 			.initialize(admin.publicKey, mailbox.programId)
 			.accounts({
 				deployer: provider.wallet.publicKey,
 				mint
 			})
 			.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-			.rpc({ commitment: "confirmed" });
+			.rpc({ commitment: "confirmed" })
+		);
 		
 		userTA = await spl.createAssociatedTokenAccount(provider.connection, user, mint, user.publicKey);
 		payerTA = await spl.createAssociatedTokenAccount(provider.connection, payer, mint, payer.publicKey);
@@ -281,7 +288,8 @@ describe("CCIP Token Pool", () => {
 	describe("Initialize token pool", function () {
 		it("initialize: initGlobalConfig fails when payer is not deployer", async () => {
 			await expect(
-				tokenPool.methods
+				  withBlockhashRetry(() =>
+				    tokenPool.methods
 				.initGlobalConfig()
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -289,12 +297,14 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([payer])
-				.rpc()
-			).to.be.rejectedWith("Unauthorized.");
+				.rpc({ commitment: "processed" })
+				  )
+				).to.be.rejectedWith("Unauthorized.");
 		});
 
 		it("initialize: fails when payer is not deployer", async () => {
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initGlobalConfig()
 				.accountsPartial({
 					programData: tokenPoolProgramData,
@@ -302,9 +312,11 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			await expect(
-				tokenPool.methods
+				  withBlockhashRetry(() =>
+				    tokenPool.methods
 				.initialize(mockCcipOfframp.programId, mockCcipRmn.programId, bridge.programId)
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -314,13 +326,15 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([payer])
-				.rpc()
-			).to.be.rejectedWith("Unauthorized.");
+				.rpc({ commitment: "confirmed" })
+				  )
+				).to.be.rejectedWith("Unauthorized.");
 		});
 
 		it("initialize: successful", async () => {
 			// This test presumes that `initGlobalConfig` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initialize(mockCcipOfframp.programId, mockCcipRmn.programId, bridge.programId)
 				.accountsPartial({
 					state: tokenPoolStatePDA,
@@ -329,7 +343,8 @@ describe("CCIP Token Pool", () => {
 					config: tokenPoolConfigPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -337,7 +352,8 @@ describe("CCIP Token Pool", () => {
 
 		it("initialize remote chain config: successful", async () => {
 			// This test presumes that `initGlobalConfig` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.initChainRemoteConfig(foreignChainSelector, mint, {
 					poolAddresses: [],
 					tokenAddress: {address: foreignToken},
@@ -349,7 +365,8 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -357,7 +374,8 @@ describe("CCIP Token Pool", () => {
 
 		it("append remote pool address: successful", async () => {
 			// This test presumes that `appendRemotePoolAddresses` has been called successfully
-			await tokenPool.methods
+			await withBlockhashRetry(() =>
+			  tokenPool.methods
 				.appendRemotePoolAddresses(foreignChainSelector, mint, [{address: foreignPoolAddress}])
 				.accountsPartial({
 					state: tokenPoolStatePDA,
@@ -365,7 +383,8 @@ describe("CCIP Token Pool", () => {
 					authority: provider.wallet.publicKey,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			// const cfg = await bridge.account.config.fetch(bridgeConfigPDA);
 			// expect(cfg.admin.toBase58()).to.be.eq(admin.publicKey.toBase58());
 					// todo: check all fields
@@ -376,42 +395,53 @@ describe("CCIP Token Pool", () => {
 
 		// enable inbound message path before the test
 		before(async () => {
-			await mailbox.methods
+			await withBlockhashRetry(() =>
+			  mailbox.methods
 				.enableInboundMessagePath(foreignLchainIdBytes, foreignMailboxAddressBytes)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setRemoteBridgeConfig(foreignLchainIdBytes, foreignBridgeAddressBytes)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setLocalTokenConfig(mint)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setRemoteTokenConfig(mint, foreignLchainIdBytes, foreignTokenBytes, 3)
 				.accounts({
 				admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipOfframp.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.addOfframp(foreignChainSelector, mockCcipOfframp.programId)
 				.accounts({
 					authority:admin.publicKey,
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipOfframp.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.initialize(tokenPool.programId)
 				.accountsPartial({
 					deployer: provider.wallet.publicKey,
@@ -419,8 +449,10 @@ describe("CCIP Token Pool", () => {
 					config: mockCcipOfframpConfigPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
-			await mockCcipRmn.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mockCcipRmn.methods
 				.initialize()
 				.accountsPartial({
 					deployer: provider.wallet.publicKey,
@@ -429,7 +461,8 @@ describe("CCIP Token Pool", () => {
 					curses: rmnCursesPDA,
 				})
 				.signers([Keypair.fromSecretKey(provider.wallet.payer.secretKey)])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 		})
 
 		after(async () => {
@@ -442,7 +475,8 @@ describe("CCIP Token Pool", () => {
 				nonceForeignChain++,
 				foreignBridgeAddress,
 				bridge.programId.toBuffer(),
-				tokenPoolSignerPDA.toBuffer(),
+				// tokenPoolSignerPDA.toBuffer(),
+				tokenPoolStatePDA.toBuffer(),
 				bridgePayload.bytes()
 			);
 
@@ -478,7 +512,8 @@ describe("CCIP Token Pool", () => {
 				amount: amountLeBytes,
 			}
 			const offRampDataPDA = PublicKey.findProgramAddressSync([Buffer.from("offramp_data"), nonceBuf], mockCcipOfframp.programId)[0];
-			await mockCcipOfframp.methods
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.initOfframp(nonce, mintArg)
 				.accountsPartial({
 					payer: payer.publicKey,
@@ -486,9 +521,11 @@ describe("CCIP Token Pool", () => {
 					systemProgram: SystemProgram.programId,
 				})
 				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 			const tokenBalanceBefore = await spl.getAccount(provider.connection, userTA);
-			await mockCcipOfframp.methods
+			await withBlockhashRetry(() =>
+			  mockCcipOfframp.methods
 				.executeOfframp(nonce)
 				.accountsPartial({
 					authority: payer.publicKey,
@@ -515,7 +552,7 @@ describe("CCIP Token Pool", () => {
 					},
 					{ // state
 						pubkey: tokenPoolStatePDA,
-						isWritable: false,
+						isWritable: true,
 						isSigner: false
 					},
 					{ // tokenProgram
@@ -530,6 +567,11 @@ describe("CCIP Token Pool", () => {
 					},
 					{ // poolSigner
 						pubkey: tokenPoolSignerPDA,
+						isWritable: true,
+						isSigner: false
+					},
+					{ // poolSigner token account
+						pubkey: tokenPoolSignerTA,
 						isWritable: true,
 						isSigner: false
 					},
@@ -553,36 +595,6 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
-					{ // bridge
-						pubkey: bridge.programId,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // mailbox
-						pubkey: mailbox.programId,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // messageInfo
-						pubkey: messageInfoPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // messageHandled
-						pubkey: messageHandledPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // mailboxConfig
-						pubkey: mailboxConfigPDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // bridgeConfig
-						pubkey: bridgeConfigPDA,
-						isWritable: false,
-						isSigner: false
-					},
 					{ // receiverTokenAccaunt
 						pubkey: userTA,
 						isWritable: true,
@@ -598,13 +610,38 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
-					{ // remoteBridgeConfig
-						pubkey: bridgeRemoteBridgeConfigPDA,
+					{ // bridge
+						pubkey: bridge.programId,
 						isWritable: false,
+						isSigner: false
+					},
+					{ // bridgeConfig
+						pubkey: bridgeConfigPDA,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // mailbox
+						pubkey: mailbox.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // mailboxConfig
+						pubkey: mailboxConfigPDA,
+						isWritable: true,
 						isSigner: false
 					},
 					{ // localTokenConfig
 						pubkey: bridgeLocalTokenConfigPDA,
+						isWritable: false,
+						isSigner: false
+					},
+					{
+						pubkey: SystemProgram.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // remoteBridgeConfig
+						pubkey: bridgeRemoteBridgeConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -618,14 +655,20 @@ describe("CCIP Token Pool", () => {
 						isWritable: false,
 						isSigner: false
 					},
-					{
-						pubkey: SystemProgram.programId,
-						isWritable: false,
+					{ // messageInfo
+						pubkey: messageInfoPDA,
+						isWritable: true,
 						isSigner: false
-					}
+					},
+					{ // messageHandled
+						pubkey: messageHandledPDA,
+						isWritable: true,
+						isSigner: false
+					},
 				])
 				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 
 			const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
     		expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amount));
@@ -637,30 +680,37 @@ describe("CCIP Token Pool", () => {
 		const customMaxPayloadSize = defaultMaxPayloadSize + 100;
     	const events = [];
 		let listener: number;
+		let altAccount: AddressLookupTableAccount | null;
 
 		// enable outbound message path before the test
 		before(async () => {
-			await mailbox.methods
+			await withBlockhashRetry(() =>
+			  mailbox.methods
 				.enableOutboundMessagePath(foreignLchainIdBytes)
 				.accounts({
 					admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await mailbox.methods
-				.setSenderConfig(bridge.programId, customMaxPayloadSize, true)
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  mailbox.methods
+				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true, bridge.programId)
 				.accounts({
-					admin: admin.publicKey
+					admin: admin.publicKey,
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
-			await bridge.methods
+				.rpc({ commitment: "confirmed" })
+			);
+			await withBlockhashRetry(() =>
+			  bridge.methods
 				.setSenderConfig(tokenPoolSignerPDA, new BN(10000), true) // No bridge fee for the token pool
 				.accounts({
 					admin: admin.publicKey
 				})
 				.signers([admin])
-				.rpc({ commitment: "confirmed" });
+				.rpc({ commitment: "confirmed" })
+			);
 
 			await spl.mintTo(provider.connection, minter, mint, payerTA, multisig, 100000000, [minter]);
 
@@ -668,6 +718,45 @@ describe("CCIP Token Pool", () => {
 			listener = mockCcipOfframp.addEventListener("mockCcipOnrampCompleted", (event, slot, signature) => {
 				events.push(event);
 			});
+
+			// Create ALT
+			// const recentSlot = await provider.connection.getSlot("confirmed");
+			const currentSlot = await provider.connection.getSlot();
+			const startSlot = Math.max(0, currentSlot - 20);
+			// Fetch recently produced blocks to find a guaranteed valid slot
+			const validBlocks = await provider.connection.getBlocks(startSlot, undefined, 'confirmed');
+			if (validBlocks.length === 0) {
+				throw new Error("No valid blocks found for ALT creation");
+			}
+			const recentSlot = validBlocks[0]; 
+			const [lookupTableInst, lookupTableAddress] =
+				AddressLookupTableProgram.createLookupTable({
+					authority: payer.publicKey,
+					payer: payer.publicKey,
+					recentSlot: recentSlot,
+			});
+			const tx1 = new anchor.web3.Transaction().add(lookupTableInst);
+			const txSig1 = await provider.sendAndConfirm(tx1, [payer]);
+			// Add some accounts to ALT
+			const extendInstruction = AddressLookupTableProgram.extendLookupTable({
+				payer: payer.publicKey,
+				authority: payer.publicKey,
+				lookupTable: lookupTableAddress,
+				addresses: [
+					mockCcipRmn.programId,
+					rmnCursesPDA,
+					mockCcipRmnConfigPDA,
+					tokenPoolChainConfigPDA,
+					multisig,
+					tokenAuth,
+				],
+			});
+			const tx2 = new anchor.web3.Transaction().add(extendInstruction);
+			const txSig2 = await provider.sendAndConfirm(tx2, [payer]);
+			// MANDATORY: Wait for the next slot to ensure activation
+			console.log("Waiting for ALT activation...");
+			await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds is safe
+			altAccount = (await provider.connection.getAddressLookupTable(lookupTableAddress)).value;
 		});
 		
 		// disable outbound message path after the test
@@ -690,7 +779,7 @@ describe("CCIP Token Pool", () => {
 			// const balanceBefore = await provider.connection.getBalance(payerFeeExempt.publicKey);
 			const amountToSend = 1000;
 
-			await mockCcipOfframp.methods
+			const ix = mockCcipOfframp.methods
 				.executeOnramp(recipient, foreignChainSelector, user.publicKey, new BN(amountToSend), new BN(nonceForeignChain++))
 				.accountsPartial({
 					sender: payer.publicKey,
@@ -700,6 +789,7 @@ describe("CCIP Token Pool", () => {
 					tokenPool: tokenPool.programId,
 					tokenPoolTokenAccount: tokenPoolSignerTA,
 					cpiSigner: cpiSignerPDA,
+					state: tokenPoolStatePDA,
 					systemProgram: SystemProgram.programId,
 				})
 				.remainingAccounts([
@@ -708,11 +798,11 @@ describe("CCIP Token Pool", () => {
 					// 	isWritable: true,
 					// 	isSigner: true
 					// },
-					{ // state
-						pubkey: tokenPoolStatePDA,
-						isWritable: false,
-						isSigner: false
-					},
+					// { // state
+					// 	pubkey: tokenPoolStatePDA,
+					// 	isWritable: false,
+					// 	isSigner: false
+					// },
 					{ // poolSigner
 						pubkey: tokenPoolSignerPDA,
 						isWritable: true,
@@ -743,8 +833,23 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
+					{ // mintAuthority
+						pubkey: multisig,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // tokenAuthority
+						pubkey: tokenAuth,
+						isWritable: false,
+						isSigner: false
+					},
 					{ // bridge
 						pubkey: bridge.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // bridgeConfig
+						pubkey: bridgeConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -758,38 +863,18 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{ // bridgeConfig
-						pubkey: bridgeConfigPDA,
+					{ // localTokenConfig
+						pubkey: bridgeLocalTokenConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
-					{ // bridgeSenderConfig
-						pubkey: tokenPoolSenderConfigPDA,
+					{
+						pubkey: SystemProgram.programId,
 						isWritable: false,
-						isSigner: false
-					},
-					{ // outboundMessagePath
-						pubkey: outboundMessagePathPDA,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // outboundMessage
-						pubkey: outboundMessagePDA,
-						isWritable: true,
-						isSigner: false
-					},
-					{ // mailboxSenderConfig
-						pubkey: bridgeSenderConfigPDA,
-						isWritable: true,
 						isSigner: false
 					},
 					{ // remoteBridgeConfig
 						pubkey: bridgeRemoteBridgeConfigPDA,
-						isWritable: false,
-						isSigner: false
-					},
-					{ // localTokenConfig
-						pubkey: bridgeLocalTokenConfigPDA,
 						isWritable: false,
 						isSigner: false
 					},
@@ -798,14 +883,47 @@ describe("CCIP Token Pool", () => {
 						isWritable: true,
 						isSigner: false
 					},
-					{
-						pubkey: SystemProgram.programId,
+					{ // bridgeSenderConfig
+						pubkey: tokenPoolSenderConfigPDA,
 						isWritable: false,
 						isSigner: false
-					}
+					},
+					{ // mailboxSenderConfig
+						pubkey: bridgeSenderConfigPDA,
+						isWritable: true,
+						isSigner: false
+					},
+					{ // outboundMessagePath
+						pubkey: outboundMessagePathPDA,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // Treasury
+						pubkey: tokenPool.programId,
+						isWritable: false,
+						isSigner: false
+					},
+					{ // outboundMessage
+						pubkey: outboundMessagePDA,
+						isWritable: true,
+						isSigner: false
+					},
 				])
-				.signers([payer])
-				.rpc({ commitment: "confirmed" });
+				.signers([payer]);
+			const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
+			const message = new anchor.web3.TransactionMessage({
+				payerKey: payer.publicKey,
+				recentBlockhash: blockhash,
+				instructions: [await ix.instruction()],
+				}).compileToV0Message([altAccount!]);
+			const transaction = new anchor.web3.VersionedTransaction(message);
+			transaction.sign([payer]); 
+			const txSig = await provider.connection.sendRawTransaction(transaction.serialize());
+			await provider.connection.confirmTransaction({
+				signature: txSig,
+				blockhash,
+				lastValidBlockHeight
+			});			
 
 			const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
 			const expecedGmpMessage = messageV1(

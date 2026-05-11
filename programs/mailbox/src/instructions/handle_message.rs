@@ -79,13 +79,15 @@ pub fn handle_message<'a, 'b, 'c, 'info>(
 
     emit!(crate::events::MessageHandled { payload_hash });
 
-    let (_, result_data) = match get_return_data() {
-        Some(res) => res,
-        None => return Ok(None)
+    let result_data= match get_return_data() {
+        Some(res) => if &res.0 == ctx.accounts.recipient_program.key {
+            Some(res.1)
+        } else { None },
+        None => None
     };
 
     // todo: we could resize the message info account to save on-chain space and only
     // store the handled status discarding the message body
 
-    Ok(Some(result_data))
+    Ok(result_data)
 }

@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::bpf_loader_upgradeable;
 
 use anchor_spl::token_interface::{Mint};
 

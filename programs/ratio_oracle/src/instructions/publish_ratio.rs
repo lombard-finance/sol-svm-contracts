@@ -51,12 +51,13 @@ pub fn publish_ratio(
         ratio_update.timestamp > oracle.switch_time,
         RatioOracleError::OutdatedRatioUpdate
     );
-    let interval = ratio_update.timestamp - oracle.switch_time;
+    let now = Clock::get()?.unix_timestamp as u64;
     require!(
-        interval <= oracle.max_ahead_interval,
+        ratio_update.timestamp <= now + oracle.max_ahead_interval,
         RatioOracleError::MaxAheadIntervalExceeded
     );
 
+    let interval = ratio_update.timestamp - oracle.switch_time;
     // check new ratio is within the threshold
     let threshold = oracle.current_ratio * interval as u128 * oracle.ratio_threshold
         / (MAX_RATIO_THRESHOLD * DEFAULT_SWITCH_INTERVAL as u128);
@@ -76,7 +77,7 @@ pub fn publish_ratio(
     }
 
     // based on the switch time we use the previous ratio
-    if Clock::get()?.unix_timestamp as u64 >= oracle.switch_time {
+    if now >= oracle.switch_time {
         oracle.previous_ratio = Some(oracle.current_ratio);
     }
 

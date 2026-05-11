@@ -15,7 +15,7 @@ import {
   assertError,
   TestSetup,
   promiseWithResolvers
-} from "./util";
+} from "./utils/utils";
 
 describe("bascule", () => {
   const provider = anchor.AnchorProvider.env();

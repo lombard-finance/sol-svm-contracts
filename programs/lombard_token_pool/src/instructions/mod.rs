@@ -8,6 +8,8 @@ pub mod configure_allow_list;
 pub use configure_allow_list::*;
 pub mod delete_chain_config;
 pub use delete_chain_config::*;
+pub mod derive_accounts;
+pub use derive_accounts::*;
 pub mod edit_configs;
 pub use edit_configs::*;
 pub mod initialize;

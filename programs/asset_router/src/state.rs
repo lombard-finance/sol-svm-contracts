@@ -54,12 +54,6 @@ pub struct TokenRoute {
 }
 
 #[account]
-#[derive(InitSpace)]
-pub struct Ratio {
-    pub value: u128,
-}
-
-#[account]
 pub struct DepositPayloadSpent {}
 
 #[derive(Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, InitSpace)]

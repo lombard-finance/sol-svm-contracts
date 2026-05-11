@@ -18,7 +18,12 @@ pub struct UpdateValset<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
-    #[account(seeds = [VALIDATED_PAYLOAD_SEED, &payload_hash[..]], bump)]
+    #[account(
+        seeds = [VALIDATED_PAYLOAD_SEED,
+        &payload_hash[..]],
+        constraint = validated_payload.latest_epoch == config.current_epoch @ ConsortiumError::ValidatedPayloadEpochMismatch,
+        bump,
+    )]
     pub validated_payload: Account<'info, ValidatedPayload>,
     #[account(
         mut,

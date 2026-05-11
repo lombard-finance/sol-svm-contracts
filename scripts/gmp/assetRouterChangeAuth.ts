@@ -9,7 +9,7 @@ const TOKEN_AUTHORITY_SEED = Buffer.from("token_authority");
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeAuth <new_authority>
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeAuth <admin> <new_authority> [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -35,11 +35,11 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const newAuthority = new PublicKey(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+const newAuthority = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const payer = provider.wallet.publicKey;
     const configPDA = PublicKey.findProgramAddressSync([ASSET_ROUTER_CONFIG_SEED], programId)[0];
     const tokenAuthority = PublicKey.findProgramAddressSync([TOKEN_AUTHORITY_SEED], programId)[0];
 
@@ -67,7 +67,7 @@ const newAuthority = new PublicKey(process.argv[2]);
     console.log("New authority:", newAuthority.toBase58());
 
     const tx = await program.methods.changeMintAuth(newAuthority).accounts({
-      payer,
+      payer: admin,
       mint,
       currentAuth,
       tokenProgram,

@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
 use crate::{
     constants::{self, CONFIG_SEED, LOCAL_TOKEN_CONFIG_SEED, OPTIONAL_MESSAGE_SIZE, OUTBOUND_DIRECTION, REMOTE_BRIDGE_CONFIG_SEED, REMOTE_TOKEN_CONFIG_SEED, SENDER_CONFIG_SEED}, 
     errors::BridgeError, 
@@ -13,6 +14,8 @@ use mailbox::{
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
+    #[account(mut)]
+    pub fee_payer: Signer<'info>,
     #[account(mut)]
     pub sender: Signer<'info>,
     #[account(
@@ -31,7 +34,10 @@ pub struct Deposit<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
-        seeds = [SENDER_CONFIG_SEED, if sender.owner.key() == system_program.key() { sender.key.as_ref() } else { sender.owner.as_ref() }],
+        seeds = [
+            SENDER_CONFIG_SEED, 
+            sender.key.as_ref()
+        ],
         constraint = sender_config.whitelisted @ BridgeError::NotWhitelisted,
         bump
     )]
@@ -68,7 +74,7 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub outbound_message: UncheckedAccount<'info>,
     /// CHECK: This will be verified by the mailbox program
-    #[account(mut)]
+    #[account()]
     pub mailbox_sender_config: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -113,7 +119,7 @@ pub fn deposit(
             .as_ref()
             .to_account_info(),
             SendMessage{
-                fee_payer: ctx.accounts.sender.to_account_info(),
+                fee_payer: ctx.accounts.fee_payer.to_account_info(),
                 sender_authority: ctx.accounts.config.to_account_info(),
                 config: ctx.accounts.mailbox_config.to_account_info(),
                 outbound_message_path: ctx.accounts.outbound_message_path.to_account_info(),

@@ -18,7 +18,7 @@ use crate::constants::{
     TOKEN_CONFIG_SEED,
 };
 use crate::state::{AccountRole, AccountRoles, DepositPayloadSpent, TokenConfig};
-use crate::utils::consortium_payloads::{DepositV1, DEPOSIT_V1_PAYLOAD_LEN};
+use crate::utils::consortium_payloads::DepositV1;
 use crate::utils::fee::{FeeAction, FEE_PAYLOAD_LEN};
 use crate::{
     errors::AssetRouterError,

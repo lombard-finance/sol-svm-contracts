@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-#[instruction(sender_program: Pubkey)]
+#[instruction(sender_authority: Pubkey)]
 pub struct UnsetSenderConfig<'info> {
     #[account(mut, address = config.admin @ MailboxError::Unauthorized)]
     pub admin: Signer<'info>,
@@ -17,14 +17,17 @@ pub struct UnsetSenderConfig<'info> {
     #[account(
         mut,
         close = admin,
-        seeds = [SENDER_CONFIG_SEED, &sender_program.to_bytes()],
+        seeds = [
+            SENDER_CONFIG_SEED,
+            &sender_authority.to_bytes(),
+        ],
         bump = sender_config.bump
     )]
     pub sender_config: Account<'info, SenderConfig>,
     pub system_program: Program<'info, System>,
 }
 
-pub fn unset_sender_config(_ctx: Context<UnsetSenderConfig>, sender_program: Pubkey) -> Result<()> {
-    emit!(SenderConfigUnset { sender_program });
+pub fn unset_sender_config(_ctx: Context<UnsetSenderConfig>, sender_authority: Pubkey) -> Result<()> {
+    emit!(SenderConfigUnset { sender_authority });
     Ok(())
 }

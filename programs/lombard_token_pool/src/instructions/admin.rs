@@ -5,15 +5,14 @@ use anchor_spl::token_interface::{Mint};
 use base_token_pool::common::*;
 
 use crate::{
-    constants::MAX_POOL_STATE_V,
-    program::LombardTokenPool,
-    state::State
+    constants::MAX_POOL_STATE_V, program::LombardTokenPool, state::State
 };
 
 
 #[derive(Accounts)]
 pub struct AdminUpdateTokenPool<'info> {
     #[account(
+        mut,
         seeds = [POOL_STATE_SEED, mint.key().as_ref()],
         bump,
         constraint = valid_version(state.version, MAX_POOL_STATE_V) @ CcipTokenPoolError::InvalidVersion,

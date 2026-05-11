@@ -19,6 +19,11 @@ pub struct BasculeEnabled {
 }
 
 #[event]
+pub struct BasculeGmpEnabled {
+    pub enabled: bool,
+}
+
+#[event]
 pub struct MintFeeSet {
     pub mint_fee: u64,
 }

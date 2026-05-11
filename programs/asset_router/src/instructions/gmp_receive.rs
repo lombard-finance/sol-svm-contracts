@@ -9,7 +9,7 @@ use bascule_gmp::{
 use mailbox::{constants::MESSAGE_SEED, state::MessageV1Info};
 
 use crate::{
-    constants::{BASCULE_VALIDATOR_SEED, BTC_STAKING_MODULE_ADDRESS, CONFIG_SEED, MESSAGE_HANDLED_SEED},
+    constants::{BASCULE_VALIDATOR_SEED, BTC_STAKING_MODULE_ADDRESS, CHAIN_ID, CONFIG_SEED, MESSAGE_HANDLED_SEED},
     errors::AssetRouterError,
     state::{Config, MessageHandled},
     utils::{self, gmp_messages::Mint},
@@ -33,7 +33,11 @@ pub struct GMPReceive<'info> {
     #[account(mut)]
     pub handler: Signer<'info>,
 
-    #[account(seeds = [CONFIG_SEED], bump)]
+    #[account(
+        constraint = !config.paused @ AssetRouterError::Paused,
+        seeds = [CONFIG_SEED],
+        bump
+    )]
     pub config: Account<'info, Config>,
 
     // This account is used to track which messages have been handled to avoid handling them again
@@ -56,6 +60,7 @@ pub struct GMPReceive<'info> {
         token::token_program = token_program,
     )]
     pub recipient: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, TokenMint>,
     /// CHECK: This being used in the mint call constrains it to be correct, otherwise the
     /// instruction will fail.
@@ -66,7 +71,7 @@ pub struct GMPReceive<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(seeds = [BASCULE_VALIDATOR_SEED], bump)]
+    #[account(mut, seeds = [BASCULE_VALIDATOR_SEED], bump)]
     pub bascule_validator: Option<UncheckedAccount<'info>>,
     /// When config.bascule_gmp is Some, must be the bascule_gmp program; otherwise optional.
     /// CHECK: instruction body constrains it to have correct configured address.
@@ -144,6 +149,11 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
             .bascule_gmp_mint_payload
             .as_ref()
             .ok_or(AssetRouterError::MissingBasculeAccount)?;
+        let bascule_validator = ctx
+            .accounts
+            .bascule_validator
+            .as_ref()
+            .ok_or(AssetRouterError::MissingBasculeAccount)?;
         let bascule_validator_bump = ctx
             .bumps
             .bascule_validator
@@ -151,6 +161,7 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
         
         let mint_message = MintMessage {
             nonce: ctx.accounts.message_info.message.nonce,
+            chain_id: CHAIN_ID,
             token_address: mint_message.token_address,
             recipient: mint_message.recipient,
             amount: mint_message.amount,
@@ -160,7 +171,8 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
             CpiContext::new_with_signer(
                 bascule_gmp_address.to_account_info(),
                 ValidateMint {
-                    validator: ctx.accounts.config.to_account_info(),
+                    validator: bascule_validator.to_account_info(),
+                    payer: ctx.accounts.handler.to_account_info(),
                     config: bascule_gmp_config.to_account_info(),
                     account_roles: bascule_gmp_account_roles.to_account_info(),
                     mint_payload: bascule_gmp_mint_payload.to_account_info(),

@@ -65,6 +65,7 @@ pub struct Metadata {
     pub validators: Vec<[u8; VALIDATOR_PUBKEY_SIZE]>,
     #[max_len(MAX_VALIDATOR_SET_SIZE)]
     pub weights: Vec<u64>,
+    pub finalized: bool
 }
 
 #[account]

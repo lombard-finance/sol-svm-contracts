@@ -75,4 +75,10 @@ pub enum LBTCError {
     ClaimerNotFound,
     #[msg("Pauser not found")]
     PauserNotFound,
+    #[msg("Metadata finalized already")]
+    MetadataFinalizedAlready,
+    #[msg("Metadata not finalized")]
+    MetadataNotFinalized,
+    #[msg("Payload mismatch")]
+    PayloadMismatch,
 }
