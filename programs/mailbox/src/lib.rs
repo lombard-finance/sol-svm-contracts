@@ -102,6 +102,10 @@ pub mod mailbox {
         instructions::deliver_message(ctx, payload_hash)
     }
 
+    pub fn delete_message(ctx: Context<DeleteMessage>, nonce: u64) -> Result<()> {
+        instructions::delete_message(ctx, nonce)
+    }
+
     pub fn handle_message<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
         payload_hash: [u8; 32],
