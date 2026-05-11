@@ -1522,12 +1522,12 @@ describe("Mailbox", () => {
   // Module-scoped so the Pause section below can reuse the surviving outbound
   // message account when testing the paused-rejection case.
   let nonceForPauseDeleteTest: BN | undefined;
+  let outboundMessagePDASurvivor: PublicKey;
 
   describe("Delete message", () => {
     let nonceToDelete: BN;
     let outboundMessagePDAToDelete: PublicKey;
     let nonceSurvivor: BN;
-    let outboundMessagePDASurvivor: PublicKey;
 
     async function sendDeletableMessage(): Promise<{ nonce: BN; pda: PublicKey }> {
       const config = await mailbox.account.config.fetch(configPDA);
@@ -1596,6 +1596,7 @@ describe("Mailbox", () => {
         .deleteMessage(nonceToDelete)
         .accounts({
           payer: admin.publicKey,
+          outboundMessage: outboundMessagePDAToDelete,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1722,6 +1723,7 @@ describe("Mailbox", () => {
           .deleteMessage(nonceForPauseDeleteTest!)
           .accounts({
             payer: admin.publicKey,
+            outboundMessage: outboundMessagePDASurvivor,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })

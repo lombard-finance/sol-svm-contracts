@@ -437,6 +437,7 @@ describe("Consortium", () => {
             .deleteSessionPayload(dummyPayloadHashBytes)
             .accounts({
               payer: user.publicKey,
+              sessionPayload: adminPostedSessionPayloadPDA,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" })
@@ -458,6 +459,7 @@ describe("Consortium", () => {
           .deleteSessionPayload(dummyPayloadHashBytes)
           .accounts({
             payer: admin.publicKey,
+            sessionPayload: adminPostedSessionPayloadPDA,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
