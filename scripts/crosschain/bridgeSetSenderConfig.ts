@@ -5,7 +5,7 @@ import { Bridge } from "../../target/types/bridge";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeSetSenderConfig <sender address> <discount> --whitelisted [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeSetSenderConfig <admin> <sender address> <discount> --whitelisted [--populate]
 
     Sets sender's config on teh bridge. `);
   process.exit(0);
@@ -31,17 +31,16 @@ if (!program.programId.equals(programId)) {
 let populate = process.argv.at(-1) === "--populate";
 let whitelisted = process.argv.at(-2) === "--whitelisted" || process.argv.at(-1) === "--whitelisted";
 
-const sender = new PublicKey(process.argv[2]);
-const discount = new anchor.BN(process.argv[3]);
+const admin = new PublicKey(process.argv[2]);
+const sender = new PublicKey(process.argv[3]);
+const discount = new anchor.BN(process.argv[4]);
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     const tx = await program.methods
 			.setSenderConfig(sender, discount, whitelisted)
 			.accounts({
-        admin: deployer,
+        admin: admin,
 			});
 
     if (populate) {
