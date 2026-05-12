@@ -6,7 +6,7 @@ import { getTokenPoolState } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolSetRateLimitAdmin <mint address> <admin address> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolSetRateLimitAdmin <admin> <mint address> <rate limit admin address> [--populate]
 
     Initializes state config for the LombardTokenPool contract. `);
   process.exit(0);
@@ -31,8 +31,9 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
-const admin = new PublicKey(process.argv[3]);
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const rlAdmin = new PublicKey(process.argv[4]);
 
 const programData = PublicKey.findProgramAddressSync(
         [program.programId.toBuffer()],
@@ -41,15 +42,13 @@ const programData = PublicKey.findProgramAddressSync(
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     // const configPDA = getConfigPDA(programId);
     const statePDA = getTokenPoolState(mint, programId);
 
     const tx = await program.methods
-      .setRateLimitAdmin(mint, admin)
+      .setRateLimitAdmin(mint, rlAdmin)
       .accounts({
-        authority: deployer,
+        authority: admin,
         state: statePDA,
       });
 

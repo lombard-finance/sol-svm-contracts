@@ -6,7 +6,7 @@ import { getTokenPoolChainConfig, getTokenPoolState } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolInitRemoteChainConfig <mint address> <remote chain id> <remote chain selector> <remote token address> <remote token pool address> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolInitRemoteChainConfig <admin> <mint address> <remote chain id> <remote chain selector> <remote token address> <remote token pool address> [--populate]
 
     Initializes state config for the LombardTokenPool contract. `);
   process.exit(0);
@@ -31,16 +31,15 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
-const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[3], "hex")));
-const chainSelector = new anchor.BN(process.argv[4]);
-const remoteToken = Buffer.from(process.argv[5], "hex");
-const remoteTokenPool = Array.from(Uint8Array.from(Buffer.from(process.argv[6], "hex")));
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[4], "hex")));
+const chainSelector = new anchor.BN(process.argv[5]);
+const remoteToken = Buffer.from(process.argv[6], "hex");
+const remoteTokenPool = Array.from(Uint8Array.from(Buffer.from(process.argv[7], "hex")));
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     // const configPDA = getConfigPDA(programId);
     const statePDA = getTokenPoolState(mint, programId);
     const chainConfigPDA = getTokenPoolChainConfig(mint, chainSelector, programId);
@@ -55,7 +54,7 @@ const remoteTokenPool = Array.from(Uint8Array.from(Buffer.from(process.argv[6], 
       .accountsPartial({
         state: statePDA,
         chainConfig: chainConfigPDA,
-        authority: deployer,
+        authority: admin,
       });
 
     if (populate) {
