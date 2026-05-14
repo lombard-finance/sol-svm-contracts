@@ -81,4 +81,8 @@ pub mod consortium {
     pub fn close_session_for_epoch(ctx: Context<CloseSessionForEpoch>, payload_hash: [u8; 32], epoch: u64) -> Result<()> {
         instructions::close_session_for_epoch(ctx, payload_hash, epoch)
     }
+
+    pub fn delete_session_payload(ctx: Context<DeleteSessionPayload>, payload_hash: [u8; 32]) -> Result<()> {
+        instructions::delete_session_payload(ctx, payload_hash)
+    }
 }
