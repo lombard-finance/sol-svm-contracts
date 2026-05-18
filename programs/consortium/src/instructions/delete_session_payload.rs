@@ -1,18 +1,16 @@
 //! Instruction to finalize a notary session after signatures have been submitted
 //! and the minimum weight threshold has been reached
 use crate::{
-    constants::{CONFIG_SEED, SESSION_PAYLOAD_SEED},
-    state::{Config, SessionPayload},
+    constants::{SESSION_PAYLOAD_SEED},
+    state::{SessionPayload},
 };
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(payload_hash: [u8; 32])]
 pub struct DeleteSessionPayload<'info> {
-    #[account(mut, address = config.admin)]
+    #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut, seeds = [CONFIG_SEED], bump)]
-    pub config: Account<'info, Config>,
     #[account(
         mut,
         close = payer,
