@@ -434,9 +434,9 @@ describe("Consortium", () => {
         await expect(
             withBlockhashRetry(() =>
               program.methods
-            .deleteSessionPayload(dummyPayloadHashBytes)
+            .deleteSessionPayload(dummyPayloadHashBytes, user.publicKey)
             .accounts({
-              payer: user.publicKey,
+              admin: user.publicKey,
               sessionPayload: adminPostedSessionPayloadPDA,
             })
             .signers([user])
@@ -456,9 +456,9 @@ describe("Consortium", () => {
 
         await withBlockhashRetry(() =>
           program.methods
-          .deleteSessionPayload(dummyPayloadHashBytes)
+          .deleteSessionPayload(dummyPayloadHashBytes, admin.publicKey)
           .accounts({
-            payer: admin.publicKey,
+            admin: admin.publicKey,
             sessionPayload: adminPostedSessionPayloadPDA,
           })
           .signers([admin])
