@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::system_instruction::transfer;
-use solana_address::bytes_are_curve_point;
 
 use crate::constants::{CONFIG_SEED, FEE_ADJUSTMET_BASE, OUTBOUND_MESSAGE, SENDER_CONFIG_SEED};
 use crate::errors::MailboxError;
@@ -64,9 +63,17 @@ pub fn send_message(
     let config = &mut ctx.accounts.config;
     let outbound_message_account = &mut ctx.accounts.outbound_message;
 
-    let (mut fee_disabled, max_payload_size) = match &ctx.accounts.sender_config {
-        Some(sender_config) => (sender_config.fee_disabled, sender_config.max_payload_size),
-        None => (false, config.default_max_payload_size),
+    let (mut fee_disabled, max_payload_size, message_sender) = match &ctx.accounts.sender_config {
+        Some(sender_config) => (
+            sender_config.fee_disabled,
+            sender_config.max_payload_size,
+            sender_config.sender.key().to_bytes()
+        ),
+        None => (
+            false, 
+            config.default_max_payload_size,
+            ctx.accounts.sender_authority.key().to_bytes(),
+        ),
     };
     let mut fee_per_byte = config.fee_per_byte;
     if fee_disabled && fee_override > 0 {
@@ -80,19 +87,13 @@ pub fn send_message(
         MailboxError::PayloadTooLarge
     );
 
-    let sender = match bytes_are_curve_point(ctx.accounts.sender_authority.key.as_ref()) ||
-        ctx.accounts.sender_authority.data_is_empty() {
-        true => ctx.accounts.sender_authority.key.to_bytes(),
-        false => ctx.accounts.sender_authority.owner.to_bytes(),
-    };
-
     let message = MessageV1 {
         nonce: config.global_nonce,
         body: message_body,
         destination_caller: destination_caller,
         recipient: recipient,
         message_path_identifier: ctx.accounts.outbound_message_path.identifier,
-        sender: sender,
+        sender: message_sender,
     };
 
     if !fee_disabled {

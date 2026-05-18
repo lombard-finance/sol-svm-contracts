@@ -7,7 +7,7 @@ import { convertToBuf, getConsortiumConfigPDA, getConsortiumSessionPayloadPDA } 
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_setInitialValidatorSetFromSession <valset_payload>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_setInitialValidatorSetFromSession <admin> <valset_payload>
 
     Sets the initial validator set on the Consortium program using previously posted payload session.`);
   process.exit(0);
@@ -32,14 +32,13 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-let valsetPayload = convertToBuf(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+let valsetPayload = convertToBuf(process.argv[3]);
 const payloadHashBuf = Buffer.from(sha256(valsetPayload), "hex");
 const payloadHash = Array.from(Uint8Array.from(payloadHashBuf));
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey; // Get wallet address
-
     // Derive PDA for config
     const configPDA = getConsortiumConfigPDA(programId);
     console.log("Using config PDA:", configPDA.toBase58());

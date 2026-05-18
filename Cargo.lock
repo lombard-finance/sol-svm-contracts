@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "abi-utils"
+version = "0.1.0"
+
+[[package]]
 name = "aead"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -402,6 +406,7 @@ version = "1.0.0"
 name = "asset_router"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "anchor-spl",
  "bascule",
@@ -599,6 +604,7 @@ dependencies = [
 name = "bridge"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "anchor-spl",
  "base-token-pool",
@@ -763,6 +769,7 @@ dependencies = [
 name = "consortium"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "hex",
  "solana-security-txt",
@@ -1358,6 +1365,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 name = "lombard_token_pool"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "anchor-spl",
  "base-token-pool",
@@ -1373,10 +1381,10 @@ dependencies = [
 name = "mailbox"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "consortium",
  "hex",
- "solana-address",
  "solana-security-txt",
 ]
 
@@ -1773,6 +1781,7 @@ dependencies = [
 name = "ratio_oracle"
 version = "0.1.0"
 dependencies = [
+ "abi-utils",
  "anchor-lang",
  "consortium",
  "solana-security-txt",
@@ -2037,19 +2046,9 @@ checksum = "6abe81cfc4a75f71a510c6856b03a7d8525e416af3c69d55daef62e6078b8d40"
 dependencies = [
  "bincode",
  "serde",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-program-memory",
  "solana-pubkey",
-]
-
-[[package]]
-name = "solana-address"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f08236dacd0e6dc8234becef58e27c8567856644ef509d7e97957d55a91dc72"
-dependencies = [
- "solana-define-syscall 5.1.0",
- "solana-program-error 3.0.1",
 ]
 
 [[package]]
@@ -2115,9 +2114,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25c536ad0ce25d84a64f48dedcb773e764827e0ef781eda41fa1fa35f5d64b38"
 dependencies = [
  "solana-account-info",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "solana-instruction",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
  "solana-stable-layout",
 ]
@@ -2149,12 +2148,6 @@ name = "solana-define-syscall"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7062ae1de58e294d3bee5fd2c89efc155b7f7383ddce4cb88345dfafaaabc5bd"
-
-[[package]]
-name = "solana-define-syscall"
-version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21e14a4f604117f379840956a8fc8695e4c84f5b0ebed192f31f60d9b85d581d"
 
 [[package]]
 name = "solana-derivation-path"
@@ -2244,7 +2237,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "solana-pubkey",
  "wasm-bindgen",
 ]
@@ -2266,7 +2259,7 @@ version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f7551f85064bc7299d56dbd7126258b084a2d78d0325b1579324f818b405123"
 dependencies = [
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
 ]
 
 [[package]]
@@ -2341,7 +2334,7 @@ dependencies = [
  "solana-clock",
  "solana-cpi",
  "solana-decode-error",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "solana-epoch-schedule",
  "solana-fee-calculator",
  "solana-hash",
@@ -2350,7 +2343,7 @@ dependencies = [
  "solana-msg",
  "solana-native-token",
  "solana-program-entrypoint",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-program-memory",
  "solana-program-option",
  "solana-program-pack",
@@ -2379,7 +2372,7 @@ checksum = "0eb90f3fa3e979b912451a404508f1f90bb6e5c1d7767625f622b20016fb9fde"
 dependencies = [
  "solana-account-info",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
 ]
 
@@ -2400,19 +2393,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-program-error"
-version = "3.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f04fa578707b3612b095f0c8e19b66a1233f7c42ca8082fcb3b745afcc0add6"
-
-[[package]]
 name = "solana-program-memory"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed4bc044dc2b49c323aeff04aec03c908a052e278c2edf2f7616f32fc0f1bcd9"
 dependencies = [
  "num-traits",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
 ]
 
 [[package]]
@@ -2427,7 +2414,7 @@ version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8fb28439d23e1f505e59c7a14ed5012365ab7aa0f20dc7bda048e02ff231cf6"
 dependencies = [
- "solana-program-error 2.1.0",
+ "solana-program-error",
 ]
 
 [[package]]
@@ -2451,7 +2438,7 @@ dependencies = [
  "serde_derive",
  "solana-atomic-u64",
  "solana-decode-error",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "solana-sanitize",
  "solana-sha256-hasher",
  "wasm-bindgen",
@@ -2557,7 +2544,7 @@ checksum = "f2eef5a00a75648273c3fb6e3d85b0c8c02fcc1e36c4271664dcc39b6b128d41"
 dependencies = [
  "borsh 1.6.0",
  "libsecp256k1",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "thiserror 1.0.69",
 ]
 
@@ -2597,7 +2584,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd115f3a1136314b0183235080d29023530c3a0a5df60505fdb7ea620eff9fd6"
 dependencies = [
  "sha2 0.10.9",
- "solana-define-syscall 2.1.0",
+ "solana-define-syscall",
  "solana-hash",
 ]
 
@@ -2766,7 +2753,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7398da23554a31660f17718164e31d31900956054f54f52d5ec1be51cb4f4b3"
 dependencies = [
  "bytemuck",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-sha256-hasher",
  "spl-discriminator-derive",
 ]
@@ -2832,7 +2819,7 @@ dependencies = [
  "solana-instruction",
  "solana-msg",
  "solana-program-entrypoint",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
 ]
 
@@ -2849,7 +2836,7 @@ dependencies = [
  "num-traits",
  "solana-decode-error",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-program-option",
  "solana-pubkey",
  "solana-zk-sdk",
@@ -2894,7 +2881,7 @@ dependencies = [
  "solana-decode-error",
  "solana-instruction",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
  "spl-discriminator",
  "spl-pod",
@@ -2995,7 +2982,7 @@ dependencies = [
  "solana-decode-error",
  "solana-instruction",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
  "spl-discriminator",
  "spl-pod",
@@ -3015,7 +3002,7 @@ dependencies = [
  "solana-decode-error",
  "solana-instruction",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
  "spl-discriminator",
  "spl-pod",
@@ -3038,7 +3025,7 @@ dependencies = [
  "solana-decode-error",
  "solana-instruction",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "solana-pubkey",
  "spl-discriminator",
  "spl-pod",
@@ -3060,7 +3047,7 @@ dependencies = [
  "solana-account-info",
  "solana-decode-error",
  "solana-msg",
- "solana-program-error 2.1.0",
+ "solana-program-error",
  "spl-discriminator",
  "spl-pod",
  "thiserror 1.0.69",

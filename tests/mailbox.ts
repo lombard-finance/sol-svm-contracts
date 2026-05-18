@@ -1256,9 +1256,9 @@ describe("Mailbox", () => {
       await expect(
           withBlockhashRetry(() =>
             mailbox.methods
-          .setSenderConfig(sender.publicKey, maxPayloadSize, true)
+          .setSenderConfig(sender.publicKey, maxPayloadSize, true, sender.publicKey)
           .accounts({
-            admin: payer.publicKey
+            admin: payer.publicKey,
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1271,9 +1271,9 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(sender.publicKey, maxPayloadSize, true)
+        .setSenderConfig(sender.publicKey, maxPayloadSize, true, sender.publicKey)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1289,9 +1289,9 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(sender.publicKey, maxPayloadSize, false)
+        .setSenderConfig(sender.publicKey, maxPayloadSize, false, sender.publicKey)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1308,7 +1308,7 @@ describe("Mailbox", () => {
             mailbox.methods
           .unsetSenderConfig(sender.publicKey)
           .accounts({
-            admin: payer.publicKey
+            admin: payer.publicKey,
           })
           .signers([payer])
           .rpc({ commitment: "confirmed" })
@@ -1321,7 +1321,7 @@ describe("Mailbox", () => {
         mailbox.methods
         .unsetSenderConfig(sender.publicKey)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1356,9 +1356,9 @@ describe("Mailbox", () => {
 
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, payerFeeExempt.publicKey)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1439,9 +1439,9 @@ describe("Mailbox", () => {
       // we use system program just for ease of testing
       await withBlockhashRetry(() =>
         mailbox.methods
-        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true)
+        .setSenderConfig(payerFeeExempt.publicKey, customMaxPayloadSize, true, payerFeeExempt.publicKey)
         .accounts({
-          admin: admin.publicKey
+          admin: admin.publicKey,
         })
         .signers([admin])
         .rpc({ commitment: "confirmed" })
@@ -1516,6 +1516,99 @@ describe("Mailbox", () => {
           .rpc({ commitment: "confirmed" })
           )
         ).to.be.rejectedWith("PayloadTooLarge");
+    });
+  });
+
+  // Module-scoped so the Pause section below can reuse the surviving outbound
+  // message account when testing the paused-rejection case.
+  let nonceForPauseDeleteTest: BN | undefined;
+  let outboundMessagePDASurvivor: PublicKey;
+
+  describe("Delete message", () => {
+    let nonceToDelete: BN;
+    let outboundMessagePDAToDelete: PublicKey;
+    let nonceSurvivor: BN;
+
+    async function sendDeletableMessage(): Promise<{ nonce: BN; pda: PublicKey }> {
+      const config = await mailbox.account.config.fetch(configPDA);
+      const nonce = config.globalNonce;
+      const pda = PublicKey.findProgramAddressSync(
+        [Buffer.from("outbound_message"), nonce.toArrayLike(Buffer, "be", 8)],
+        mailbox.programId
+      )[0];
+
+      const body = Buffer.from("delete-message-test", "utf8");
+      const recipientBz = Array.from(Uint8Array.from(Buffer.from(sha256("recipient"), "hex")));
+      const destinationCallerBz = Array.from(Uint8Array.from(Buffer.from(sha256("destinationCaller"), "hex")));
+
+      await withBlockhashRetry(() =>
+        mailbox.methods
+        .sendMessage(body, recipientBz, destinationCallerBz, new BN(0))
+        .accountsPartial({
+          feePayer: payer.publicKey,
+          senderAuthority: payer.publicKey,
+          outboundMessage: pda,
+          outboundMessagePath: outboundMessagePathPDA,
+          treasury: treasury.publicKey,
+          senderConfig: null
+        })
+        .signers([payer])
+        .rpc({ commitment: "confirmed" })
+      );
+
+      return { nonce, pda };
+    }
+
+    before("Send messages to be deleted", async () => {
+      ({ nonce: nonceToDelete, pda: outboundMessagePDAToDelete } = await sendDeletableMessage());
+      ({ nonce: nonceSurvivor, pda: outboundMessagePDASurvivor } = await sendDeletableMessage());
+      nonceForPauseDeleteTest = nonceSurvivor;
+
+      expect(await provider.connection.getAccountInfo(outboundMessagePDAToDelete)).to.be.not.null;
+      expect(await provider.connection.getAccountInfo(outboundMessagePDASurvivor)).to.be.not.null;
+    });
+
+    it("deleteMessage rejects when called by not admin", async () => {
+      await expect(
+          withBlockhashRetry(() =>
+            mailbox.methods
+          .deleteMessage(nonceToDelete)
+          .accounts({
+            payer: payer.publicKey,
+          })
+          .signers([payer])
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("An address constraint was violated");
+
+      // PDA must still exist
+      expect(await provider.connection.getAccountInfo(outboundMessagePDAToDelete)).to.be.not.null;
+    });
+
+    it("deleteMessage successful by admin", async () => {
+      const accountInfoBefore = await provider.connection.getAccountInfo(outboundMessagePDAToDelete);
+      expect(accountInfoBefore).to.be.not.null;
+      const reclaimable = accountInfoBefore!.lamports;
+      const adminBalanceBefore = await provider.connection.getBalance(admin.publicKey);
+
+      await withBlockhashRetry(() =>
+        mailbox.methods
+        .deleteMessage(nonceToDelete)
+        .accounts({
+          payer: admin.publicKey,
+          outboundMessage: outboundMessagePDAToDelete,
+        })
+        .signers([admin])
+        .rpc({ commitment: "confirmed" })
+      );
+
+      // Account must no longer exist (0 lamports, owned by System Program, 0 data)
+      expect(await provider.connection.getAccountInfo(outboundMessagePDAToDelete)).to.be.null;
+
+      // Admin must have received the reclaimed rent (minus tx fee paid by admin)
+      const adminBalanceAfter = await provider.connection.getBalance(admin.publicKey);
+      expect(adminBalanceAfter).to.be.gt(adminBalanceBefore);
+      expect(adminBalanceAfter - adminBalanceBefore).to.be.lte(reclaimable);
     });
   });
 
@@ -1615,6 +1708,24 @@ describe("Mailbox", () => {
             consortiumValidatedPayload: validatedPayloadPDA
           })
           .signers([payer])
+          .rpc({ commitment: "confirmed" })
+          )
+        ).to.be.rejectedWith("Paused");
+    });
+
+    //Delete
+    it("deleteMessage rejects when paused", async () => {
+      expect(nonceForPauseDeleteTest, "expected a surviving outbound message from Delete describe").to.be.not.undefined;
+
+      await expect(
+          withBlockhashRetry(() =>
+            mailbox.methods
+          .deleteMessage(nonceForPauseDeleteTest!)
+          .accounts({
+            payer: admin.publicKey,
+            outboundMessage: outboundMessagePDASurvivor,
+          })
+          .signers([admin])
           .rpc({ commitment: "confirmed" })
           )
         ).to.be.rejectedWith("Paused");

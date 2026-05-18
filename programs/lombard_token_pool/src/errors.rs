@@ -41,4 +41,6 @@ pub enum LombardTokenPoolError {
     InvalidPayloadLength,
     #[msg("Invalid payload")]
     InvalidPayload,
+    #[msg("ABI word value overflows the target integer type")]
+    AbiWordOverflow,
 }

@@ -16,13 +16,14 @@ staging = ["bridge/staging","mailbox/staging"]
 bft = ["bridge/bft","mailbox/bft"]
 localnet = ["bridge/localnet","mailbox/localnet"]
 devnet = ["bridge/devnet","mailbox/devnet"]
-# cpi = ["no-entrypoint"]
+cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
+abi-utils = { path = "../../crates/abi_utils" }
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
 # base-token-pool = { git = "https://github.com/smartcontractkit/chainlink-ccip", tag = "solana-v0.1.2", features = ["no-entrypoint"]}

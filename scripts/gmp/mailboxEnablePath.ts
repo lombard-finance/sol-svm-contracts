@@ -5,7 +5,7 @@ import { Mailbox } from "../../target/types/mailbox";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxEnablePath <remote chain id> <remote mailbox> <direction: inbound|outbound|both>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxEnablePath <admin> <remote chain id> <remote mailbox> <direction: inbound|outbound|both>
 
     Enables Mailbox path contract. `);
   process.exit(0);
@@ -30,14 +30,13 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[2], "hex")));
-const remoteMailbox = Array.from(Uint8Array.from(Buffer.from(process.argv[3], "hex")));
-const direction = process.argv[4];
+const admin = new PublicKey(process.argv[2]);
+const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[3], "hex")));
+const remoteMailbox = Array.from(Uint8Array.from(Buffer.from(process.argv[4], "hex")));
+const direction = process.argv[5];
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey; // Get wallet address
-
     if (direction === "inbound" || direction === "both") {
       const tx = await program.methods.enableInboundMessagePath(remoteChainId, remoteMailbox).accounts({
         admin: admin,

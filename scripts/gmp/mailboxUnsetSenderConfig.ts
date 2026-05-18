@@ -1,13 +1,14 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getBase58EncodedTxBytes } from "../utils";
-import { Bridge } from "../../target/types/bridge";
+import { Mailbox } from "../../target/types/mailbox";
+import { getMailboxSenderConfigPDA } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeSetSenderConfig <admin> <sender address> <discount> --whitelisted [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_mailboxUnsetSenderConfig <admin> <sender authority address> [--populate]
 
-    Sets sender's config on teh bridge. `);
+    Unsets sender config on the Mailbox contract. `);
   process.exit(0);
 }
 
@@ -20,7 +21,7 @@ if (!process.env.PROGRAM_ID) {
   process.exit(1);
 }
 const programId = new PublicKey(process.env.PROGRAM_ID);
-const program = new anchor.Program(require("../../target/idl/bridge.json"), provider) as anchor.Program<Bridge>;
+const program = new anchor.Program(require("../../target/idl/mailbox.json"), provider) as anchor.Program<Mailbox>;
 
 if (!program.programId.equals(programId)) {
   console.error("the program id in the idl does not match the program id passed as env variable");
@@ -29,19 +30,18 @@ if (!program.programId.equals(programId)) {
 
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
-let whitelisted = process.argv.at(-2) === "--whitelisted" || process.argv.at(-1) === "--whitelisted";
 
 const admin = new PublicKey(process.argv[2]);
-const sender = new PublicKey(process.argv[3]);
-const discount = new anchor.BN(process.argv[4]);
+const senderAuthority = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const tx = await program.methods
-			.setSenderConfig(sender, discount, whitelisted)
-			.accounts({
-        admin: admin,
-			});
+    // const admin = provider.wallet.publicKey; // Get wallet address
+    const senderConfigPDA = getMailboxSenderConfigPDA(program.programId, senderAuthority)
+
+    const tx = await program.methods.unsetSenderConfig(senderAuthority).accounts({
+      admin: admin,
+    });
 
     if (populate) {
       console.log("Transaction bytes:", await getBase58EncodedTxBytes(await tx.instruction(), provider.connection));
@@ -49,6 +49,6 @@ const discount = new anchor.BN(process.argv[4]);
       console.log("Transaction Signature:", await tx.rpc());
     }
   } catch (err) {
-    console.error("Error setting bridge sender's config:", err);
+    console.error("Error unsetting sender config:", err);
   }
 })();

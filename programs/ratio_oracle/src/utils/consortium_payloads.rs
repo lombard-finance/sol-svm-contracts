@@ -1,5 +1,6 @@
 use std::io::{prelude::*, BufReader};
 
+use abi_utils::{u128_from_abi_word, u64_from_abi_word};
 use crate::errors::RatioOracleError;
 
 pub const RATIO_UPDATE_SELECTOR: [u8; 4] = [0x6c, 0x72, 0x2c, 0x2c];
@@ -38,12 +39,12 @@ impl RatioUpdate {
         // Read ratio
         let mut ratio_bytes = [0u8; 32];
         reader.read_exact(&mut ratio_bytes)?;
-        ratio_update.ratio = u128::from_be_bytes(ratio_bytes[16..32].try_into().unwrap());
+        ratio_update.ratio = u128_from_abi_word(&ratio_bytes).ok_or(RatioOracleError::AbiWordOverflow)?;
 
         // Read timestamp
         let mut timestamp_bytes = [0u8; 32];
         reader.read_exact(&mut timestamp_bytes)?;
-        ratio_update.timestamp = u64::from_be_bytes(timestamp_bytes[24..32].try_into().unwrap());
+        ratio_update.timestamp = u64_from_abi_word(&timestamp_bytes).ok_or(RatioOracleError::AbiWordOverflow)?;
 
         Ok(ratio_update)
     }

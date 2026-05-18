@@ -74,6 +74,7 @@ pub struct SenderConfig {
     pub bump: u8,
     pub max_payload_size: u32,
     pub fee_disabled: bool,
+    pub sender: Pubkey,
 }
 
 #[derive(Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, InitSpace)]

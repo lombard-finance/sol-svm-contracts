@@ -1,5 +1,6 @@
 use std::io::{prelude::*, BufReader};
 
+use abi_utils::u64_from_abi_word;
 use crate::errors::AssetRouterError;
 
 // The type of the ABI encoded message with fields:
@@ -78,7 +79,7 @@ impl Mint {
 
         let mut amount_bytes = [0u8; 32];
         reader.read_exact(&mut amount_bytes)?;
-        mint.amount = u64::from_be_bytes(amount_bytes[24..32].try_into().unwrap());
+        mint.amount = u64_from_abi_word(&amount_bytes).ok_or(AssetRouterError::AbiWordOverflow)?;
 
         Ok(mint)
     }

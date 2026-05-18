@@ -23,10 +23,10 @@ no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
+abi-utils = { path = "../../crates/abi_utils" }
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 consortium = { path = "../consortium", features = ["cpi"] }
 solana-security-txt = "1.1.1"
-solana-address = { version = "=2.5.0", features = ["syscalls"] }
  
 [dev-dependencies]
 hex = "0.4.3"

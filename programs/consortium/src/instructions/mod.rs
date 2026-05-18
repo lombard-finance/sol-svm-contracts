@@ -6,6 +6,8 @@ pub mod close_session_for_epoch;
 pub use close_session_for_epoch::*;
 pub mod create_session;
 pub use create_session::*;
+pub mod delete_session_payload;
+pub use delete_session_payload::*;
 pub mod finalize_session;
 pub use finalize_session::*;
 pub mod initialize;

@@ -1047,7 +1047,7 @@ describe("Asset Router", () => {
               mintAuthority: tokenAuth,
               tokenProgram: spl.TOKEN_PROGRAM_ID,
               consortiumValidatedPayload: validatedPayloadPDA,
-              depositPayloadSpent: depositPayloadSpentPDA
+              depositPayloadSpent: depositPayloadSpentPDA,
             })
           )
           .signers([payer])
@@ -2323,7 +2323,7 @@ describe("Asset Router", () => {
     );
 
     before("Exempt assetRouter from mailbox fees", async () => {
-      await mailboxUtilities.setSenderConfig(messagingAuthorityPDA, 10000, true);
+      await mailboxUtilities.setSenderConfig(messagingAuthorityPDA, 10000, true, program.programId);
     });
 
     const args = [

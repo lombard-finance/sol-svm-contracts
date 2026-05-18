@@ -555,9 +555,9 @@ describe("Bridge", () => {
     it("Set sender config on mailbox", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true, bridge.programId)
           .accounts({
-            admin: admin.publicKey
+            admin: admin.publicKey,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
@@ -783,9 +783,9 @@ describe("Bridge", () => {
     before("Set bridge fee = 100% mailbox fee", async () => {
       await withBlockhashRetry(() =>
         mailbox.methods
-          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true)
+          .setSenderConfig(bridgeConfigPDA, defaultMaxPayloadSize, true, bridge.programId)
           .accounts({
-            admin: admin.publicKey
+            admin: admin.publicKey,
           })
           .signers([admin])
           .rpc({ commitment: "confirmed" })
@@ -834,7 +834,7 @@ describe("Bridge", () => {
             outboundMessage: outboundMessagePDA,
             outboundMessagePath: outboundMessagePathPDA,
             mailboxSenderConfig: bridgeSenderConfigPDA,
-            treasury: treasury.publicKey
+            treasury: treasury.publicKey,
           })
           .signers([sender])
           .rpc({ commitment: "confirmed" })

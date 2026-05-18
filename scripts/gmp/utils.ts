@@ -51,8 +51,14 @@ export function getMailboxConfigPDA(program: PublicKey) {
   return PublicKey.findProgramAddressSync([MAILBOX_CONFIG_SEED], program)[0];
 }
 
-export function getMailboxSenderConfigPDA(program: PublicKey, sender: PublicKey) {
-  return PublicKey.findProgramAddressSync([MAILBOX_SENDER_CONFIG_SEED, sender.toBytes()], program)[0];
+export function getMailboxSenderConfigPDA(program: PublicKey, sender_authority: PublicKey) {
+  return PublicKey.findProgramAddressSync(
+    [
+      MAILBOX_SENDER_CONFIG_SEED, 
+      sender_authority.toBuffer()  
+    ],
+    program
+  )[0];
 }
 
 export function getMailboxOutboundMessagePDA(program: PublicKey, nonce: anchor.BN) {

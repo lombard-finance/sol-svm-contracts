@@ -102,6 +102,10 @@ pub mod mailbox {
         instructions::deliver_message(ctx, payload_hash)
     }
 
+    pub fn delete_message(ctx: Context<DeleteMessage>, nonce: u64) -> Result<()> {
+        instructions::delete_message(ctx, nonce)
+    }
+
     pub fn handle_message<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, HandleMessage<'info>>,
         payload_hash: [u8; 32],
@@ -138,14 +142,15 @@ pub mod mailbox {
 
     pub fn set_sender_config(
         ctx: Context<SetSenderConfig>,
-        sender_program: Pubkey,
+        sender_authority: Pubkey,
         max_payload_size: u32,
         fee_disabled: bool,
+        sender: Pubkey,
     ) -> Result<()> {
-        instructions::set_sender_config(ctx, sender_program, max_payload_size, fee_disabled)
+        instructions::set_sender_config(ctx, sender_authority, max_payload_size, fee_disabled, sender)
     }
 
-    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender_program: Pubkey) -> Result<()> {
-        instructions::unset_sender_config(ctx, sender_program)
+    pub fn unset_sender_config(ctx: Context<UnsetSenderConfig>, sender_authority: Pubkey) -> Result<()> {
+        instructions::unset_sender_config(ctx, sender_authority)
     }
 }

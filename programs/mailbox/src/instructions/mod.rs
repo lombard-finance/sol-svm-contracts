@@ -2,6 +2,8 @@ pub mod accept_ownership;
 pub use accept_ownership::*;
 pub mod admin;
 pub use admin::*;
+pub mod delete_message;
+pub use delete_message::*;
 pub mod deliver_message;
 pub use deliver_message::*;
 pub mod disable_inbound_message_path;

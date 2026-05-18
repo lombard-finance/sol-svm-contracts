@@ -6,7 +6,7 @@ import { getTokenPoolChainConfig, getTokenPoolState } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolAppendRemotePool <mint address> <remote chain selector> <remote token pool address> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolAppendRemotePool <admin> <mint address> <remote chain selector> <remote token pool address> [--populate]
 
     Appends information about remote token pool the LombardTokenPool chain config. `);
   process.exit(0);
@@ -31,14 +31,13 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
-const chainSelector = new anchor.BN(process.argv[3]);
-const remoteTokenPool = Buffer.from(process.argv[4], "hex");
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const chainSelector = new anchor.BN(process.argv[4]);
+const remoteTokenPool = Buffer.from(process.argv[5], "hex");
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     // const configPDA = getConfigPDA(programId);
     const statePDA = getTokenPoolState(mint, programId);
     const chainConfigPDA = getTokenPoolChainConfig(mint, chainSelector, programId);
@@ -48,7 +47,7 @@ const remoteTokenPool = Buffer.from(process.argv[4], "hex");
       .accountsPartial({
         state: statePDA,
         chainConfig: chainConfigPDA,
-        authority: deployer,
+        authority: admin,
       });
 
     if (populate) {

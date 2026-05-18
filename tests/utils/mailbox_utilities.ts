@@ -84,16 +84,22 @@ export class MailboxUtilities {
     )[0];
   }
 
-  getSenderConfigPDA(sender: PublicKey) {
-    return PublicKey.findProgramAddressSync([Buffer.from("sender_config"), sender.toBuffer()], mailbox.programId)[0];
+  getSenderConfigPDA(sender: PublicKey): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("sender_config"), 
+        sender.toBuffer()  
+      ],
+      mailbox.programId
+    )[0];
   }
 
-  async setSenderConfig(sender: PublicKey, maxPayload: number, feeDisabled: boolean) {
+  async setSenderConfig(sender_authority: PublicKey, maxPayload: number, feeDisabled: boolean, sender: PublicKey = sender_authority) {
     const tx = await withBlockhashRetry(() =>
       mailbox.methods
-      .setSenderConfig(sender, maxPayload, feeDisabled)
+      .setSenderConfig(sender_authority, maxPayload, feeDisabled, sender)
       .accounts({
-        admin: this.admin.publicKey
+        admin: this.admin.publicKey,
       })
       .signers([this.admin])
       .rpc({ commitment: "confirmed" })

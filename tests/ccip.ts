@@ -1,7 +1,7 @@
 import "dotenv/config";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program } from "@coral-xyz/anchor";
-import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
+import { AddressLookupTableAccount, AddressLookupTableProgram, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as spl from "@solana/spl-token";
 import { Consortium } from "../target/types/consortium";
 import { Mailbox } from "../target/types/mailbox";
@@ -680,6 +680,7 @@ describe("CCIP Token Pool", () => {
 		const customMaxPayloadSize = defaultMaxPayloadSize + 100;
     	const events = [];
 		let listener: number;
+		let altAccount: AddressLookupTableAccount | null;
 
 		// enable outbound message path before the test
 		before(async () => {
@@ -694,9 +695,9 @@ describe("CCIP Token Pool", () => {
 			);
 			await withBlockhashRetry(() =>
 			  mailbox.methods
-				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true)
+				.setSenderConfig(bridgeConfigPDA, customMaxPayloadSize, true, bridge.programId)
 				.accounts({
-					admin: admin.publicKey
+					admin: admin.publicKey,
 				})
 				.signers([admin])
 				.rpc({ commitment: "confirmed" })
@@ -717,6 +718,45 @@ describe("CCIP Token Pool", () => {
 			listener = mockCcipOfframp.addEventListener("mockCcipOnrampCompleted", (event, slot, signature) => {
 				events.push(event);
 			});
+
+			// Create ALT
+			// const recentSlot = await provider.connection.getSlot("confirmed");
+			const currentSlot = await provider.connection.getSlot();
+			const startSlot = Math.max(0, currentSlot - 20);
+			// Fetch recently produced blocks to find a guaranteed valid slot
+			const validBlocks = await provider.connection.getBlocks(startSlot, undefined, 'confirmed');
+			if (validBlocks.length === 0) {
+				throw new Error("No valid blocks found for ALT creation");
+			}
+			const recentSlot = validBlocks[0]; 
+			const [lookupTableInst, lookupTableAddress] =
+				AddressLookupTableProgram.createLookupTable({
+					authority: payer.publicKey,
+					payer: payer.publicKey,
+					recentSlot: recentSlot,
+			});
+			const tx1 = new anchor.web3.Transaction().add(lookupTableInst);
+			const txSig1 = await provider.sendAndConfirm(tx1, [payer]);
+			// Add some accounts to ALT
+			const extendInstruction = AddressLookupTableProgram.extendLookupTable({
+				payer: payer.publicKey,
+				authority: payer.publicKey,
+				lookupTable: lookupTableAddress,
+				addresses: [
+					mockCcipRmn.programId,
+					rmnCursesPDA,
+					mockCcipRmnConfigPDA,
+					tokenPoolChainConfigPDA,
+					multisig,
+					tokenAuth,
+				],
+			});
+			const tx2 = new anchor.web3.Transaction().add(extendInstruction);
+			const txSig2 = await provider.sendAndConfirm(tx2, [payer]);
+			// MANDATORY: Wait for the next slot to ensure activation
+			console.log("Waiting for ALT activation...");
+			await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds is safe
+			altAccount = (await provider.connection.getAddressLookupTable(lookupTableAddress)).value;
 		});
 		
 		// disable outbound message path after the test
@@ -739,8 +779,7 @@ describe("CCIP Token Pool", () => {
 			// const balanceBefore = await provider.connection.getBalance(payerFeeExempt.publicKey);
 			const amountToSend = 1000;
 
-			await withBlockhashRetry(() =>
-			  mockCcipOfframp.methods
+			const ix = mockCcipOfframp.methods
 				.executeOnramp(recipient, foreignChainSelector, user.publicKey, new BN(amountToSend), new BN(nonceForeignChain++))
 				.accountsPartial({
 					sender: payer.publicKey,
@@ -870,9 +909,21 @@ describe("CCIP Token Pool", () => {
 						isSigner: false
 					},
 				])
-				.signers([payer])
-				.rpc({ commitment: "confirmed" })
-			);
+				.signers([payer]);
+			const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
+			const message = new anchor.web3.TransactionMessage({
+				payerKey: payer.publicKey,
+				recentBlockhash: blockhash,
+				instructions: [await ix.instruction()],
+				}).compileToV0Message([altAccount!]);
+			const transaction = new anchor.web3.VersionedTransaction(message);
+			transaction.sign([payer]); 
+			const txSig = await provider.connection.sendRawTransaction(transaction.serialize());
+			await provider.connection.confirmTransaction({
+				signature: txSig,
+				blockhash,
+				lastValidBlockHeight
+			});			
 
 			const expectedBody = new BridgePayload(foreignToken, user.publicKey.toBytes(), recipient, amountToSend);
 			const expecedGmpMessage = messageV1(

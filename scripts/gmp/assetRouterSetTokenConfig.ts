@@ -5,7 +5,7 @@ import { AssetRouter } from "../../target/types/asset_router";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetTokenConfig <mint> <redeem fee> <redeem for BTC min amount> <max mint commission> <to native commission> <ledger handler>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetTokenConfig <admin> <mint> <redeem fee> <redeem for BTC min amount> <max mint commission> <to native commission> <ledger handler>
 
     Initializes the Mailbox contract. `);
   process.exit(0);
@@ -30,16 +30,16 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
-const redeemFee = new anchor.BN(process.argv[3]);
-const redeemForBtcMinAmount = new anchor.BN(process.argv[4]);
-const maxMinCommission = new anchor.BN(process.argv[5]);
-const toNativeCommission = new anchor.BN(process.argv[6]);
-const ledgerRedeemHandler = Array.from(Uint8Array.from(Buffer.from(process.argv[7], "hex")));
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const redeemFee = new anchor.BN(process.argv[4]);
+const redeemForBtcMinAmount = new anchor.BN(process.argv[5]);
+const maxMinCommission = new anchor.BN(process.argv[6]);
+const toNativeCommission = new anchor.BN(process.argv[7]);
+const ledgerRedeemHandler = Array.from(Uint8Array.from(Buffer.from(process.argv[8], "hex")));
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey; // Get wallet address
     const config = {
       redeemFee: redeemFee,
       redeemForBtcMinAmount: redeemForBtcMinAmount,

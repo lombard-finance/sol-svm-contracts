@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{ACCOUNT_ROLES_SEED, CONFIG_SEED, MINT_PAYLOAD_SEED};
+use crate::constants::{ACCOUNT_ROLES_SEED, CHAIN_ID, CONFIG_SEED, MINT_PAYLOAD_SEED};
 use crate::errors::BasculeGmpError;
 use crate::events::MintValidated;
 use crate::state::{
@@ -38,6 +38,12 @@ pub struct ValidateMint<'info> {
 }
 
 pub fn validate_mint(ctx: Context<ValidateMint>, mint_message: MintMessage) -> Result<()> {
+
+    require!(
+        mint_message.chain_id == CHAIN_ID,
+        BasculeGmpError::InvalidChainId
+    );
+
     let mint_id = mint_message.mint_id();
     let config = &ctx.accounts.config;
     let mint_payload = &mut ctx.accounts.mint_payload;

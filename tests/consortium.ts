@@ -396,5 +396,117 @@ describe("Consortium", () => {
         expect(sessionPayloadInfo).to.be.null;
       });
     });
+
+    describe("Delete session payload", () => {
+      // Arbitrary bytes — `delete_session_payload` doesn't validate the contents,
+      // it only closes the PDA at SESSION_PAYLOAD_SEED + admin.key + payload_hash.
+      const dummyPayload = Buffer.from("dummy-payload-for-delete-test", "utf8");
+      const dummyPayload2 = Buffer.from("dummy-payload-for-delete-test2", "utf8");
+      const dummyPayloadHash = sha256(dummyPayload);
+      const dummyPayloadHash2 = sha256(dummyPayload2);
+      const dummyPayloadHashBytes = Array.from(Uint8Array.from(Buffer.from(dummyPayloadHash, "hex")));
+      const dummyPayloadHashBytes2 = Array.from(Uint8Array.from(Buffer.from(dummyPayloadHash2, "hex")));
+
+      // The delete instruction derives the PDA from the SIGNER's pubkey, and the
+      // signer must equal config.admin. So we must post the session payload from
+      // admin to make the PDAs line up.
+      const adminPostedSessionPayloadPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from("session_payload"), admin.publicKey.toBuffer(), Buffer.from(dummyPayloadHash, "hex")],
+        program.programId
+      )[0];
+      const userPostedSessionPayloadPDA = PublicKey.findProgramAddressSync(
+        [Buffer.from("session_payload"), user.publicKey.toBuffer(), Buffer.from(dummyPayloadHash2, "hex")],
+        program.programId
+      )[0];
+
+      before("Admin posts a session payload to be deleted", async () => {
+        await withBlockhashRetry(() =>
+          program.methods
+          .postSessionPayload(dummyPayloadHashBytes, dummyPayload, dummyPayload.length)
+          .accounts({
+            payer: admin.publicKey,
+            sessionPayload: adminPostedSessionPayloadPDA,
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+        );
+
+        const info = await provider.connection.getAccountInfo(adminPostedSessionPayloadPDA);
+        expect(info).to.be.not.null;
+      });
+
+      it("deleteSessionPayload rejects when called NOT by payload creator 1", async () => {
+        await expect(
+            withBlockhashRetry(() =>
+              program.methods
+            .deleteSessionPayload(dummyPayloadHashBytes)
+            .accounts({
+              payer: user.publicKey,
+              sessionPayload: adminPostedSessionPayloadPDA,
+            })
+            .signers([user])
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith("A seeds constraint was violated");
+
+        // PDA must still exist
+        expect(await provider.connection.getAccountInfo(adminPostedSessionPayloadPDA)).to.be.not.null;
+      });
+
+      it("deleteSessionPayload rejects when called NOT by payload creator 2", async () => {
+        await withBlockhashRetry(() =>
+          program.methods
+          .postSessionPayload(dummyPayloadHashBytes2, dummyPayload2, dummyPayload2.length)
+          .accounts({
+            payer: user.publicKey,
+            sessionPayload: userPostedSessionPayloadPDA,
+          })
+          .signers([user])
+          .rpc({ commitment: "confirmed" })
+        );
+
+        await expect(
+            withBlockhashRetry(() =>
+              program.methods
+            .deleteSessionPayload(dummyPayloadHashBytes2)
+            .accounts({
+              payer: admin.publicKey,
+              sessionPayload: adminPostedSessionPayloadPDA,
+            })
+            .signers([admin])
+            .rpc({ commitment: "confirmed" })
+            )
+          ).to.be.rejectedWith("A seeds constraint was violated");
+
+        // PDA must still exist
+        expect(await provider.connection.getAccountInfo(adminPostedSessionPayloadPDA)).to.be.not.null;
+      });
+
+      it("deleteSessionPayload successful by admin", async () => {
+        const accountInfoBefore = await provider.connection.getAccountInfo(adminPostedSessionPayloadPDA);
+        expect(accountInfoBefore).to.be.not.null;
+        const reclaimable = accountInfoBefore!.lamports;
+        const adminBalanceBefore = await provider.connection.getBalance(admin.publicKey);
+
+        await withBlockhashRetry(() =>
+          program.methods
+          .deleteSessionPayload(dummyPayloadHashBytes)
+          .accounts({
+            payer: admin.publicKey,
+            sessionPayload: adminPostedSessionPayloadPDA,
+          })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" })
+        );
+
+        // Account must be closed
+        expect(await provider.connection.getAccountInfo(adminPostedSessionPayloadPDA)).to.be.null;
+
+        // Rent must have been refunded to admin (minus the tx fee admin pays)
+        const adminBalanceAfter = await provider.connection.getBalance(admin.publicKey);
+        expect(adminBalanceAfter).to.be.gt(adminBalanceBefore);
+        expect(adminBalanceAfter - adminBalanceBefore).to.be.lte(reclaimable);
+      });
+    });
   });
 });

@@ -6,7 +6,7 @@ import { BASCULE_GMP_CONFIG_SEED } from "./constants";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_basculeGmpGrantRole <account> <role>  [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_basculeGmpGrantRole <admin> <account> <role>  [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -32,9 +32,10 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const acc = new PublicKey(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+const acc = new PublicKey(process.argv[3]);
 let role = {}
-switch (process.argv[3]) {
+switch (process.argv[4]) {
   case "mintReporter":
     role = { mintReporter: {} };
     break;
@@ -53,7 +54,6 @@ switch (process.argv[3]) {
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey;
     const configPDA = PublicKey.findProgramAddressSync([BASCULE_GMP_CONFIG_SEED], programId)[0];
 
     console.log("Using config PDA:", configPDA.toBase58());
