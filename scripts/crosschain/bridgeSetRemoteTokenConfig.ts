@@ -5,7 +5,7 @@ import { Bridge } from "../../target/types/bridge";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeSetRemoteTokenConfig <mint address> <remote chain id> <remote token address> <direction bitmask: 1|2|3> [--populate]
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_bridgeSetRemoteTokenConfig <admin> <mint address> <remote chain id> <remote token address> <direction bitmask: 1|2|3> [--populate]
 
     Sets remote token config on the bridge. `);
   process.exit(0);
@@ -30,19 +30,18 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
-const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[3], "hex")));
-const remoteBridge = Array.from(Uint8Array.from(Buffer.from(process.argv[4], "hex")));
-const direction = Number(process.argv[5]);
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
+const remoteChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[4], "hex")));
+const remoteBridge = Array.from(Uint8Array.from(Buffer.from(process.argv[5], "hex")));
+const direction = Number(process.argv[6]);
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     const tx = await program.methods
 			.setRemoteTokenConfig(mint, remoteChainId, remoteBridge, direction)
 			.accounts({
-        admin: deployer,
+        admin: admin,
 			});
 
     if (populate) {

@@ -1,4 +1,5 @@
 use std::io::{BufReader, Cursor, Read};
+use abi_utils::u64_from_abi_word;
 use anchor_lang::prelude::*;
 
 use anchor_lang::solana_program::hash::hash  as sha256;
@@ -152,13 +153,13 @@ pub mod release_or_mint {
         // check selector
         let mut offset_bytes = [0u8; 32];
         reader.read_exact(&mut offset_bytes)?;
-        let offset = u64::from_be_bytes(offset_bytes[24..32].try_into().unwrap());
+        let offset = u64_from_abi_word(&offset_bytes).ok_or_else(|| error!(LombardTokenPoolError::AbiWordOverflow))?;
         require!(offset >= 32, LombardTokenPoolError::InvalidPayload);
         reader.seek_relative(offset as i64 - 32)?;
 
         let mut length_bytes = [0u8; 32];
         reader.read_exact(&mut length_bytes)?;
-        let length = u64::from_be_bytes(length_bytes[24..32].try_into().unwrap());
+        let length = u64_from_abi_word(&length_bytes).ok_or_else(|| error!(LombardTokenPoolError::AbiWordOverflow))?;
 
         let mut payload = vec![0u8; length as usize];
         reader.read_exact(&mut payload)?;

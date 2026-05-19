@@ -1,5 +1,6 @@
 use std::io::{prelude::*, BufReader};
 
+use abi_utils::{u32_from_abi_word, u64_from_abi_word};
 use crate::errors::AssetRouterError;
 
 pub const DEPOSIT_V1_SELECTOR: [u8; 4] = [0xce, 0x25, 0xe7, 0xc2];
@@ -47,7 +48,7 @@ impl DepositV1 {
         // Read amount
         let mut amount_bytes = [0u8; 32];
         reader.read_exact(&mut amount_bytes)?;
-        deposit_v1.amount = u64::from_be_bytes(amount_bytes[24..32].try_into().unwrap());
+        deposit_v1.amount = u64_from_abi_word(&amount_bytes).ok_or(AssetRouterError::AbiWordOverflow)?;
 
         // Read txid
         reader.read_exact(&mut deposit_v1.txid)?;
@@ -63,7 +64,7 @@ impl DepositV1 {
         // Read vout
         let mut vout_bytes = [0u8; 32];
         reader.read_exact(&mut vout_bytes)?;
-        deposit_v1.vout = u32::from_be_bytes(vout_bytes[28..32].try_into().unwrap());
+        deposit_v1.vout = u32_from_abi_word(&vout_bytes).ok_or(AssetRouterError::AbiWordOverflow)?;
 
         // Read token address
         reader.read_exact(&mut deposit_v1.token_address)?;

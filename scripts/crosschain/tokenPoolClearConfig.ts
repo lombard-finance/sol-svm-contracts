@@ -5,7 +5,7 @@ import { LombardTokenPool } from "../../target/types/lombard_token_pool";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<token_pool_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolClearConfig <mint address>
+  console.log(`Usage: PROGRAM_ID=<token_pool_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn crosschain_tokenPoolClearConfig <admin> <mint address>
     Clears AssetRouter's config.
     WARNING: This clears LombardTokenPool's config so it becomes possible to reinitialize it.`);
   process.exit(0);
@@ -30,12 +30,11 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const mint = new PublicKey(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+const mint = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const admin = provider.wallet.publicKey;
-
     const tx = await program.methods.clearConfig(mint).accounts({
       admin: admin,
     });

@@ -25,6 +25,8 @@ pub enum RatioOracleError {
     ZeroRatioThreshold,
     #[msg("Exceeded max ratio threshold")]
     ExceededMaxRatioThreshold,
+    #[msg("ABI word value overflows the target integer type")]
+    AbiWordOverflow,
 }
 
 impl From<std::io::Error> for RatioOracleError {

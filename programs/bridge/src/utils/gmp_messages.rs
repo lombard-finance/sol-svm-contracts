@@ -1,4 +1,5 @@
 use std::{cmp, io::{BufReader, prelude::*}};
+use abi_utils::u64_from_abi_word;
 use anchor_lang::prelude::{borsh, AnchorSerialize, AnchorDeserialize};
 
 use crate::{constants::OPTIONAL_MESSAGE_SIZE, errors::BridgeError};
@@ -85,7 +86,7 @@ impl Mint {
 
         let mut amount_bytes = [0u8; 32];
         reader.read_exact(&mut amount_bytes)?;
-        mint.amount = u64::from_be_bytes(amount_bytes[24..32].try_into().unwrap());
+        mint.amount = u64_from_abi_word(&amount_bytes).ok_or(BridgeError::AbiWordOverflow)?;
         if message.len() > MINT_MESSAGE_MIN_LENGTH {
             let mut msg_bytes = [0u8; OPTIONAL_MESSAGE_SIZE];
             let remaining = cmp::min(message.len() - MINT_MESSAGE_MIN_LENGTH, OPTIONAL_MESSAGE_SIZE);

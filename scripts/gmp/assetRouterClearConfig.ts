@@ -6,7 +6,7 @@ import { AssetRouter } from "../../target/types/asset_router";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterClearConfig
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterClearConfig <admin>
     Clears AssetRouter's config.
     WARNING: This makes AssetRouter useless until it gets reinitialized.`);
   process.exit(0);
@@ -31,10 +31,10 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
+const admin = new PublicKey(process.argv[2]);
+
 (async () => {
   try {
-    const admin = provider.wallet.publicKey;
-
     const tx = await program.methods.clearConfig().accounts({
       admin: admin,
     });

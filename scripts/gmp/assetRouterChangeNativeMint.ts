@@ -9,7 +9,7 @@ const TOKEN_AUTHORITY_SEED = Buffer.from("token_authority");
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeNativeMint <new_mint>
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeNativeMint <admin> <new_mint>
 
     Updates the native mint address. `);
   process.exit(0);
@@ -34,11 +34,11 @@ if (!program.programId.equals(programId)) {
 // If we have a populate flag at the end of the call, we return the bytes.
 let populate = process.argv.at(-1) === "--populate";
 
-const newNativeMint = new PublicKey(process.argv[2]);
+const admin = new PublicKey(process.argv[2]);
+const newNativeMint = new PublicKey(process.argv[3]);
 
 (async () => {
   try {
-    const payer = provider.wallet.publicKey;
     const configPDA = PublicKey.findProgramAddressSync([ASSET_ROUTER_CONFIG_SEED], programId)[0];
     const tokenAuthority = PublicKey.findProgramAddressSync([TOKEN_AUTHORITY_SEED], programId)[0];
 
@@ -51,7 +51,7 @@ const newNativeMint = new PublicKey(process.argv[2]);
     console.log("New Native Mint:", newNativeMint.toBase58());
 
     const tx = await program.methods.changeNativeMint(newNativeMint).accounts({
-      payer,
+      payer: admin,
     });
 
     if (populate) {
