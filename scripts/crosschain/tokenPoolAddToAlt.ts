@@ -23,11 +23,9 @@ process.argv[4].split(",").forEach(addr => addrs.push(new PublicKey(addr)));
 
 (async () => {
   try {
-    const deployer = provider.wallet.publicKey; // Get wallet address
-
     const ix =
     AddressLookupTableProgram.extendLookupTable({
-      payer: deployer,
+      payer: admin,
       authority: admin,
       lookupTable: alt,
       addresses: addrs
