@@ -12,14 +12,18 @@ export function loadWalletKeypair(): Keypair {
   return Keypair.fromSecretKey(new Uint8Array(secret));
 }
 
-export async function getBase58EncodedTxBytes(instruction: TransactionInstruction, connection: Connection) {
+export async function getBase58EncodedTxBytes(instruction: TransactionInstruction, connection: Connection, feePayer?: PublicKey) {
   const transaction = new Transaction().add(instruction);
 
   const { blockhash } = await connection.getLatestBlockhash();
   transaction.recentBlockhash = blockhash;
 
-  const provider = AnchorProvider.env();
-  transaction.feePayer = provider.wallet.publicKey;
+  if (feePayer) {
+    transaction.feePayer = feePayer;
+  } else {
+    const provider = AnchorProvider.env();
+    transaction.feePayer = provider.wallet.publicKey;
+  }
 
   const serializedTransaction = transaction.serializeMessage();
   const base58EncodedTx = bs58.encode(serializedTransaction);
