@@ -9,7 +9,7 @@ import { getBase58EncodedTxBytes } from "./utils";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn buildExtendProgram <programId> <upgrade authority> <payer> <additional bytes> [--populate]
+  console.log(`Usage: ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn buildExtendProgram <programId> <payer> <additional bytes> [--populate]
 
     Build extend program size transaction.`);
   process.exit(0);
@@ -28,9 +28,8 @@ anchor.setProvider(provider);
 let populate = process.argv.at(-1) === "--populate";
 
 const programId = new PublicKey(process.argv[2]);
-const upgradeAuthority = new PublicKey(process.argv[3]);
-const additionalBytes = Number(process.argv[5]);
-const payer = new PublicKey(process.argv[4]);
+const payer = new PublicKey(process.argv[3]);
+const additionalBytes = Number(process.argv[4]);
 
 const additionalBytesBuffer = Buffer.alloc(4);
 additionalBytesBuffer.writeUInt32LE(additionalBytes, 0);
@@ -45,10 +44,9 @@ const programData = PublicKey.findProgramAddressSync(
 const extendProgramIx = new TransactionInstruction({
   programId: BPF_LOADER_UPGRADEABLE,
   keys: [
-    { pubkey: programData, isSigner: false, isWritable: true },  // program data account
-    { pubkey: programId,          isSigner: false, isWritable: true },  // program account
+    { pubkey: programData, isSigner: false, isWritable: true },
+    { pubkey: programId, isSigner: false, isWritable: true },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    { pubkey: upgradeAuthority,           isSigner: false, isWritable: true }, // upgrade authority (Squads vault)
     { pubkey: payer, isSigner: true, isWritable: true },
   ],
   data,
@@ -59,7 +57,7 @@ const extendProgramIx = new TransactionInstruction({
   try {
 
     if (populate) {
-      console.log(`Transaction bytes: ${await getBase58EncodedTxBytes(extendProgramIx, provider.connection)}`);
+      console.log(`Transaction bytes: ${await getBase58EncodedTxBytes(extendProgramIx, provider.connection, payer)}`);
     } else {
       const tx = new anchor.web3.Transaction().add(extendProgramIx);
       const txSig = await provider.sendAndConfirm(tx);
