@@ -88,6 +88,8 @@
     "crosschain_bridgeGetSenderConfig": "ts-node -T scripts/crosschain/bridgeGetSenderConfig.ts",
     "crosschain_bridgeTransferOwnership": "ts-node -T scripts/crosschain/bridgeOwnershipTransfer.ts",
     "crosschain_bridgeAcceptOwnership": "ts-node -T scripts/crosschain/bridgeOwnershipAccept.ts",
+    "crosschain_bridgeGetRemoteTokenConfig": "ts-node -T scripts/crosschain/bridgeGetRemoteTokenConfig.ts",
+    "crosschain_bridgeSetRateLimit": "ts-node -T scripts/crosschain/bridgeSetRateLimit.ts",
     "crosschain_tokenPoolGetSigner": "ts-node -T scripts/crosschain/tokenPoolGetSigner.ts",
     "crosschain_tokenPoolGlobalInitialize": "ts-node -T scripts/crosschain/tokenPoolGlobalInitialize.ts",
     "crosschain_tokenPoolInitialize": "ts-node -T scripts/crosschain/tokenPoolInitialize.ts",
@@ -103,6 +105,7 @@
     "crosschain_tokenPoolTransferOwnership": "ts-node -T scripts/crosschain/tokenPoolOwnershipTransfer.ts",
     "crosschain_tokenPoolAcceptOwnership": "ts-node -T scripts/crosschain/tokenPoolOwnershipAccept.ts",
     "crosschain_tokenPoolSetRateLimitAdmin": "ts-node -T scripts/crosschain/tokenPoolSetRateLimitAdmin.ts",
+    "crosschain_tokenPoolSetRateLimits": "ts-node -T scripts/crosschain/tokenPoolSetRateLimits.ts",
     "test:anchor-each": "bash scripts/anchor-test-each.sh"
   },
   "dependencies": {
