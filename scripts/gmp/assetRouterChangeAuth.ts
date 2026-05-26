@@ -9,7 +9,7 @@ const TOKEN_AUTHORITY_SEED = Buffer.from("token_authority");
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeAuth <admin> <new_authority> [--populate]
+  console.log(`Usage: PROGRAM_ID=<asset_router_program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterChangeAuth <admin> <mint> <new_authority> [--populate]
 
     Updates the native mint authority through asset_router::change_mint_auth.
     WARNING: This can break minting functionality if misconfigured.`);
@@ -36,7 +36,8 @@ if (!program.programId.equals(programId)) {
 let populate = process.argv.at(-1) === "--populate";
 
 const admin = new PublicKey(process.argv[2]);
-const newAuthority = new PublicKey(process.argv[3]);
+const mint = new PublicKey(process.argv[3]);
+const newAuthority = new PublicKey(process.argv[4]);
 
 (async () => {
   try {
@@ -45,9 +46,6 @@ const newAuthority = new PublicKey(process.argv[3]);
 
     console.log("Using config PDA:", configPDA.toBase58());
     console.log("Using token authority PDA:", tokenAuthority.toBase58());
-
-    const cfg = await program.account.config.fetch(configPDA);
-    const mint = cfg.nativeMint as PublicKey;
 
     const mintAccountInfo = await provider.connection.getAccountInfo(mint);
     if (!mintAccountInfo) {
