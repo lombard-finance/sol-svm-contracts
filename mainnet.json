@@ -1,15 +1,7 @@
 {
     "admin": "HzCyQqcAoxAHeqHAWH1RQbfw7GNUzinqSWideGj7ZtEE",
-    "treasury": "4qKkExZ4T5yyVumc4qoTzoa8fwmhpDy2Zg9ZUoNwzSP9",
-    "LBTC_program": "LomP48F7bLbKyMRHHsDVt7wuHaUQvQnVVspjcbfuAek",
-    "LBTC_config": "5Ls2ezQpvUmthZqqtUftTbfehWaDM7EDqrcTq9esiMr1",
+    "LBTC_treasury": "4qKkExZ4T5yyVumc4qoTzoa8fwmhpDy2Zg9ZUoNwzSP9",
     "LBTC_token": "LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY",
-    "LBTC_token_auth": "EGhKeCZ1xgaxmkigfeZLRPCARaFsJzBeVWcSKGvQJcXq",
-    "bascule": "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn",
-    "LZ_oft_adapter": "7QkBVz37mjevzKYJDcVy6xKDG1hUewWgj51Dehgcu5sM",
-    "LZ_oft_store": "CQeKmXxoGog57U5jPyYz7YAo8AuLUdoDqxGTXtMPkMuc",
-    "LZ_escrow": "6nc7pBpN82EeKFbcqRt7xVV2h8FNQGdiVnTb2TQvyv99",
-    "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK",
 
     "registry": "LomApQenrjmo7phzAYM7SanrNt4oDabpsR3J99jCGCK",
     
@@ -20,5 +12,16 @@
     "Bridge": "Lomva5kTftuXE8992qRufkaeq3XrXV47qv3C1W9xW6Z",
     "Lombard Token Pool": "Lomb8TTCwJKEhZrJ1J8UbsCRjNSf7NNQUEr4qo3dkSk",
     "Bascule GMP": "LomeavGUocL4Rn5TboDYFQEwUp3wBKodUTRKE8KqbE6",
-    "BTC.b": "BTCbKVgfW4xMqTWEmxVwc6pzg2c5YtQWxSpBuQDhUrpu"
+    "BTC.b": "BTCbKVgfW4xMqTWEmxVwc6pzg2c5YtQWxSpBuQDhUrpu",
+    "LBTC_token_auth": "2SrdQEtsVEWa3tofTWnUUVKnrqgCX4jXjHxBMrMsw2ma",
+    "deprecated": {
+        "LBTC_program": "LomP48F7bLbKyMRHHsDVt7wuHaUQvQnVVspjcbfuAek",
+        "LBTC_config": "5Ls2ezQpvUmthZqqtUftTbfehWaDM7EDqrcTq9esiMr1",
+        "LBTC_token_auth": "EGhKeCZ1xgaxmkigfeZLRPCARaFsJzBeVWcSKGvQJcXq",
+        "bascule": "E1p8P6TTe8QvKmSK7QZ3n7HtQY9hE1p9JrCwLrXnPUfn",
+        "LZ_oft_adapter": "7QkBVz37mjevzKYJDcVy6xKDG1hUewWgj51Dehgcu5sM",
+        "LZ_oft_store": "CQeKmXxoGog57U5jPyYz7YAo8AuLUdoDqxGTXtMPkMuc",
+        "LZ_escrow": "6nc7pBpN82EeKFbcqRt7xVV2h8FNQGdiVnTb2TQvyv99",
+        "LZ_multisig": "2YB3LPB4Tdb1ccmEFqhK3ZEKLFzCPayUwzEU5J1DXSzK",
+    }
 }
