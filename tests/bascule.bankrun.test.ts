@@ -1,3 +1,4 @@
+import "./setup";
 import * as anchor from "@coral-xyz/anchor";
 
 import { Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
