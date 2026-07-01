@@ -118,6 +118,10 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
     require!(
         mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
             || (ctx.accounts.recipient.key() == recipient_derived_token_account
+                // Let's make sure that mint_message.recipient is NOT ATA
+                // in case mint_message.recipient != ctx.accounts.recipient
+                // it is still possible that it is just a TA, but better than nothing
+                && mint_message.recipient != recipient_derived_token_account.to_bytes()
                 && ctx.accounts.recipient.owner.key().to_bytes() == mint_message.recipient),
         AssetRouterError::RecipientMismatch
     );

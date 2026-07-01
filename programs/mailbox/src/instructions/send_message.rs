@@ -86,6 +86,10 @@ pub fn send_message(
         message_body.len() <= max_payload_size as usize,
         MailboxError::PayloadTooLarge
     );
+    require!(
+        (message_body.len() > 0 || ctx.accounts.sender_config.is_some()),
+        MailboxError::InvalidPayloadState
+    );
 
     let message = MessageV1 {
         nonce: config.global_nonce,
