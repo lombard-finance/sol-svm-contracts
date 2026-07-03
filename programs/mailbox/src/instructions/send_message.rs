@@ -53,6 +53,11 @@ pub struct SendMessage<'info> {
     pub sender_config: Option<Account<'info, SenderConfig>>,
 }
 
+// Current design presumes that message sender has to set message nonce (`global_nonce`)
+// when attempting to send transaction. This means there can be a race when several senders are trying
+// to send messages with the same nonce. Only the first of them will succeed, the others will
+// have to repeat an attempt to send message with different nonce.
+// This is considered to be acceptable for now, we will redesign this part if we see it causes problems.
 pub fn send_message(
     ctx: Context<SendMessage>,
     message_body: Vec<u8>,

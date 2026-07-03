@@ -110,19 +110,8 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<(
         mint_message.token_address == ctx.accounts.mint.key().to_bytes(),
         AssetRouterError::InvalidTokenAddress
     );
-    let recipient_derived_token_account = associated_token::get_associated_token_address_with_program_id(
-        &Pubkey::new_from_array(mint_message.recipient),
-        &ctx.accounts.mint.key(),
-        &ctx.accounts.token_program.key(),
-     );
     require!(
-        mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
-            || (ctx.accounts.recipient.key() == recipient_derived_token_account
-                // Let's make sure that mint_message.recipient is NOT ATA
-                // in case mint_message.recipient != ctx.accounts.recipient
-                // it is still possible that it is just a TA, but better than nothing
-                && mint_message.recipient != recipient_derived_token_account.to_bytes()
-                && ctx.accounts.recipient.owner.key().to_bytes() == mint_message.recipient),
+        mint_message.recipient == ctx.accounts.recipient.key().to_bytes(),
         AssetRouterError::RecipientMismatch
     );
     require!(mint_message.amount > 0, AssetRouterError::ZeroAmount);
