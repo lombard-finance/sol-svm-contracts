@@ -86,6 +86,7 @@ pub fn redeem(
     ctx: Context<Redeem>,
     to_lchain_id: [u8; 32],
     _to_token_address: [u8; 32],
+    // MUST be TA
     recipient: [u8; 32],
     amount: u64,
 ) -> Result<()> {

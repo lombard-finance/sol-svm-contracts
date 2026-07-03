@@ -77,6 +77,7 @@ pub fn deposit(
     ctx: Context<Deposit>,
     to_lchain_id: [u8; 32],
     to_token_address: [u8; 32],
+    // MUST be TA
     recipient: [u8; 32],
     amount: u64,
 ) -> Result<()> {
