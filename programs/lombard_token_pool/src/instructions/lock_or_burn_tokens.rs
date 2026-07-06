@@ -188,6 +188,10 @@ fn bridge_deposit_for_burn_with_caller(
 ) -> Result<[u8; 32]> {
     // Token transfer to the token pool is supposed to be done by `ccip_send` 
 
+    require!(
+        lock_or_burn.receiver.len() == 32,
+        LombardTokenPoolError::MalformedReceiver
+    );
     let pool_signer_seeds: &[&[&[u8]]] = &[&[
         POOL_SIGNER_SEED,
         &ctx.accounts.mint.key().to_bytes(),
