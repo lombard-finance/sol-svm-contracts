@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token, token_interface::{Mint as TokenMint, TokenAccount, TokenInterface}};
+use anchor_spl::token_interface::{Mint as TokenMint, TokenAccount, TokenInterface};
 use anchor_lang::solana_program::hash::hash as sha256;
 
 use bascule_gmp::{
