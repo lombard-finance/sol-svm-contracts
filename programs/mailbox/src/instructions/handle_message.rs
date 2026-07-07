@@ -64,6 +64,7 @@ pub fn handle_message<'a, 'b, 'c, 'info>(
         });
         account_infos.push(a.to_account_info());
     });
+    account_infos.push(ctx.accounts.recipient_program.to_account_info());
 
     let instruction = Instruction {
         program_id: ctx.accounts.recipient_program.key(),

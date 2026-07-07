@@ -25,6 +25,7 @@ pub struct GMPReceive<'info> {
         owner = config.mailbox,
         seeds = [MESSAGE_SEED, &payload_hash],
         seeds::program = config.mailbox,
+        constraint = message_info.message.recipient == crate::ID.to_bytes() @ AssetRouterError::WrongRecipient,
         bump,
     )]
     pub message_info: Account<'info, MessageV1Info>,
