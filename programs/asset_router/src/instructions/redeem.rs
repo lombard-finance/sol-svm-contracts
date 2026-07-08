@@ -95,6 +95,7 @@ pub fn redeem(
 
     let fee = ctx.accounts.token_config.redeem_fee;
     require!(amount > fee, AssetRouterError::FeeGTEAmount);
+    require!(amount - fee > ctx.accounts.token_route.min_amount, AssetRouterError::InsufficientAmount);
 
     anchor_spl::token_interface::transfer_checked(
         CpiContext::new(

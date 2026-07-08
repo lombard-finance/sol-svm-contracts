@@ -133,6 +133,7 @@ pub mod asset_router {
         to_chain_id: [u8; 32],
         to_token_address: [u8; 32],
         token_route_type: TokenRouteType,
+        min_amount: u64,
     ) -> Result<()> {
         instructions::set_token_route(
             ctx,
@@ -141,6 +142,7 @@ pub mod asset_router {
             to_chain_id,
             to_token_address,
             token_route_type,
+            min_amount,
         )
     }
 
