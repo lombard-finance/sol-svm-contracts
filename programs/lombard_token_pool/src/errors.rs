@@ -43,4 +43,6 @@ pub enum LombardTokenPoolError {
     InvalidPayload,
     #[msg("ABI word value overflows the target integer type")]
     AbiWordOverflow,
+    #[msg("Unexpected size of receiver byte vector")]
+    MalformedReceiver,
 }

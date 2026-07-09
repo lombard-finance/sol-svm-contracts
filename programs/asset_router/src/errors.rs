@@ -87,6 +87,8 @@ pub enum AssetRouterError {
     InvalidMessagePath,
     #[msg("ABI word value overflows the target integer type")]
     AbiWordOverflow,
+    #[msg("Wrong recipient")]
+    WrongRecipient,
 }
 
 impl From<std::io::Error> for AssetRouterError {

@@ -123,6 +123,7 @@ pub fn send_message(
             let account_infos = vec![
                 ctx.accounts.fee_payer.to_account_info(),
                 treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(), // This one is not really necessary, can be collected from the parent context, but better to add for clarity
             ];
             invoke(
                 &transfer(ctx.accounts.fee_payer.key, &treasury.key(), fee),

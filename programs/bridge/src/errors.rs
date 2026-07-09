@@ -49,6 +49,8 @@ pub enum BridgeError {
     InvalidPayloadHash,
     #[msg("ABI word value overflows the target integer type")]
     AbiWordOverflow,
+    #[msg("Wrong recipient")]
+    WrongRecipient,
 }
 
 impl From<std::io::Error> for BridgeError {

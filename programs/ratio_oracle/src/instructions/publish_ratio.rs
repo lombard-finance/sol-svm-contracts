@@ -44,6 +44,11 @@ pub fn publish_ratio(
         RatioOracleError::WrongDenom
     );
 
+    require!(
+        ratio_update.ratio > 0,
+        RatioOracleError::ZeroRatio
+    );
+
     let oracle = &mut ctx.accounts.oracle;
 
     // check switch time is not in the past or too far in the future
