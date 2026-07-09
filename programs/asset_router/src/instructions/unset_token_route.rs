@@ -36,7 +36,8 @@ pub fn unset_token_route(
         from_token_address,
         to_chain_id,
         to_token_address,
-        token_route_type: ctx.accounts.token_route.route_type
+        token_route_type: ctx.accounts.token_route.route_type,
+        min_amount: ctx.accounts.token_route.min_amount,
     });
     Ok(())
 }

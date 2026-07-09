@@ -5,7 +5,7 @@ import { AssetRouter } from "../../target/types/asset_router";
 
 // Provide instructions.
 if (process.argv.indexOf("--help") > -1) {
-  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetTokenRoute <admin> <from chain> <from token> <to chain> <to token> <route type>
+  console.log(`Usage: PROGRAM_ID=<program_id> ANCHOR_PROVIDER_URL=<rpc_url> ANCHOR_WALLET=<wallet_path> yarn gmp_assetRouterSetTokenRoute <admin> <from chain> <from token> <to chain> <to token> <route type> <min amount>
 
     Initializes the Mailbox contract. `);
   process.exit(0);
@@ -33,6 +33,7 @@ let populate = process.argv.at(-1) === "--populate";
 const admin = new PublicKey(process.argv[2]);
 const fromChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[3], "hex")));
 const toChainId = Array.from(Uint8Array.from(Buffer.from(process.argv[5], "hex")));
+const minAmount = new anchor.BN(process.argv[8]);
 const depositPathType = { deposit: {} };
 const redeemPathType = { redeem: {} };
 if (process.argv[7] != "deposit" && process.argv[7] != "deposit-local" && process.argv[7] != "redeem" && process.argv[7] != "redeem-local") {
@@ -57,11 +58,13 @@ if (process.argv[7] == "deposit") {
   pathType = redeemPathType;
   fromToken = (new PublicKey(process.argv[4])).toBytes();
   toToken = (new PublicKey(process.argv[6])).toBytes();
+} else {
+  throw Error("unkown route type")
 }
 
 (async () => {
   try {
-    const tx = await program.methods.setTokenRoute(fromChainId, fromToken, toChainId, toToken, pathType).accounts({
+    const tx = await program.methods.setTokenRoute(fromChainId, Array.from(fromToken), toChainId, Array.from(toToken), pathType, minAmount).accounts({
       payer: admin,
     });
 
