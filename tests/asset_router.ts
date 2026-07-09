@@ -119,6 +119,8 @@ describe("Asset Router", () => {
   const stakedToNativeCommission = new BN(100);
   const nativeToNativeCommission = new BN(100);
   const redeemForBtcMinAmount = new BN(1000);
+  const minDepositAmount = new BN(250);
+  const defaultMinAmount = new BN(0);
   const bascule: PublicKey | null = null;
   const basculeGmp: PublicKey | null = null;
   const redeemTokenRoutePDA = PublicKey.findProgramAddressSync(
@@ -547,7 +549,7 @@ describe("Asset Router", () => {
     it("setTokenRoute: successful by admin to redeem staked to self chain", async () => {
       await withBlockhashRetry(async () =>
         program.methods
-        .setTokenRoute(LCHAIN_ID_BZ, mintStakedAsBytes, LCHAIN_ID_BZ, mintNativeAsBytes, { redeem: {} })
+        .setTokenRoute(LCHAIN_ID_BZ, mintStakedAsBytes, LCHAIN_ID_BZ, mintNativeAsBytes, { redeem: {} }, defaultMinAmount)
         .accounts({
           payer: admin.publicKey
         })
@@ -569,7 +571,7 @@ describe("Asset Router", () => {
     it("setTokenRoute: successful by admin to deposit to self chain", async () => {
       await withBlockhashRetry(async () =>
         program.methods
-        .setTokenRoute(LCHAIN_ID_BZ, mintNativeAsBytes, LCHAIN_ID_BZ, mintStakedAsBytes, { deposit: {} })
+        .setTokenRoute(LCHAIN_ID_BZ, mintNativeAsBytes, LCHAIN_ID_BZ, mintStakedAsBytes, { deposit: {} }, minDepositAmount)
         .accounts({
           payer: admin.publicKey
         })
@@ -596,7 +598,8 @@ describe("Asset Router", () => {
           mintStakedAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
           Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
-          { redeem: {} }
+          { redeem: {} },
+          redeemForBtcMinAmount,
         )
         .accounts({
           payer: admin.publicKey
@@ -626,7 +629,8 @@ describe("Asset Router", () => {
           mintNativeAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
           Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
-          { redeem: {} }
+          { redeem: {} },
+          redeemForBtcMinAmount,
         )
         .accounts({
           payer: admin.publicKey
@@ -704,7 +708,8 @@ describe("Asset Router", () => {
             mintNativeAsBytes,
             BITCOIN_LCHAIN_ID_BZ,
             Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
-            { redeem: {} }
+            { redeem: {} },
+            redeemForBtcMinAmount,
           )
           .accounts({
             payer: payer.publicKey
@@ -724,7 +729,8 @@ describe("Asset Router", () => {
             mintNativeAsBytes,
             BITCOIN_LCHAIN_ID_BZ,
             Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
-            { redeem: {} }
+            { redeem: {} },
+            defaultMinAmount,
           )
           .accounts({
             payer: admin.publicKey
@@ -743,7 +749,8 @@ describe("Asset Router", () => {
           mintNativeAsBytes,
           BITCOIN_LCHAIN_ID_BZ,
           Array.from(Uint8Array.from(BITCOIN_TOKEN_ADDRESS)),
-          { redeem: {} }
+          { redeem: {} },
+          redeemForBtcMinAmount,
         )
         .accounts({
           payer: admin.publicKey
@@ -2886,7 +2893,15 @@ describe("Asset Router", () => {
         dToken: () => mintStakedAsBytes,
         recipient: () => Array.from(payer.publicKey.toBuffer()),
         amount: async () => new BN(0),
-        error: "ZeroAmount"
+        error: "Insufficient amount"
+      },
+      {
+        name: "amount < minimal amount",
+        dChain: () => LCHAIN_ID_BZ,
+        dToken: () => mintStakedAsBytes,
+        recipient: () => Array.from(payer.publicKey.toBuffer()),
+        amount: async () => minDepositAmount,
+        error: "Insufficient amount"
       },
       {
         name: "amount > balance",

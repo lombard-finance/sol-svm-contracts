@@ -59,6 +59,8 @@ pub enum AssetRouterError {
     InvalidMessageSender,
     #[msg("Zero amount")]
     ZeroAmount,
+    #[msg("Insufficient amount")]
+    InsufficientAmount,
     #[msg("Invalid token route type")]
     InvalidTokenRouteType,
     #[msg("Program error")]

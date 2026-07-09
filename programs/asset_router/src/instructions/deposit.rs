@@ -82,7 +82,7 @@ pub fn deposit(
     amount: u64,
 ) -> Result<()> {
 
-    require!(amount > 0, AssetRouterError::ZeroAmount);
+    require!(amount > ctx.accounts.token_route.min_amount, AssetRouterError::InsufficientAmount);
 
     utils::execute_burn(
         ctx.accounts.token_program.to_account_info(),

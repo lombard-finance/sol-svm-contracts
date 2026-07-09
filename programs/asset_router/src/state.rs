@@ -35,7 +35,7 @@ pub struct Config {
 #[derive(InitSpace)]
 pub struct TokenConfig {
     pub redeem_fee: u64,
-    pub redeem_for_btc_min_amount: u64,
+    pub redeem_for_btc_min_amount: u64, // This one becomes obsolete after TokenRoute's min_amount is available
     pub max_mint_commission: u64,
     pub to_native_commission: u64,
     pub ledger_redeem_handler: [u8; 32],
@@ -51,6 +51,7 @@ pub enum TokenRouteType {
 #[derive(InitSpace)]
 pub struct TokenRoute {
     pub route_type: TokenRouteType,
+    pub min_amount: u64,
 }
 
 #[account]
