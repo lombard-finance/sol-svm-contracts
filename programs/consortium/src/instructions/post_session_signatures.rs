@@ -39,6 +39,23 @@ pub fn post_session_signatures(
         ConsortiumError::SignaturesIndicesMismatch
     );
 
+    // Defence-in-depth: `session.signed`, `current_validators` and `current_weights`
+    // are parallel arrays sized to the validator set when the session is created
+    // (see `create_session`). The loop below indexes all three with a caller-supplied
+    // `index`, so assert that invariant explicitly and reject any out-of-bounds index
+    // here. Without these guards a malformed index (or one that is stale after a valset
+    // rotation) triggers an unchecked slice panic instead of a clean, typed error.
+    let validators_len = ctx.accounts.config.current_validators.len();
+    require!(
+        ctx.accounts.session.signed.len() == validators_len
+            && ctx.accounts.config.current_weights.len() == validators_len,
+        ConsortiumError::SessionLengthMismatch
+    );
+    require!(
+        indices.iter().all(|index| (*index as usize) < validators_len),
+        ConsortiumError::IndexOutOfBounds
+    );
+
     let mut validator_indices = Vec::new();
     signatures
         .iter()

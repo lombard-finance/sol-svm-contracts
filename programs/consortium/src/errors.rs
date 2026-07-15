@@ -57,6 +57,10 @@ pub enum ConsortiumError {
     DuplicateValidator,
     #[msg("ABI word value overflows the target integer type")]
     AbiWordOverflow,
+    #[msg("Signature index out of bounds for the current validator set")]
+    IndexOutOfBounds,
+    #[msg("session.signed, current_validators and current_weights lengths do not match")]
+    SessionLengthMismatch,
 }
 
 impl From<std::io::Error> for ConsortiumError {
