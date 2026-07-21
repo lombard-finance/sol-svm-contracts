@@ -86,6 +86,7 @@ pub fn redeem(
     ctx: Context<Redeem>,
     to_lchain_id: [u8; 32],
     _to_token_address: [u8; 32],
+    // MUST be TA
     recipient: [u8; 32],
     amount: u64,
 ) -> Result<()> {
@@ -94,6 +95,7 @@ pub fn redeem(
 
     let fee = ctx.accounts.token_config.redeem_fee;
     require!(amount > fee, AssetRouterError::FeeGTEAmount);
+    require!(amount - fee > ctx.accounts.token_route.min_amount, AssetRouterError::InsufficientAmount);
 
     anchor_spl::token_interface::transfer_checked(
         CpiContext::new(

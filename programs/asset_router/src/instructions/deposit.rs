@@ -77,11 +77,12 @@ pub fn deposit(
     ctx: Context<Deposit>,
     to_lchain_id: [u8; 32],
     to_token_address: [u8; 32],
+    // MUST be TA
     recipient: [u8; 32],
     amount: u64,
 ) -> Result<()> {
 
-    require!(amount > 0, AssetRouterError::ZeroAmount);
+    require!(amount > ctx.accounts.token_route.min_amount, AssetRouterError::InsufficientAmount);
 
     utils::execute_burn(
         ctx.accounts.token_program.to_account_info(),

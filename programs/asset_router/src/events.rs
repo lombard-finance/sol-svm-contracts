@@ -76,6 +76,7 @@ pub struct TokenRouteSet {
     pub to_chain_id: [u8; 32],
     pub to_token_address: [u8; 32],
     pub token_route_type: TokenRouteType,
+    pub min_amount: u64,
 }
 
 #[event]
@@ -85,4 +86,5 @@ pub struct TokenRouteUnset {
     pub to_chain_id: [u8; 32],
     pub to_token_address: [u8; 32],
     pub token_route_type: TokenRouteType,
+    pub min_amount: u64,
 }

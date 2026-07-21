@@ -33,6 +33,7 @@ pub struct DisableOutboundMessagePath<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// This operation is not retroactive, already-created outbound_message payloads may still execute once relayed
 pub fn disable_outbound_message_path(
     _ctx: Context<DisableOutboundMessagePath>,
     destination_chain_id: [u8; 32],

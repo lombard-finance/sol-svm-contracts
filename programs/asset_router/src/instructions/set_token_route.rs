@@ -36,6 +36,7 @@ pub fn set_token_route(
     to_chain_id: [u8; 32],
     to_token_address: [u8; 32],
     token_route_type: TokenRouteType,
+    min_amount: u64,
 ) -> Result<()> {
     require!(
         from_chain_id == CHAIN_ID || to_chain_id == CHAIN_ID,
@@ -43,12 +44,14 @@ pub fn set_token_route(
     );
 
     ctx.accounts.token_route.route_type = token_route_type.clone();
+    ctx.accounts.token_route.min_amount = min_amount;
     emit!(crate::events::TokenRouteSet {
         from_chain_id,
         from_token_address,
         to_chain_id,
         to_token_address,
-        token_route_type
+        token_route_type,
+        min_amount,
     });
     Ok(())
 }

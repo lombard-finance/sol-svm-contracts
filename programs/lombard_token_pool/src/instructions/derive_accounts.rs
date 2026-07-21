@@ -133,7 +133,7 @@ pub mod release_or_mint {
                     .writable(),
                 // inbound_message_path
                 get_pda(&[b"inbound_message_path", chain_id.as_ref()], &mailbox::ID)
-                    .writable(),
+                    .readonly(),
                 // message_info
                 get_pda(&[b"message", &payload_hash], &mailbox::ID).writable(),
                 // message_handled

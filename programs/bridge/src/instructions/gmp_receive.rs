@@ -30,6 +30,7 @@ pub struct GMPReceive<'info> {
         owner = config.mailbox,
         seeds = [MESSAGE_SEED, &payload_hash],
         seeds::program = config.mailbox,
+        constraint = message_info.message.recipient == crate::ID.to_bytes() @ BridgeError::WrongRecipient,
         bump,
     )]
     pub message_info: Account<'info, MessageV1Info>,
@@ -123,6 +124,9 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<I
         ctx.accounts.mint.key(),
         Pubkey::new_from_array(mint_message.recipient),
     );
+    // There is a chance that tokens will be minted to the TA that is not the one user
+    // anticipated (due to the wrong recipient set in the context), 
+    // but the code below make sure user still can access it and manage tokens minted
     require!(
         mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
             || (ctx.accounts.recipient.key() == recipient_derived_token_account?

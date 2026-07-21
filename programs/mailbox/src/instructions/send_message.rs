@@ -53,6 +53,11 @@ pub struct SendMessage<'info> {
     pub sender_config: Option<Account<'info, SenderConfig>>,
 }
 
+// Current design presumes that message sender has to set message nonce (`global_nonce`)
+// when attempting to send transaction. This means there can be a race when several senders are trying
+// to send messages with the same nonce. Only the first of them will succeed, the others will
+// have to repeat an attempt to send message with different nonce.
+// This is considered to be acceptable for now, we will redesign this part if we see it causes problems.
 pub fn send_message(
     ctx: Context<SendMessage>,
     message_body: Vec<u8>,
@@ -86,6 +91,10 @@ pub fn send_message(
         message_body.len() <= max_payload_size as usize,
         MailboxError::PayloadTooLarge
     );
+    require!(
+        (message_body.len() > 0 || ctx.accounts.sender_config.is_some()),
+        MailboxError::InvalidPayloadState
+    );
 
     let message = MessageV1 {
         nonce: config.global_nonce,
@@ -114,6 +123,7 @@ pub fn send_message(
             let account_infos = vec![
                 ctx.accounts.fee_payer.to_account_info(),
                 treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(), // This one is not really necessary, can be collected from the parent context, but better to add for clarity
             ];
             invoke(
                 &transfer(ctx.accounts.fee_payer.key, &treasury.key(), fee),

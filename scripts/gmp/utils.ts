@@ -39,6 +39,10 @@ export function getAssetRouterTokenLocalRoutePDA(program: PublicKey, chainId: Bu
   return PublicKey.findProgramAddressSync([ASSET_ROUTER_TOKEN_ROUTE_SEED, chainId, fromMint.toBytes(), chainId, toMint.toBytes()], program)[0];
 }
 
+export function getAssetRouterTokenRoutePDA(program: PublicKey, fromChainId: Buffer<ArrayBuffer>, fromMint: Buffer<ArrayBuffer>, toChainId: Buffer<ArrayBuffer>, toMint: Buffer<ArrayBuffer>) {
+  return PublicKey.findProgramAddressSync([ASSET_ROUTER_TOKEN_ROUTE_SEED, fromChainId, fromMint, toChainId, toMint], program)[0];
+}
+
 export function getAssetRouterTokenConfigPDA(program: PublicKey, mint: PublicKey) {
   return PublicKey.findProgramAddressSync([ASSET_ROUTER_TOKEN_CONFIG_SEED, mint.toBytes()], program)[0];
 }
