@@ -2,8 +2,6 @@
 
 This folder consists of the audit reports performed on Lombard Solana programs by various security firms.
 
-⚠️ Some of the programs were modified after they were audited.
-
 | Audit Purpose   -           | Scope                                                                                             | Report                                                                                                                         | Firm                                         | Date       |
 | --------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | ---------- |
 | V1 Release                  | `LBTC`, `Bascule`                                                                                 | [pdf](https://raw.githubusercontent.com/lombard-finance/sol-svm-contracts/main/docs/audit/Ackee_V1.pdf)                        | [Ackee](https://ackee.xyz)                   | 04.04.2025 |
