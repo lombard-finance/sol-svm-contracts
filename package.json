@@ -108,6 +108,7 @@
     "crosschain_tokenPoolAcceptOwnership": "ts-node -T scripts/crosschain/tokenPoolOwnershipAccept.ts",
     "crosschain_tokenPoolSetRateLimitAdmin": "ts-node -T scripts/crosschain/tokenPoolSetRateLimitAdmin.ts",
     "crosschain_tokenPoolSetRateLimits": "ts-node -T scripts/crosschain/tokenPoolSetRateLimits.ts",
+    "crosschain_tokenPoolDeleteRemoteChainConfig": "ts-node -T scripts/crosschain/tokenPoolDeleteRemoteChainConfig.ts",
     "test:anchor-each": "bash scripts/anchor-test-each.sh"
   },
   "dependencies": {
