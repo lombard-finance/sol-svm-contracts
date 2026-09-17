@@ -124,9 +124,13 @@ pub fn gmp_receive(ctx: Context<GMPReceive>, payload_hash: [u8; 32]) -> Result<I
         ctx.accounts.mint.key(),
         Pubkey::new_from_array(mint_message.recipient),
     );
-    // There is a chance that tokens will be minted to the TA that is not the one user
-    // anticipated (due to the wrong recipient set in the context), 
-    // but the code below make sure user still can access it and manage tokens minted
+    // `mint_message.recipient` is expected to be a wallet address (the EVM side always
+    // sets the user's account, never a token account, as the recipient), in which case
+    // only that wallet's canonical ATA is accepted here and the minted tokens stay under
+    // the recipient's control no matter who delivers the message. The exact-match branch
+    // exists for possible new bridge clients in the future; such clients must only use a
+    // wallet address or an ATA as the recipient, never a non-ATA token account — see
+    // docs/bridge_gmp_receive_recipient_check.md for the full reasoning.
     require!(
         mint_message.recipient == ctx.accounts.recipient.key().to_bytes()
             || (ctx.accounts.recipient.key() == recipient_derived_token_account?
