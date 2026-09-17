@@ -57,4 +57,4 @@ const chainSelector = new anchor.BN(process.argv[4]);
   } catch (err) {
     console.error("Error deleting LombardTokePool remote chain config:", err);
   }
-})().catch((reason: any) => {console.error(`Command failed with ${reason}`)});
+})().catch((reason) => {console.error(`Command failed with ${reason}`)});
