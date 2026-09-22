@@ -29,17 +29,26 @@ class BridgePayload {
   sender: string;
   recipient: string;
   amount: string;
+  optionalMessage: string;
 
-  constructor(token: Uint8Array, sender: Uint8Array, recipient: Uint8Array, amount: number, version: number = 1) {
+  constructor(
+    token: Uint8Array,
+    sender: Uint8Array,
+    recipient: Uint8Array,
+    amount: number,
+    optionalMessage: Uint8Array | null = null,
+    version: number = optionalMessage ? 2 : 1
+  ) {
     this.version = ("00" + version.toString(16)).slice(-2);
     this.token = toHexString(token);
     this.sender = toHexString(sender);
     this.recipient = toHexString(recipient);
     this.amount = ("0000000000000000000000000000000000000000000000000000000000000000" + amount.toString(16)).slice(-64);
+    this.optionalMessage = optionalMessage ? toHexString(optionalMessage) : "";
   }
 
   hex(): string {
-    return this.version + this.token + this.sender + this.recipient + this.amount;
+    return this.version + this.token + this.sender + this.recipient + this.amount + this.optionalMessage;
   }
 
   bytes(): Buffer {
@@ -657,13 +666,30 @@ describe("Bridge", () => {
 
         receiverAddress: () => user.publicKey.toBytes(),
         receiverTokeAccount: () => userTA2
+      },
+      {
+        name: "tokens to user account with short optional message",
+        tokenToMint: () => mint.toBytes(),
+        receiverAddress: () => user.publicKey.toBytes(),
+        receiverTokeAccount: () => userTA,
+        inboundMessagePath: () => inboundMessagePath,
+        inboundMessagePathPDA: () => inboundMessagePathPDA,
+        fromChainId: () => foreignLchainId,
+        foreignBridgeAddress: () => foreignBridgeAddress,
+        localToken: () => mint,
+        remoteBridgeConfigPDA: () => remoteBridgeConfigPDA,
+        remoteTokenConfigPDA: () => remoteTokenConfigPDA11,
+        localTokenConfig: () => localTokenConfigPDA,
+        // 13 bytes, less than OPTIONAL_MESSAGE_SIZE (48): the program zero-pads it
+        optionalMessage: () => Buffer.from("short message")
       }
     ];
 
     args.forEach(function (arg) {
       it(`receive ${arg.name}`, async () => {
         const amount = 1000;
-        const bridgePayload = new BridgePayload(arg.tokenToMint(), remoteSenderBytes, arg.receiverAddress(), amount);
+        const optionalMessage = (arg as { optionalMessage?: () => Buffer }).optionalMessage?.() ?? null;
+        const bridgePayload = new BridgePayload(arg.tokenToMint(), remoteSenderBytes, arg.receiverAddress(), amount, optionalMessage);
         const message = messageV1(
           arg.inboundMessagePath(),
           nonceForeignChain++,
@@ -686,7 +712,7 @@ describe("Bridge", () => {
           [Buffer.from("message_handled"), payloadHash],
           bridge.programId
         )[0];
-        await withBlockhashRetry(() =>
+        const handleMessageTx = await withBlockhashRetry(() =>
           mailbox.methods
             .handleMessage(payloadHashBytes)
             .accounts({
@@ -775,6 +801,29 @@ describe("Bridge", () => {
 
         const tokenBalanceAfter = await spl.getAccount(provider.connection, arg.receiverTokeAccount());
         expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amount));
+
+        // handle_message returns the bridge's InboundResponse to its caller; when an optional
+        // message was sent, verify it comes back zero-padded to OPTIONAL_MESSAGE_SIZE (48)
+        if (optionalMessage) {
+          const tx = await provider.connection.getTransaction(handleMessageTx, {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0
+          });
+          const returnData = tx.meta.returnData;
+          expect(returnData.programId.toString()).to.equal(mailbox.programId.toBase58());
+          const raw = Buffer.from(returnData.data[0], "base64");
+          // borsh Option<Vec<u8>>: 1 byte Some + u32 LE length,
+          // then InboundResponse: u64 LE amount + Option<[u8; 48]> message
+          expect(raw[0]).to.equal(1);
+          const len = raw.readUInt32LE(1);
+          expect(len).to.equal(8 + 1 + 48);
+          // the RPC may trim trailing zero bytes of return data, restore them before comparing
+          const inbound = Buffer.concat([raw.subarray(5), Buffer.alloc(len)]).subarray(0, len);
+          expect(inbound.readBigUInt64LE(0)).to.equal(BigInt(amount));
+          expect(inbound[8]).to.equal(1);
+          const expectedMessage = Buffer.concat([optionalMessage, Buffer.alloc(48 - optionalMessage.length)]);
+          expect(inbound.subarray(9)).to.deep.equal(expectedMessage);
+        }
       });
     });
   });

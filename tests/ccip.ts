@@ -32,17 +32,26 @@ export class BridgePayload {
   sender: string;
   recipient: string;
   amount: string;
+  optionalMessage: string;
 
-  constructor(token: Uint8Array, sender: Uint8Array, recipient: Uint8Array, amount: number, version: number = 1) {
+  constructor(
+	token: Uint8Array,
+	sender: Uint8Array,
+	recipient: Uint8Array,
+	amount: number,
+	optionalMessage: Uint8Array | null = null,
+	version: number = optionalMessage ? 2 : 1
+  ) {
 	this.version = ("00" + version.toString(16)).slice(-2);
 	this.token = toHexString(token);
 	this.sender = toHexString(sender);
 	this.recipient = toHexString(recipient);
 	this.amount = ("0000000000000000000000000000000000000000000000000000000000000000" + amount.toString(16)).slice(-64);
+	this.optionalMessage = optionalMessage ? toHexString(optionalMessage) : "";
   }
 
   hex(): string {
-	return this.version + this.token + this.sender + this.recipient + this.amount;
+	return this.version + this.token + this.sender + this.recipient + this.amount + this.optionalMessage;
   }
 
   bytes(): Buffer {
@@ -468,8 +477,7 @@ describe("CCIP Token Pool", () => {
 		after(async () => {
 		})
 
-		it("receive tokens via CCIP bridge", async () => {
-			const bridgePayload = new BridgePayload(mint.toBytes(), senderBytes, userTA.toBytes(), amount);
+		async function receiveTokensViaCcip(bridgePayload: BridgePayload, ccipNonce: number) {
 			const message = messageV1(
 				inboundMessagePath,
 				nonceForeignChain++,
@@ -498,8 +506,8 @@ describe("CCIP Token Pool", () => {
 
 			const balanceBefore = await provider.connection.getBalance(payerFeeExempt.publicKey);
 
-			const nonce = 1;
-			const nonceBuf = Buffer.from([1,0]);
+			const nonce = ccipNonce;
+			const nonceBuf = Buffer.from([ccipNonce, 0]);
 
 			const mintArg = {
 				originalSender: originalSender,
@@ -672,6 +680,19 @@ describe("CCIP Token Pool", () => {
 
 			const tokenBalanceAfter = await spl.getAccount(provider.connection, userTA);
     		expect(tokenBalanceAfter.amount).to.be.equal(tokenBalanceBefore.amount + BigInt(amount));
+		}
+
+		it("receive tokens via CCIP bridge", async () => {
+			await receiveTokensViaCcip(new BridgePayload(mint.toBytes(), senderBytes, userTA.toBytes(), amount), 1);
+		})
+
+		it("receive tokens via CCIP bridge with short optional message", async () => {
+			// 13 bytes, less than OPTIONAL_MESSAGE_SIZE (48): the bridge zero-pads it
+			const optionalMessage = Buffer.from("short message");
+			await receiveTokensViaCcip(
+				new BridgePayload(mint.toBytes(), senderBytes, userTA.toBytes(), amount, optionalMessage),
+				2
+			);
 		})
 	})
 
