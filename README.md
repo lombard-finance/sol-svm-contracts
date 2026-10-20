@@ -6,6 +6,7 @@
 1. [Overview](https://github.com/lombard-finance/sol-svm-contracts?tab=readme-ov-file#overview)
 2. [One-time setup](https://github.com/lombard-finance/sol-svm-contracts?tab=readme-ov-file#one-time-setup)
 3. [Audit](https://github.com/lombard-finance/sol-svm-contracts?tab=readme-ov-file#audit)
+4. [Known design properties](https://github.com/lombard-finance/sol-svm-contracts?tab=readme-ov-file#known-design-properties)
 
 ## Overview
 LBTC is liquid Bitcoin; it's yield-bearing, cross-chain, and 1:1 backed by BTC. LBTC enables yield-bearing BTC to move cross-chain without fragmenting liquidity, and is designed to seamlessly integrate Bitcoin into the decentralized finance (DeFi) ecosystem while maintaining the security and integrity of the underlying asset.
@@ -98,6 +99,17 @@ anchor test
 ## Audit
 
 Find the latest audit reports in [docs/audit](https://github.com/lombard-finance/sol-svm-contracts/tree/main/docs/audit)
+
+## Known design properties
+
+### Shared pool signer pays per-message rent
+
+The Lombard Token Pool's pool signer PDA (`Dyksp4gTXrjseaXYNfYo57JUuXtMYnNBoYug7eEYFVVt` on mainnet) pays the rent for the accounts created for each cross-chain message:
+
+- the Mailbox outbound message account on Solana-to-EVM transfers (`lock_or_burn_tokens`);
+- the Bridge `MessageHandled` replay marker on EVM-to-Solana transfers (`release_or_mint_tokens`).
+
+The sender does not reimburse this rent, and rent reclaimed by Mailbox message cleanup goes to the Mailbox admin. A sufficient number of valid transfers of any size can therefore lower the signer's balance below the rent needed for the next account; further transfers in either direction then fail until the signer is topped up. Those transfers revert atomically, so no user funds are lost. This is an accepted design property, not a vulnerability.
 
 
 ## Verify On-Chain Programs

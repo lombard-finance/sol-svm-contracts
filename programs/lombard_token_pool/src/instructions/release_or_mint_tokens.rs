@@ -78,10 +78,10 @@ pub struct TokenOfframp<'info> {
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
-    /// CHECK: CPI signer
+    /// CHECK: CPI signer. It also pays the rent of the Bridge MessageHandled replay marker,
+    /// see "Known design properties" in the README.
     #[account(
-        mut, // Lombard's receive_message method requires that this account is mutable,
-             // although it does not really mutate it
+        mut,
         seeds = [POOL_SIGNER_SEED, mint.key().as_ref()],
         bump,
         address = state.config.pool_signer,
